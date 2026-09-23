@@ -1,0 +1,7 @@
+photos/
+!photos/.keep
+dashboard/config.local.js
+pi/pi-target.txt
+pi/autopull.log
+__pycache__/
+*.pyc

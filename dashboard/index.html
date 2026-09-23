@@ -1,0 +1,2387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Family Quest Board</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: rgba(22, 26, 36, 0.86);
+    --panel-solid: #161a24;
+    --card: #1e2433;
+    --card-hi: #273044;
+    --line: rgba(255,255,255,0.08);
+    --text: #f3f4f6;
+    --muted: #9aa3b5;
+    --accent: #f59e0b;
+    --accent-2: #fbbf24;
+    --good: #34d399;
+    --bad: #f87171;
+    --info: #60a5fa;
+    --nav-w: 108px;
+    --radius: 22px;
+    --shadow: 0 14px 40px rgba(0,0,0,0.35);
+    font-size: 18px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden; user-select: none; -webkit-user-select: none;
+    touch-action: manipulation; cursor: default;
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; touch-action: manipulation; }
+  button:active { transform: scale(0.97); }
+  input { font: inherit; }
+
+  #app { display: grid; grid-template-columns: var(--nav-w) 1fr; height: 100%; }
+
+  /* ---------- Nav rail ---------- */
+  #nav {
+    background: var(--panel-solid); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; align-items: center; padding: 18px 0; gap: 10px; z-index: 5;
+  }
+  #nav .navbtn {
+    width: 84px; height: 84px; border-radius: 20px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; color: var(--muted); position: relative;
+  }
+  #nav .navbtn .ico { font-size: 30px; line-height: 1; }
+  #nav .navbtn .lbl { font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+  #nav .navbtn.active { background: var(--card-hi); color: var(--text); }
+  #nav .navbtn .badge {
+    position: absolute; top: 8px; right: 8px; min-width: 24px; height: 24px; padding: 0 7px;
+    border-radius: 12px; background: var(--bad); color: #fff; font-size: 13px; font-weight: 700;
+    display: none; align-items: center; justify-content: center;
+  }
+  #nav .navbtn .badge.on { display: flex; }
+  #nav .spacer { flex: 1; }
+  #nav .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 10px; letter-spacing: .05em;
+    background: rgba(245,158,11,.18); color: var(--accent-2);
+  }
+  #nav .pill.live { background: rgba(52,211,153,.18); color: var(--good); }
+  #nav .pill.err { background: rgba(248,113,113,.2); color: var(--bad); }
+
+  /* ---------- Screens ---------- */
+  main { position: relative; overflow: hidden; }
+  .screen { position: absolute; inset: 0; display: none; padding: 28px 32px; overflow: hidden; }
+  .screen.active { display: block; }
+  .screen h1 { margin: 0 0 18px; font-size: 34px; font-weight: 800; letter-spacing: -.01em; display: flex; align-items: center; gap: 14px; }
+  .screen h1 small { font-size: 16px; color: var(--muted); font-weight: 600; }
+
+  .card { background: var(--card); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 64px; padding: 0 26px;
+    border-radius: 18px; background: var(--card-hi); font-weight: 700; font-size: 19px;
+  }
+  .btn.primary { background: var(--accent); color: #1a1200; }
+  .btn.good { background: var(--good); color: #032b1c; }
+  .btn.bad { background: var(--bad); color: #3b0505; }
+  .btn.ghost { background: transparent; border: 2px solid var(--line); color: var(--muted); }
+  .btn.sm { min-height: 50px; padding: 0 18px; font-size: 16px; border-radius: 14px; }
+  .muted { color: var(--muted); }
+  .empty { color: var(--muted); padding: 40px; text-align: center; font-size: 20px; }
+  .scroll { overflow-y: auto; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* ---------- Home / idle ---------- */
+  #screen-home { padding: 0; }
+  .photo-layer {
+    position: absolute; inset: 0; background-size: cover; background-position: center;
+    opacity: 0; transition: opacity 1.6s ease; transform: scale(1.02);
+  }
+  .photo-layer.show { opacity: 1; }
+  .photo-layer.kb { animation: kenburns 24s ease-in-out infinite alternate; }
+  .photo-layer.pan { background-size: 100% 100%; background-position: 0 0; transform: none; will-change: transform; }
+  @keyframes kenburns { from { transform: scale(1.02) translate(0,0); } to { transform: scale(1.1) translate(-1.5%, 1%); } }
+  .gradient-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(120deg, #1e3a8a, #6d28d9, #be185d, #d97706);
+    background-size: 300% 300%; animation: drift 40s ease infinite;
+  }
+  @keyframes drift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  .home-shade {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,.7) 100%);
+  }
+  .home-grid {
+    position: absolute; inset: 0; padding: 30px 36px; display: grid;
+    grid-template-rows: auto 1fr auto; grid-template-columns: 1fr auto; gap: 20px;
+  }
+  .clock { grid-column: 1; text-shadow: 0 2px 18px rgba(0,0,0,.6); }
+  .clock .time { font-size: 92px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+  .clock .time small { font-size: 34px; font-weight: 600; margin-left: 8px; opacity: .8; }
+  .clock .date { font-size: 28px; font-weight: 600; opacity: .9; margin-top: 6px; }
+  .clock .family { font-size: 18px; color: rgba(255,255,255,.7); margin-top: 6px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .weather { grid-column: 2; text-align: right; text-shadow: 0 2px 18px rgba(0,0,0,.6); }
+  .weather .now { font-size: 64px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+  .weather .desc { font-size: 20px; opacity: .9; margin-top: 4px; }
+  .weather .hilo { font-size: 18px; opacity: .8; margin-top: 2px; }
+  .weather .days { display: flex; gap: 14px; justify-content: flex-end; margin-top: 12px; }
+  .weather .days div { text-align: center; font-size: 14px; opacity: .9; }
+  .weather .days .i { font-size: 24px; }
+  .home-bottom { grid-row: 3; grid-column: 1 / -1; display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: end; }
+  .smart { background: rgba(14, 17, 26, 0.55); backdrop-filter: blur(10px); border-radius: var(--radius); padding: 16px 22px; min-height: 0; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .smart .kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 4px; }
+  .smart .big { font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+  .smart .big.huge { font-size: 52px; }
+  .smart .sub { font-size: 16px; color: var(--muted); margin-top: 4px; }
+  .smart .rows { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .smart .row { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+  .smart .row .t { min-width: 76px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .smart .row .dot { width: 10px; height: 10px; border-radius: 5px; flex: none; }
+  .smart .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .smart .subk { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+  .smart .subk + .rows { margin-top: 4px; }
+  .smart .muted { color: #cfd5e0; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 14px; background: rgba(255,255,255,.08); font-size: 16px; font-weight: 600; }
+  .leader { background: rgba(14, 17, 26, 0.55); backdrop-filter: blur(10px); border-radius: var(--radius); padding: 14px 20px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .leader .kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 6px; }
+  .leader .lrow { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 17px; }
+  .leader .lrow:first-of-type { border-top: 0; }
+  .leader .av { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; }
+  .leader .pts { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .leader .pend { font-size: 14px; color: var(--muted); font-weight: 600; }
+
+  /* ---------- Calendar ---------- */
+  .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; height: calc(100% - 70px); }
+  .cal-day { background: var(--card); border-radius: 18px; padding: 12px; display: flex; flex-direction: column; min-width: 0; }
+  .cal-day.today { outline: 3px solid var(--accent); }
+  .cal-day .dh { text-align: center; padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .cal-day .dh .dn { font-size: 14px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  .cal-day .dh .dd { font-size: 30px; font-weight: 800; line-height: 1.1; }
+  .cal-day.today .dh .dd { color: var(--accent-2); }
+  .cal-day .evs { flex: 1; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 6px; }
+  .cal-day .evs::-webkit-scrollbar { display: none; }
+  .ev { border-left: 5px solid var(--info); background: rgba(255,255,255,.05); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  .ev .et { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .ev .en { font-size: 16px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+  .ev.allday { background: rgba(255,255,255,.1); }
+  .ev.past { opacity: .45; }
+  .cal-day .dinner { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 14px; color: var(--muted); }
+  .cal-day .dinner b { color: var(--text); }
+
+  /* ---------- Groceries ---------- */
+  .gtabs { display: flex; gap: 10px; margin-bottom: 14px; }
+  .gtab { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 16px; background: var(--card); font-weight: 700; font-size: 18px; color: var(--muted); }
+  .gtab.active { background: var(--card-hi); color: var(--text); }
+  .gtab .cnt { background: rgba(255,255,255,.1); padding: 2px 10px; border-radius: 10px; font-size: 15px; }
+  .gtab.active .cnt { background: var(--accent); color: #1a1200; }
+  .groc { display: grid; grid-template-columns: 1fr 320px; gap: 22px; height: calc(100% - 130px); }
+  .groc-main { display: grid; grid-template-columns: 1fr 44px; gap: 8px; min-height: 0; }
+  .groc-list { position: relative; overflow-y: auto; scrollbar-width: none; padding: 0 4px 30px 0; scroll-behavior: smooth; }
+  .groc-list::-webkit-scrollbar { display: none; }
+  .lsec { margin-bottom: 14px; }
+  .lhead { position: sticky; top: 0; z-index: 2; background: linear-gradient(var(--bg) 70%, transparent); padding: 4px 6px 8px; font-size: 22px; font-weight: 800; color: var(--accent-2); }
+  .lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .gchip {
+    display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 16px; padding: 12px 14px; min-height: 66px;
+    text-align: left; border: 3px solid transparent; position: relative;
+  }
+  .gchip .box { width: 32px; height: 32px; border-radius: 10px; border: 3px solid rgba(255,255,255,.2); display: grid; place-items: center; flex: none; font-size: 18px; }
+  .gchip .name { font-size: 18px; font-weight: 600; line-height: 1.2; }
+  .gchip .note { font-size: 13px; color: var(--muted); }
+  .gchip.needed { border-color: var(--accent); background: rgba(245,158,11,.12); }
+  .gchip.needed .box { background: var(--accent); border-color: var(--accent); color: #1a1200; }
+  .gchip.cart { border-color: var(--good); opacity: .7; }
+  .gchip.cart .box { background: var(--good); border-color: var(--good); color: #032b1c; }
+  .gchip.cart .name { text-decoration: line-through; }
+  .gchip .meta, .gitem .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .spill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: rgba(96,165,250,.18); color: var(--info); }
+  .npill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--line); color: var(--muted); }
+  .gchip.nice:not(.needed):not(.cart), .gitem.nice:not(.cart) { opacity: .8; }
+  .gitem.nice .name { font-weight: 500; }
+  .gitem.keep { border-color: var(--info); background: rgba(96,165,250,.12); }
+  .gitem.keep .box { background: var(--info); border-color: var(--info); color: #06213f; }
+  .gitem .keeplbl { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--info); letter-spacing: .04em; }
+  .shead { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; color: var(--accent-2); margin: 8px 0 10px; }
+  .shead .n { font-size: 14px; color: var(--muted); font-weight: 700; }
+  .seg button.storeon { background: var(--info); color: #06213f; }
+  .seg button.prio-ess.on { background: var(--accent); color: #1a1200; }
+  .seg button.prio-nice.on { background: var(--card-hi); color: var(--text); border: 2px solid var(--muted); }
+  /* Shopping-list rows */
+  .gitem { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 18px; padding: 14px 18px; min-height: 76px; width: 100%; text-align: left; margin-bottom: 10px; border: 3px solid transparent; }
+  .gitem .box { display: none; }
+  .gitem.keep .box { display: grid; width: 40px; height: 40px; border-radius: 12px; place-items: center; flex: none; font-size: 22px; }
+  .gitem .rpill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: rgba(52,211,153,.15); color: var(--good); }
+  .gchip .rpill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: rgba(52,211,153,.15); color: var(--good); }
+  .gitem.cart { opacity: .55; border-color: var(--good); }
+  .gitem.cart .box { background: var(--good); border-color: var(--good); color: #032b1c; }
+  .gitem.cart .name { text-decoration: line-through; }
+  .gitem .name { font-size: 22px; font-weight: 600; }
+  .gitem .note { font-size: 15px; color: var(--muted); }
+  .gitem .who { margin-left: auto; font-size: 14px; color: var(--muted); }
+  /* A–Z rail */
+  .letter-rail { display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: var(--card); border-radius: 14px; padding: 6px 0; user-select: none; touch-action: none; }
+  .letter-rail span { font-size: 13px; font-weight: 800; color: var(--muted); line-height: 1; flex: 1; display: grid; place-items: center; width: 100%; }
+  .letter-rail span.has { color: var(--text); }
+  .letter-rail span.cur { color: var(--accent-2); }
+  .letter-rail.hidden { visibility: hidden; }
+  .letter-bubble { position: fixed; z-index: 40; width: 110px; height: 110px; border-radius: 30px; background: var(--accent); color: #1a1200; font-size: 64px; font-weight: 900; display: none; place-items: center; box-shadow: var(--shadow); pointer-events: none; }
+  .letter-bubble.on { display: grid; }
+  .groc-side { display: flex; flex-direction: column; gap: 14px; }
+  .groc-side .count { font-size: 60px; font-weight: 800; line-height: 1; }
+  .groc-side .count small { font-size: 18px; color: var(--muted); font-weight: 600; display: block; margin-top: 4px; }
+  .groc-side .btn { width: 100%; }
+  .sect { font-size: 14px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 10px 0 2px; }
+
+  /* ---------- Quests ---------- */
+  .kid-tabs { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .kid-tab {
+    display: flex; align-items: center; gap: 12px; padding: 10px 20px 10px 12px; border-radius: 18px; background: var(--card);
+    font-size: 20px; font-weight: 700; border: 3px solid transparent;
+  }
+  .kid-tab .av { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; }
+  .kid-tab.active { border-color: var(--kid, var(--accent)); background: var(--card-hi); }
+  .kid-tab .pts { font-size: 15px; color: var(--muted); font-weight: 600; }
+  .quest-wrap { display: grid; grid-template-columns: 1fr 360px; gap: 22px; height: calc(100% - 150px); }
+  .quest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; align-content: start; overflow-y: auto; scrollbar-width: none; padding-bottom: 20px; }
+  .quest-grid::-webkit-scrollbar { display: none; }
+  .quest {
+    background: var(--card); border-radius: 20px; padding: 18px; min-height: 150px; display: flex; flex-direction: column; gap: 8px;
+    text-align: left; position: relative; overflow: hidden; border: 3px solid transparent;
+  }
+  .quest .qi { font-size: 40px; line-height: 1; }
+  .quest .qt { font-size: 20px; font-weight: 700; line-height: 1.2; }
+  .quest .qm { display: flex; align-items: center; gap: 8px; margin-top: auto; font-size: 15px; color: var(--muted); font-weight: 600; }
+  .quest .qp { margin-left: auto; background: rgba(245,158,11,.18); color: var(--accent-2); padding: 4px 10px; border-radius: 10px; font-weight: 800; }
+  .quest.pending { border-color: var(--accent); }
+  .quest.pending::after, .quest.done::after {
+    content: attr(data-state); position: absolute; top: 12px; right: 12px; font-size: 13px; font-weight: 800; padding: 5px 10px; border-radius: 10px;
+    background: var(--accent); color: #1a1200; letter-spacing: .04em;
+  }
+  .quest.done { opacity: .55; border-color: var(--good); }
+  .quest.done::after { background: var(--good); color: #032b1c; }
+  .rewards { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; scrollbar-width: none; }
+  .rewards::-webkit-scrollbar { display: none; }
+  .bal { background: linear-gradient(135deg, #b45309, #f59e0b); color: #1a1200; border-radius: 20px; padding: 18px 20px; }
+  .bal .n { font-size: 54px; font-weight: 900; line-height: 1; }
+  .bal .l { font-size: 15px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+  .bal .p { font-size: 15px; font-weight: 700; margin-top: 4px; opacity: .85; }
+  .reward { display: flex; align-items: center; gap: 14px; background: var(--card); border-radius: 18px; padding: 14px 16px; text-align: left; width: 100%; }
+  .reward .ri { font-size: 32px; }
+  .reward .rt { font-size: 18px; font-weight: 700; flex: 1; }
+  .reward .rc { font-weight: 800; color: var(--accent-2); }
+  .reward.locked { opacity: .45; }
+
+  /* ---------- To-do ---------- */
+  .tfilters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .tfilters .tag { padding: 10px 16px; border-radius: 14px; background: var(--card); font-weight: 700; font-size: 16px; color: var(--muted); display: inline-flex; gap: 8px; align-items: center; }
+  .tfilters .tag.active { background: var(--info); color: #06213f; }
+  .tfilters .tag .n { font-size: 13px; opacity: .8; }
+  .tfilters .spacer { flex: 1; }
+  .tfilters .toggle { padding: 10px 16px; border-radius: 14px; border: 2px solid var(--line); color: var(--muted); font-weight: 700; font-size: 15px; }
+  .tfilters .toggle.on { border-color: var(--good); color: var(--good); }
+  .todo-wrap { display: grid; grid-template-columns: 1fr 320px; gap: 22px; height: calc(100% - 130px); }
+  .todo-list { overflow-y: auto; scrollbar-width: none; padding-bottom: 30px; display: flex; flex-direction: column; gap: 10px; }
+  .todo-list::-webkit-scrollbar { display: none; }
+  .todo { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 18px; padding: 14px 18px; min-height: 76px; width: 100%; text-align: left; border: 3px solid transparent; }
+  .todo .box { width: 40px; height: 40px; border-radius: 12px; border: 3px solid var(--muted); display: grid; place-items: center; flex: none; font-size: 24px; }
+  .todo .tt { font-size: 21px; font-weight: 600; line-height: 1.2; }
+  .todo .tm { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 14px; color: var(--muted); }
+  .todo .pill { background: rgba(96,165,250,.18); color: var(--info); padding: 3px 10px; border-radius: 9px; font-weight: 700; font-size: 13px; }
+  .todo .due { font-weight: 700; }
+  .todo .rpt { color: var(--good); font-weight: 700; }
+  .seg button.rpton { background: var(--good); color: #032b1c; }
+  .todo.today .due { color: var(--accent-2); }
+  .todo.overdue { border-color: rgba(248,113,113,.6); }
+  .todo.overdue .due { color: var(--bad); }
+  .todo.done { opacity: .5; }
+  .todo.done .box { background: var(--good); border-color: var(--good); color: #032b1c; }
+  .todo.done .tt { text-decoration: line-through; }
+  .todo .who { margin-left: auto; font-size: 26px; flex: none; }
+  .todo:active { transform: none; }
+  .todo .box { cursor: pointer; transition: transform .08s; }
+  .todo .box:active { transform: scale(.88); }
+  .todo .sub { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .todo.flash .box { background: var(--good); border-color: var(--good); color: #032b1c; }
+  .tgroup { font-size: 14px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 14px 0 4px; }
+  .tgroup.overdue { color: var(--bad); }
+  .tgroup.today { color: var(--accent-2); }
+  .tfilters .sortlbl { font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-left: 6px; }
+  /* Task detail */
+  .td-head { display: flex; gap: 16px; align-items: flex-start; }
+  .td-head .box { width: 48px; height: 48px; border-radius: 15px; border: 3px solid var(--muted); display: grid; place-items: center; flex: none; font-size: 28px; margin-top: 4px; cursor: pointer; }
+  .td-head .box.done { background: var(--good); border-color: var(--good); color: #032b1c; }
+  .td-title { font-size: 28px; font-weight: 800; line-height: 1.2; text-align: left; flex: 1; padding: 6px 0; }
+  .td-title.done { text-decoration: line-through; opacity: .6; }
+  .td-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .td-chips button { padding: 9px 14px; border-radius: 12px; background: var(--card); font-weight: 700; font-size: 15px; display: inline-flex; gap: 6px; align-items: center; }
+  .td-chips button.empty { color: var(--muted); border: 2px dashed var(--line); background: transparent; }
+  .td-chips button.late { color: var(--bad); }
+  .td-notes { background: var(--card); border-radius: 16px; padding: 14px 18px; min-height: 64px; font-size: 17px; line-height: 1.5; text-align: left; width: 100%; white-space: pre-wrap; }
+  .td-notes.ph { color: var(--muted); }
+  .steps { display: flex; flex-direction: column; gap: 6px; }
+  .step { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 14px; padding: 10px 14px; width: 100%; text-align: left; min-height: 54px; }
+  .step .sb { width: 28px; height: 28px; border-radius: 9px; border: 3px solid var(--muted); display: grid; place-items: center; flex: none; font-size: 16px; }
+  .step.d .sb { background: var(--good); border-color: var(--good); color: #032b1c; }
+  .step.d .st { text-decoration: line-through; opacity: .55; }
+  .step .st { font-size: 17px; font-weight: 600; flex: 1; }
+  .step .sx { color: var(--muted); font-size: 18px; padding: 4px 8px; }
+  .td-foot { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 6px; }
+  .td-meta { font-size: 13px; color: var(--muted); }
+  /* Calendar task pills */
+  .ev.task { border-left-style: dashed; background: rgba(96,165,250,.08); }
+  .ev.task .et { color: var(--info); }
+  .ev.task.late { border-color: var(--bad) !important; }
+  .ev.task.late .et { color: var(--bad); }
+  #kb textarea.text { min-height: 120px; resize: none; font-size: 20px; line-height: 1.4; }
+  .todo-side { display: flex; flex-direction: column; gap: 14px; }
+  .todo-side .btn { width: 100%; }
+  .todo-side .count { font-size: 60px; font-weight: 800; line-height: 1; }
+  .todo-side .count small { font-size: 18px; color: var(--muted); font-weight: 600; display: block; margin-top: 4px; }
+  /* Task editor sheet */
+  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: none; z-index: 45; align-items: center; justify-content: center; padding: 20px; }
+  .sheet.open { display: flex; }
+  .sheet-panel { background: var(--panel-solid); border-radius: 26px; padding: 26px 28px; width: min(760px, 96vw); max-height: 92vh; overflow-y: auto; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+  .sheet-panel h2 { margin: 0 0 4px; font-size: 26px; }
+  .sheet-panel label { font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  .sheet-panel .actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 10px; }
+  .seg button.newtag { border: 2px dashed var(--line); background: transparent; color: var(--muted); }
+  .seg button.tagon { background: var(--info); color: #06213f; }
+  .seg button.dueon { background: var(--accent); color: #1a1200; }
+  .seg button.whoon { background: var(--good); color: #032b1c; }
+  input[type=date].hidden-date { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+
+  /* ---------- Parent ---------- */
+  .pinpad { max-width: 420px; margin: 40px auto; text-align: center; }
+  .pinpad .dots { display: flex; gap: 16px; justify-content: center; margin: 20px 0 30px; }
+  .pinpad .dots span { width: 20px; height: 20px; border-radius: 10px; background: var(--card-hi); }
+  .pinpad .dots span.on { background: var(--accent); }
+  .pinpad .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .pinpad .keys button { height: 84px; border-radius: 20px; background: var(--card); font-size: 30px; font-weight: 700; }
+  .pinpad .msg { min-height: 28px; color: var(--bad); font-weight: 700; margin-top: 14px; }
+  .ptabs { display: flex; gap: 10px; margin-bottom: 18px; }
+  .ptab { padding: 12px 20px; border-radius: 14px; background: var(--card); font-weight: 700; font-size: 17px; }
+  .ptab.active { background: var(--accent); color: #1a1200; }
+  .pbody { height: calc(100% - 140px); overflow-y: auto; scrollbar-width: none; }
+  .pbody::-webkit-scrollbar { display: none; }
+  .qrow { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 18px; padding: 14px 18px; margin-bottom: 10px; }
+  .qrow .qi { font-size: 30px; }
+  .qrow .qt { font-size: 20px; font-weight: 700; }
+  .qrow .qs { font-size: 14px; color: var(--muted); }
+  .qrow .acts { margin-left: auto; display: flex; gap: 10px; }
+  .drow { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; background: var(--card); border-radius: 18px; padding: 12px 18px; margin-bottom: 10px; min-height: 70px; text-align: left; width: 100%; }
+  .drow .dd { font-weight: 700; color: var(--muted); }
+  .drow .dm { font-size: 20px; font-weight: 700; }
+  .drow .dm.none { color: var(--muted); font-weight: 500; font-style: italic; }
+  .form { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
+  .form label { font-size: 14px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  .form .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .field { background: var(--card); border-radius: 16px; padding: 14px 18px; min-height: 64px; display: flex; align-items: center; font-size: 19px; width: 100%; text-align: left; }
+  .field.ph { color: var(--muted); }
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg button { padding: 12px 18px; border-radius: 14px; background: var(--card); font-weight: 700; }
+  .seg button.active { background: var(--info); color: #06213f; }
+  input.text, textarea.text { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 14px 18px; color: var(--text); width: 100%; font-size: 18px; outline: none; }
+  input.text:focus, textarea.text:focus { border-color: var(--accent); }
+  .note { color: var(--muted); font-size: 16px; line-height: 1.5; }
+  code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; font-size: 15px; }
+
+  .prow.off { opacity: .45; }
+
+  /* ---------- Keyboard overlay ---------- */
+  #kb { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; z-index: 50; align-items: flex-end; justify-content: center; }
+  #kb.open { display: flex; }
+  .kb-panel { width: 100%; max-width: 1200px; background: var(--panel-solid); border-radius: 26px 26px 0 0; padding: 20px 22px 26px; box-shadow: var(--shadow); }
+  .kb-title { font-size: 15px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+  .kb-field { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  .kb-field input { flex: 1; font-size: 26px; padding: 14px 18px; }
+  .kb-field textarea { flex: 1; font-family: inherit; font-size: 22px; line-height: 1.35; padding: 14px 18px; min-height: 120px; max-height: 220px; resize: none; }
+  .kb-rows { display: flex; flex-direction: column; gap: 8px; }
+  .kb-row { display: flex; gap: 8px; justify-content: center; }
+  .kb-row button { flex: 1; max-width: 96px; height: 66px; border-radius: 14px; background: var(--card-hi); font-size: 24px; font-weight: 600; }
+  .kb-row button.wide { max-width: 170px; font-size: 17px; font-weight: 700; }
+  .kb-row button.space { max-width: 520px; }
+  .kb-row button.done { background: var(--accent); color: #1a1200; }
+  .kb-row button.cancel { background: transparent; border: 2px solid var(--line); color: var(--muted); }
+
+  /* ---------- Modal ---------- */
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: none; z-index: 60; align-items: center; justify-content: center; }
+  #modal.open { display: flex; }
+  .modal-box { background: var(--panel-solid); border-radius: 26px; padding: 30px 32px; width: min(620px, 92vw); box-shadow: var(--shadow); text-align: center; }
+  .modal-box .mi { font-size: 64px; }
+  .modal-box .mt { font-size: 28px; font-weight: 800; margin: 8px 0; }
+  .modal-box .mb { font-size: 19px; color: var(--muted); margin-bottom: 24px; line-height: 1.4; }
+  .modal-box .ma { display: flex; gap: 12px; justify-content: center; }
+  .modal-box .ma .btn { min-width: 170px; }
+
+  /* ---------- Sleep + toast ---------- */
+  /* Sleep screen: dim clock, or pure black when the panel is (or should be) off */
+  #sleep { position: fixed; inset: 0; background: #000; display: none; z-index: 80; flex-direction: column; align-items: center; justify-content: center; }
+  #sleep.on { display: flex; }
+  #sleep .st { font-size: 96px; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: #fff; }
+  #sleep .sd { font-size: 24px; font-weight: 600; margin-top: 10px; color: #fff; opacity: .7; }
+  #sleep.clock .st, #sleep.clock .sd { opacity: var(--dim, .35); }
+  #sleep.off .st, #sleep.off .sd { display: none; }
+  /* Display admin */
+  .dstatus { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; background: var(--card); border-radius: 18px; padding: 16px 20px; margin-bottom: 16px; }
+  .dstatus .now { font-size: 24px; font-weight: 800; }
+  .dstatus .sub { color: var(--muted); font-size: 16px; }
+  .dstatus .hw { margin-left: auto; font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 10px; }
+  .dstatus .hw.ok { background: rgba(52,211,153,.18); color: var(--good); }
+  .dstatus .hw.no { background: rgba(245,158,11,.18); color: var(--accent-2); }
+  .prow { display: grid; grid-template-columns: 120px 1fr auto; gap: 16px; align-items: center; background: var(--card); border-radius: 18px; padding: 14px 18px; margin-bottom: 10px; width: 100%; text-align: left; }
+  .prow .pt { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .prow .pm { font-size: 19px; font-weight: 700; }
+  .prow .pd { font-size: 14px; color: var(--muted); }
+  .prow.cur { outline: 3px solid var(--accent); }
+  .prow .badge2 { font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 9px; background: var(--card-hi); color: var(--muted); }
+  .seg button.modeon { background: var(--accent); color: #1a1200; }
+  #toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: #fff; color: #111; padding: 14px 22px; border-radius: 16px; font-weight: 700; display: none; z-index: 90; box-shadow: var(--shadow); max-width: 80vw; }
+  #toast.on { display: block; }
+  #toast.err { background: var(--bad); color: #fff; }
+
+  .spin { display: inline-block; width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Portrait wall tweaks ---------- */
+  @media (orientation: portrait) and (min-width: 901px) {
+    :root { --nav-w: 92px; }
+    .cal-week { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; }
+    .groc, .quest-wrap { grid-template-columns: 1fr; }
+    .home-bottom { grid-template-columns: 1fr; }
+    .clock .time { font-size: 72px; }
+  }
+
+  /* ---------- Phone / remote mode (narrow screens) ---------- */
+  @media (max-width: 900px) {
+    :root { font-size: 16px; --radius: 16px; }
+    body { overflow: auto; }
+    #app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100dvh; }
+    #nav { grid-row: 2; flex-direction: row; justify-content: space-around; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); gap: 2px; border-right: 0; border-top: 1px solid var(--line); }
+    #nav .spacer { display: none; }
+    #nav .navbtn { width: auto; flex: 1; height: 58px; border-radius: 14px; }
+    #nav .navbtn .ico { font-size: 22px; }
+    #nav .navbtn .lbl { font-size: 11px; }
+    #nav .pill { position: fixed; top: 8px; right: 8px; z-index: 6; }
+    main { overflow: auto; }
+    .screen { position: static; padding: 14px 14px 24px; overflow: visible; height: auto; min-height: 100%; }
+    .screen h1 { font-size: 24px; margin-bottom: 12px; flex-wrap: wrap; }
+    .screen h1 small { font-size: 13px; }
+    /* Home */
+    #screen-home { position: relative; min-height: 100%; padding: 0; }
+    .photo-layer, .gradient-bg, .home-shade { position: fixed; }
+    .home-grid { position: relative; grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; padding: 16px 14px 24px; gap: 14px; }
+    .clock .time { font-size: 56px; }
+    .clock .time small { font-size: 22px; }
+    .clock .date { font-size: 20px; }
+    .weather { grid-column: 1; text-align: left; }
+    .weather .now { justify-content: flex-start; font-size: 44px; }
+    .weather .days { justify-content: flex-start; }
+    .home-bottom { grid-row: 3; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+    .smart { min-height: 0; padding: 16px 18px; }
+    .smart .big { font-size: 28px; }
+    .smart .big.huge { font-size: 44px; }
+    /* Calendar */
+    .cal-week { display: flex; flex-direction: column; gap: 10px; height: auto; }
+    .cal-day { padding: 10px 12px; }
+    .cal-day .dh { display: flex; align-items: baseline; gap: 10px; text-align: left; }
+    .cal-day .dh .dd { font-size: 22px; }
+    .cal-day .evs { overflow: visible; }
+    /* Groceries */
+    .groc { display: flex; flex-direction: column-reverse; gap: 12px; height: auto; }
+    .groc-side { flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .groc-side .card { padding: 10px 16px; flex: 1; }
+    .groc-side .count { font-size: 32px; }
+    .groc-side .count small { display: inline; margin-left: 6px; font-size: 14px; }
+    .groc-side .btn { width: auto; flex: 1; min-height: 54px; }
+    .groc-side .note { display: none; }
+    .groc-list { overflow: visible; padding-right: 0; }
+    .groc-main { grid-template-columns: 1fr 34px; gap: 6px; }
+    .letter-rail { position: sticky; top: 8px; align-self: start; height: min(72dvh, 560px); }
+    .letter-rail span { font-size: 12px; }
+    .letter-bubble { width: 84px; height: 84px; font-size: 48px; border-radius: 22px; }
+    .lhead { top: -14px; }
+    .lgrid { grid-template-columns: 1fr; gap: 8px; }
+    .gchip { min-height: 56px; padding: 10px 12px; }
+    .gtabs { gap: 8px; }
+    .gtab { flex: 1; justify-content: center; padding: 10px 8px; font-size: 15px; }
+    .gitem { min-height: 60px; padding: 10px 14px; }
+    .gitem .name { font-size: 18px; }
+    /* Quests */
+    .kid-tabs { gap: 8px; margin-bottom: 12px; }
+    .kid-tab { padding: 8px 14px 8px 8px; font-size: 16px; }
+    .kid-tab .av { width: 36px; height: 36px; font-size: 20px; }
+    .quest-wrap { display: flex; flex-direction: column; height: auto; gap: 14px; }
+    .quest-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; overflow: visible; }
+    .quest { min-height: 120px; padding: 12px; }
+    .quest .qi { font-size: 30px; }
+    .quest .qt { font-size: 16px; }
+    .bal .n { font-size: 40px; }
+    /* Parent */
+    .pinpad { margin: 10px auto; }
+    .pinpad .keys button { height: 64px; font-size: 24px; }
+    .ptabs { flex-wrap: wrap; gap: 6px; }
+    .ptab { padding: 10px 12px; font-size: 14px; flex: 1; text-align: center; }
+    .pbody { height: auto; overflow: visible; }
+    .qrow { flex-wrap: wrap; }
+    .qrow .acts { margin-left: 0; width: 100%; }
+    .qrow .acts .btn { flex: 1; }
+    .drow { grid-template-columns: 110px 1fr; }
+    /* To-do */
+    .todo-wrap { display: flex; flex-direction: column-reverse; gap: 12px; height: auto; }
+    .todo-side { flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .todo-side .card { padding: 10px 16px; flex: 1; }
+    .todo-side .count { font-size: 32px; }
+    .todo-side .count small { display: inline; margin-left: 6px; font-size: 14px; }
+    .todo-side .btn { width: auto; flex: 1; min-height: 54px; }
+    .todo-side .note { display: none; }
+    .todo-list { overflow: visible; }
+    .todo { min-height: 64px; padding: 10px 14px; gap: 12px; }
+    .todo .tt { font-size: 17px; }
+    .todo .box { width: 32px; height: 32px; font-size: 18px; }
+    .tfilters .tag { padding: 8px 12px; font-size: 14px; }
+    .tfilters .spacer { display: none; }
+    .tfilters .toggle { padding: 8px 12px; font-size: 13px; }
+    .sheet { padding: 0; align-items: flex-end; }
+    .sheet-panel { border-radius: 22px 22px 0 0; width: 100%; padding: 18px 16px 24px; }
+    /* Keyboard: on phones we use the phone's own keyboard */
+    .kb-panel { padding: 16px 14px 18px; border-radius: 20px 20px 0 0; }
+    .kb-field input { font-size: 20px; }
+    #kb.native .kb-rows .kb-row:not(.native-row) { display: none; }
+    .kb-row.native-row { display: none; }
+    #kb.native .kb-row.native-row { display: flex; }
+    .kb-row.native-row button { max-width: none; height: 54px; }
+    .modal-box { padding: 22px 18px; }
+    .modal-box .mt { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav">
+    <button class="navbtn" data-screen="home"><span class="ico">🏠</span><span class="lbl">Home</span></button>
+    <button class="navbtn" data-screen="calendar"><span class="ico">📅</span><span class="lbl">Calendar</span></button>
+    <button class="navbtn" data-screen="groceries"><span class="ico">🛒</span><span class="lbl">Groceries</span><span class="badge" id="badge-groc"></span></button>
+    <button class="navbtn" data-screen="quests"><span class="ico">⚔️</span><span class="lbl">Quests</span></button>
+    <button class="navbtn" data-screen="todo"><span class="ico">📝</span><span class="lbl">To-do</span><span class="badge" id="badge-todo"></span></button>
+    <div class="spacer"></div>
+    <button class="navbtn" data-screen="parent"><span class="ico">🔒</span><span class="lbl">Parents</span><span class="badge" id="badge-queue"></span></button>
+    <div class="pill" id="mode-pill">DEMO</div>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section class="screen" id="screen-home">
+      <div class="gradient-bg" id="gradient-bg"></div>
+      <div class="photo-layer" id="photo-a"></div>
+      <div class="photo-layer" id="photo-b"></div>
+      <div class="home-shade"></div>
+      <div class="home-grid">
+        <div class="clock">
+          <div class="time" id="clock-time">--:--</div>
+          <div class="date" id="clock-date"></div>
+          <div class="family" id="family-name"></div>
+        </div>
+        <div class="weather" id="weather"></div>
+        <div class="home-bottom">
+          <div class="smart" id="smart"></div>
+          <div class="leader" id="leader"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="screen" id="screen-calendar">
+      <h1>📅 This Week <small id="cal-sub"></small></h1>
+      <div class="cal-week" id="cal-week"></div>
+    </section>
+
+    <!-- GROCERIES -->
+    <section class="screen" id="screen-groceries">
+      <h1>🛒 Groceries <small id="groc-hint">tap anything you're out of</small></h1>
+      <div class="gtabs">
+        <button class="gtab" data-gtab="need">🛒 To get <span class="cnt" id="groc-need-cnt">0</span></button>
+        <button class="gtab" data-gtab="all">➕ Add items <span class="cnt" id="groc-all-cnt">0</span></button>
+      </div>
+      <div class="tfilters" id="gfilters"></div>
+      <div class="groc">
+        <div class="groc-main">
+          <div class="groc-list" id="groc-list"></div>
+          <div class="letter-rail" id="letter-rail"></div>
+        </div>
+        <div class="groc-side">
+          <div class="card"><div class="count" id="groc-count">0<small>to buy</small></div></div>
+          <button class="btn primary" id="groc-add">＋ Add item</button>
+          <button class="btn good" id="groc-clear">🧹 Clear list</button>
+          <button class="btn" id="groc-send">✉️ Send list</button>
+          <div class="note" style="margin-top:6px"><b>To get</b> is the list. <b>Add items</b> is everything you buy — tap to put something on the list, or add it if it's new. <b>Send list</b> takes it to the store.<br><br>Back home, <b>Clear list</b>. Tap anything first to keep it (out of stock, forgot it). Weekly staples come back on their own — hold an item to set that.</div>
+        </div>
+      </div>
+      <div class="letter-bubble" id="letter-bubble"></div>
+    </section>
+
+    <!-- QUESTS -->
+    <section class="screen" id="screen-quests">
+      <h1>⚔️ Quest Board <small>tap a quest when it's done</small></h1>
+      <div class="kid-tabs" id="kid-tabs"></div>
+      <div class="quest-wrap">
+        <div class="quest-grid" id="quest-grid"></div>
+        <div class="rewards" id="rewards"></div>
+      </div>
+    </section>
+
+    <!-- TO-DO -->
+    <section class="screen" id="screen-todo">
+      <div id="todo-lock" style="display:none"></div>
+      <div id="todo-panel">
+        <h1>📝 To-do <small>the grown-ups' list · tap the circle to finish · tap the task to open it</small></h1>
+        <div class="tfilters" id="tfilters"></div>
+        <div class="todo-wrap">
+          <div class="todo-list" id="todo-list"></div>
+          <div class="todo-side">
+            <div class="card"><div class="count" id="todo-count">0<small>open</small></div></div>
+            <button class="btn primary" id="todo-add">＋ New task</button>
+            <div class="note">Tags let you filter: <b>house</b>, <b>calls</b>, <b>kids</b>, whatever fits. Type <b>#tag</b> in the task text and it becomes a tag automatically.<br><br>This is the <b>Todos</b> tab in your Sheet.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PARENT -->
+    <section class="screen" id="screen-parent">
+      <div id="parent-lock"></div>
+      <div id="parent-panel" style="display:none; height:100%">
+        <h1>🔒 Parent Zone <small>approvals · dinner · quests · bonuses · display · settings</small>
+          <button class="btn sm ghost" style="margin-left:auto" id="parent-lockbtn">Lock</button></h1>
+        <div class="ptabs" id="ptabs">
+          <button class="ptab active" data-ptab="queue">Approvals</button>
+          <button class="ptab" data-ptab="dinner">Dinner plan</button>
+          <button class="ptab" data-ptab="quests">Quests & rewards</button>
+          <button class="ptab" data-ptab="bonus">Bonus points</button>
+          <button class="ptab" data-ptab="display">Display</button>
+          <button class="ptab" data-ptab="settings">Settings</button>
+        </div>
+        <div class="pbody" id="pbody"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- On-screen keyboard -->
+<div id="kb">
+  <div class="kb-panel">
+    <div class="kb-title" id="kb-title">Type</div>
+    <div class="kb-field"><input class="text" id="kb-input" autocomplete="off"><textarea class="text" id="kb-area" style="display:none"></textarea></div>
+    <div class="kb-rows" id="kb-rows"></div>
+  </div>
+</div>
+
+<!-- Grocery item editor -->
+<div id="groc-ed" class="sheet"><div class="sheet-panel">
+  <h2 id="ge-title">New item</h2>
+  <label>Item</label><button class="field" id="ge-name"></button>
+  <label>Note <span style="opacity:.6;text-transform:none;letter-spacing:0">(brand, size, "the big bag"…)</span></label><button class="field" id="ge-note"></button>
+  <label>Store</label><div class="seg" id="ge-store"></div>
+  <label>Priority</label><div class="seg" id="ge-prio"></div>
+  <label>Comes back automatically</label><div class="seg" id="ge-repeat"></div><div class="note" id="ge-repeat-note" style="font-size:14px"></div>
+  <div class="actions"><button class="btn bad" id="ge-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="ge-cancel">Cancel</button><button class="btn primary" id="ge-save">Save</button></div>
+</div></div>
+
+<!-- Task detail -->
+<div id="todo-dt" class="sheet"><div class="sheet-panel" style="width:min(820px,96vw)">
+  <div class="td-head"><button class="box" id="td-box"></button><button class="td-title" id="td-title"></button></div>
+  <div class="td-chips" id="td-chips"></div>
+  <label>Notes</label><button class="td-notes" id="td-notes"></button>
+  <label>Checklist <span id="td-steps-n" style="text-transform:none;letter-spacing:0"></span></label>
+  <div class="steps" id="td-steps"></div>
+  <div class="row"><button class="btn sm ghost" id="td-addstep">＋ Add a step</button></div>
+  <div class="td-foot"><span class="td-meta" id="td-meta"></span><span class="row"><button class="btn sm bad" id="td-del">Delete</button><button class="btn sm" id="td-edit">✎ Edit details</button><button class="btn sm primary" id="td-close">Close</button></span></div>
+</div></div>
+
+<!-- Task editor -->
+<div id="todo-ed" class="sheet" style="z-index:46"><div class="sheet-panel">
+  <h2 id="te-title">New task</h2>
+  <label>Task</label><button class="field" id="te-task"></button>
+  <label>Tags</label><div class="seg" id="te-tags"></div>
+  <label>Due</label><div class="seg" id="te-due"></div>
+  <label>Who</label><div class="seg" id="te-who"></div>
+  <label>Repeat</label><div class="seg" id="te-repeat"></div><div class="note" id="te-repeat-note" style="font-size:14px"></div>
+  <input type="date" class="hidden-date" id="te-date">
+  <div class="actions"><button class="btn ghost" id="te-cancel">Cancel</button><button class="btn primary" id="te-save">Save</button></div>
+</div></div>
+
+<!-- Confirm modal -->
+<div id="modal"><div class="modal-box">
+  <div class="mi" id="m-icon"></div>
+  <div class="mt" id="m-title"></div>
+  <div class="mb" id="m-body"></div>
+  <div class="ma"><button class="btn ghost" id="m-cancel">Cancel</button><button class="btn" id="m-alt" style="display:none"></button><button class="btn primary" id="m-ok">OK</button></div>
+</div></div>
+
+<div id="sleep"><div class="st" id="sleep-time"></div><div class="sd" id="sleep-date"></div></div>
+
+<!-- Quest / reward editor -->
+<div id="quest-ed" class="sheet"><div class="sheet-panel">
+  <h2 id="qe-title">New quest</h2>
+  <div style="display:flex;gap:10px;align-items:stretch;margin:6px 0 10px"><button class="field" id="qe-icon" style="flex:0 0 78px;width:78px;font-size:30px;justify-content:center;padding:8px"></button><button class="field" id="qe-name" style="flex:1;width:auto"></button></div>
+  <label id="qe-ptslabel">Points</label><div class="seg" id="qe-points"></div>
+  <div id="qe-questonly">
+    <label>Who</label><div class="seg" id="qe-who"></div>
+    <label>How often</label><div class="seg" id="qe-repeat"></div>
+    <div class="note" id="qe-hint"></div>
+  </div>
+  <label>Status</label><div class="seg" id="qe-active"></div>
+  <div class="actions"><button class="btn bad" id="qe-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="qe-cancel">Cancel</button><button class="btn primary" id="qe-save">Save</button></div>
+</div></div>
+
+<!-- Display period editor -->
+<div id="disp-ed" class="sheet"><div class="sheet-panel">
+  <h2 id="de-title">New period</h2>
+  <label>Starts at</label><button class="field" id="de-time"></button>
+  <label>Show</label><div class="seg" id="de-mode"></div>
+  <label>Days</label><div class="seg" id="de-days"></div>
+  <input type="time" class="hidden-date" id="de-timeinput">
+  <div class="actions"><button class="btn bad" id="de-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="de-cancel">Cancel</button><button class="btn primary" id="de-save">Save</button></div>
+</div></div>
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+/* =========================================================================
+   Family Quest Board — dashboard
+   Single-file app. Talks to Google Sheets through Apps Script, or runs in
+   demo mode with sample data when no URL is configured.
+   ========================================================================= */
+(function () {
+'use strict';
+
+const CFG = Object.assign({ APPS_SCRIPT_URL: '', REFRESH_SEC: 60, PHOTO_SOURCE: 'auto', HOME_SCREEN: 'home' }, window.FQB_CONFIG || {});
+// Phone / remote mode: narrow screen, or ?remote=1 in the URL. No idle timeout,
+// no night mode, and the phone's own keyboard instead of the on-screen one.
+const isPhone = () => App.forcePhone || new URLSearchParams(location.search).has('remote') || window.matchMedia('(max-width: 900px)').matches;
+
+// Safety net: a browser in "Desktop site" mode ignores the viewport tag and
+// renders the 1920px wall layout shrunk down. Detect a small touch screen with
+// a wide layout viewport and force the phone layout anyway.
+function forcePhoneLayoutIfNeeded() {
+  const small = screen.width && screen.width <= 900, wide = window.innerWidth > 900, touch = window.matchMedia('(pointer: coarse)').matches;
+  if (!(small && wide && touch)) return;
+  App.forcePhone = true;
+  try {
+    const scale = window.innerWidth / screen.width;
+    document.documentElement.style.zoom = String(scale);
+    // viewport units get scaled too, so pin the app height in zoomed pixels
+    const fit = () => { $('#app').style.height = Math.floor(window.innerHeight / scale) + 'px'; };
+    fit(); window.addEventListener('resize', fit);
+    for (const sheet of document.styleSheets) {
+      for (const r of Array.from(sheet.cssRules)) {
+        if (r instanceof CSSMediaRule && /900px/.test(r.conditionText || r.media.mediaText)) {
+          for (const inner of Array.from(r.cssRules)) sheet.insertRule(inner.cssText, sheet.cssRules.length);
+        }
+      }
+    }
+  } catch (e) { console.warn('forcePhoneLayout', e); }
+}
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = (n) => String(n).padStart(2, '0');
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const firstGrapheme = (str) => { try { return [...new Intl.Segmenter().segment(str)][0].segment; } catch (_) { return Array.from(str)[0] || ''; } };
+const isTrue = (v) => String(v).toUpperCase() === 'TRUE' || v === true || v === 1;
+const dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseHM = (s, fallback) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '').trim()); return m ? (+m[1]) * 60 + (+m[2]) : fallback; };
+const fmtTime = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const toDate = (v) => (v instanceof Date ? v : new Date(v));
+const uid = () => Math.random().toString(36).slice(2, 12);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+function weekKey(d, monday) {
+  const x = new Date(d); x.setHours(0, 0, 0, 0);
+  const day = x.getDay(); x.setDate(x.getDate() - (monday ? (day + 6) % 7 : day));
+  return dayKey(x);
+}
+
+/* ------------------------------------------------------------------------
+   Backends
+   ------------------------------------------------------------------------ */
+function demoSeed() {
+  const now = new Date();
+  const at = (dayOffset, h, m, durH) => {
+    const s = new Date(now); s.setDate(s.getDate() + dayOffset); s.setHours(h, m, 0, 0);
+    const e = new Date(s.getTime() + (durH || 1) * 3600000);
+    return { start: s.toISOString(), end: e.toISOString() };
+  };
+  const allDay = (dayOffset) => { const s = new Date(now); s.setDate(s.getDate() + dayOffset); s.setHours(0, 0, 0, 0); return { start: s.toISOString(), end: new Date(s.getTime() + 86400000).toISOString(), allDay: true }; };
+  const dinnerMeals = ['Tacos', 'Spaghetti', 'Pizza night', 'Chicken & rice', '', 'Burgers', 'Leftovers'];
+  const dinner = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(now); d.setDate(d.getDate() + i); dinner.push({ date: dayKey(d), meal: dinnerMeals[i], note: '' }); }
+  return {
+    config: {
+      family_name: 'Our Family', pin: '1234', lat: '34.05', lon: '-118.24', weather_units: 'F', calendars: '', calendar_days: '14',
+      school_days: 'Mon,Tue,Wed,Thu,Fri', school_departure: '07:45', school_countdown_from: '06:00',
+      photo_interval_sec: '20', idle_timeout_sec: '90', night_start: '21:30', night_end: '06:00', week_starts_monday: 'TRUE', shopping_email: '',
+      touch_wake_min: '2', clock_dim: '35',
+    },
+    members: [
+      { name: 'Mom', role: 'parent', color: '#f472b6', emoji: '👩', active: 'TRUE' },
+      { name: 'Dad', role: 'parent', color: '#60a5fa', emoji: '👨', active: 'TRUE' },
+      { name: 'Ava', role: 'kid', color: '#a78bfa', emoji: '🦄', active: 'TRUE' },
+      { name: 'Max', role: 'kid', color: '#34d399', emoji: '🦖', active: 'TRUE' },
+    ],
+    groceries: [
+      // [item, note, status, store, priority]
+      ['Milk', '', 'needed', '', ''], ['Eggs', '', '', '', ''], ['Butter', '', '', '', ''], ['Cheese', 'shredded', '', '', ''], ['Yogurt', '', '', '', ''],
+      ['Bread', '', 'needed', '', ''], ['Tortillas', '', '', '', ''], ['Bagels', '', '', '', 'nice'], ['Cereal', '', '', '', ''], ['Oatmeal', '', '', '', ''],
+      ['Bananas', '', 'cart', '', ''], ['Apples', '', '', '', ''], ['Berries', '', 'needed', '', 'nice'], ['Grapes', '', '', '', 'nice'], ['Oranges', '', '', '', ''],
+      ['Lettuce', '', '', '', ''], ['Tomatoes', '', '', '', ''], ['Onions', '', '', '', ''], ['Garlic', '', '', '', ''], ['Potatoes', '', '', '', ''],
+      ['Carrots', '', '', '', ''], ['Broccoli', '', '', '', ''], ['Avocados', '', '', '', 'nice'], ['Lemons', '', '', '', ''],
+      ['Chicken', '', 'needed', 'Costco', ''], ['Ground beef', '', '', 'Costco', ''], ['Bacon', '', '', '', ''], ['Deli turkey', '', '', '', ''], ['Salmon', '', '', 'Costco', 'nice'],
+      ['Rice', '', '', 'Costco', ''], ['Pasta', '', '', '', ''], ['Pasta sauce', '', '', '', ''], ['Beans', 'black', '', '', ''], ['Peanut butter', '', '', '', ''],
+      ['Jelly', '', '', '', ''], ['Ketchup', '', '', '', ''], ['Olive oil', '', '', 'Costco', ''], ['Salt', '', '', '', ''], ['Sugar', '', '', '', ''], ['Flour', '', '', '', ''],
+      ['Chips', '', '', '', 'nice'], ['Crackers', '', '', '', 'nice'], ['Granola bars', '', '', 'Costco', ''], ['Juice boxes', '', '', 'Costco', ''], ['Coffee', '', 'needed', 'Costco', ''],
+      ['Frozen pizza', '', '', '', 'nice'], ['Ice cream', '', 'needed', '', 'nice'], ['Frozen veggies', '', '', '', ''],
+      ['Paper towels', '', '', 'Costco', ''], ['Toilet paper', '', 'needed', 'Costco', ''], ['Dish soap', '', '', 'Target', ''], ['Laundry detergent', '', '', 'Costco', ''],
+      ['Trash bags', '', '', 'Costco', ''], ['Toothpaste', '', 'needed', 'Target', ''], ['Shampoo', '', '', 'Target', ''], ['Cat food', 'the big bag', '', 'Pet store', ''], ['Cat litter', '', '', 'Pet store', ''],
+    ].map((r, i) => ({ id: 'g' + (i + 1), item: r[0], note: r[1], status: r[2], store: r[3], priority: r[4], repeat: ['Milk', 'Eggs', 'Bread', 'Bananas'].includes(r[0]) ? 'weekly' : '', next_add: '', added_by: 'setup', updated_at: '' })),
+    quests: [
+      { id: 'q1', title: 'Make your bed', points: '5', assigned_to: 'Anyone', repeat: 'daily', icon: '🛏️', active: 'TRUE' },
+      { id: 'q2', title: 'Brush teeth (morning)', points: '2', assigned_to: 'Anyone', repeat: 'daily', icon: '🪥', active: 'TRUE' },
+      { id: 'q3', title: 'Feed the cats', points: '5', assigned_to: 'Ava', repeat: 'daily', icon: '🐈', active: 'TRUE' },
+      { id: 'q4', title: 'Take out recycling', points: '10', assigned_to: 'Max', repeat: 'weekly', icon: '♻️', active: 'TRUE' },
+      { id: 'q5', title: 'Read for 20 minutes', points: '10', assigned_to: 'Anyone', repeat: 'daily', icon: '📚', active: 'TRUE' },
+      { id: 'q6', title: 'Clean your room', points: '25', assigned_to: 'Anyone', repeat: 'weekly', icon: '🧹', active: 'TRUE' },
+      { id: 'q7', title: 'Help with dinner', points: '15', assigned_to: 'Anyone', repeat: 'once', icon: '🍳', active: 'TRUE' },
+    ],
+    rewards: [
+      { id: 'r1', title: '30 min screen time', cost: '30', icon: '🎮', active: 'TRUE' },
+      { id: 'r2', title: 'Pick the movie', cost: '50', icon: '🍿', active: 'TRUE' },
+      { id: 'r3', title: 'Ice cream trip', cost: '100', icon: '🍦', active: 'TRUE' },
+      { id: 'r4', title: 'Stay up 30 min late', cost: '75', icon: '🌙', active: 'TRUE' },
+    ],
+    queue: [
+      { id: 'k1', type: 'quest', ref_id: 'q1', title: 'Make your bed', member: 'Ava', points: '5', submitted_at: new Date(now - 86400000 * 2).toISOString(), status: 'approved', reviewed_at: '' },
+      { id: 'k2', type: 'quest', ref_id: 'q5', title: 'Read for 20 minutes', member: 'Ava', points: '10', submitted_at: new Date(now - 86400000).toISOString(), status: 'approved', reviewed_at: '' },
+      { id: 'k3', type: 'quest', ref_id: 'q4', title: 'Take out recycling', member: 'Max', points: '10', submitted_at: new Date(now - 86400000 * 3).toISOString(), status: 'approved', reviewed_at: '' },
+      { id: 'k4', type: 'quest', ref_id: 'q2', title: 'Brush teeth (morning)', member: 'Max', points: '2', submitted_at: new Date(now - 3600000).toISOString(), status: 'pending', reviewed_at: '' },
+    ],
+    dinner,
+    display: [
+      { id: 'p1', start: '06:00', mode: 'photos', days: 'all', note: '' },
+      { id: 'p2', start: '21:30', mode: 'clock', days: 'all', note: '' },
+      { id: 'p3', start: '23:00', mode: 'off', days: 'all', note: '' },
+    ],
+    todos: [
+      { id: 't1', task: 'Call the dentist to reschedule', tags: 'calls, kids', assigned_to: 'Mom', due: dayKey(now), done: 'FALSE', added_by: 'Mom', created_at: new Date(now - 86400000 * 2).toISOString(), done_at: '' },
+      { id: 't2', task: 'Fix the gate latch', tags: 'house', assigned_to: 'Dad', due: dayKey(new Date(now - 86400000)), done: 'FALSE', notes: 'Latch bolt is bent — probably needs the whole assembly. Home Depot had the Schlage one.', subtasks: '[{"t":"Measure the old latch","d":true},{"t":"Buy replacement","d":false},{"t":"Install","d":false}]', added_by: 'Dad', created_at: new Date(now - 86400000 * 5).toISOString(), done_at: '' },
+      { id: 't3', task: 'Order new cat litter', tags: 'shopping, cats', assigned_to: '', due: '', done: 'FALSE', added_by: 'Dad', created_at: new Date(now - 86400000).toISOString(), done_at: '' },
+      { id: 't4', task: 'Plan the birthday party', tags: 'kids, planning', assigned_to: '', due: dayKey(new Date(now.getTime() + 86400000 * 9)), done: 'FALSE', added_by: 'Mom', created_at: new Date(now - 86400000 * 3).toISOString(), done_at: '' },
+      { id: 't5', task: 'Renew car registration', tags: 'house, calls', assigned_to: 'Dad', due: '', done: 'TRUE', added_by: 'Dad', created_at: new Date(now - 86400000 * 8).toISOString(), done_at: new Date(now - 86400000).toISOString() },
+      { id: 't6', task: 'Take the trash bins out', tags: 'house', assigned_to: 'Dad', due: dayKey(now), repeat: 'weekly', done: 'FALSE', added_by: 'Dad', created_at: new Date(now - 86400000 * 20).toISOString(), done_at: '' },
+      { id: 't7', task: 'Water the plants', tags: 'house', assigned_to: '', due: dayKey(new Date(now.getTime() + 86400000 * 2)), repeat: 'every:3', done: 'FALSE', added_by: 'Mom', created_at: new Date(now - 86400000 * 10).toISOString(), done_at: '' },
+    ],
+    events: [
+      Object.assign({ title: 'Soccer practice', calendar: 'Kids', color: '#34d399' }, at(0, 16, 30, 1.5)),
+      Object.assign({ title: 'Dentist — Ava', calendar: 'Family', color: '#f472b6' }, at(1, 10, 0, 1)),
+      Object.assign({ title: 'Piano lesson', calendar: 'Kids', color: '#34d399' }, at(2, 15, 0, 1)),
+      Object.assign({ title: 'Date night 🍷', calendar: 'Family', color: '#f472b6' }, at(4, 18, 30, 3)),
+      Object.assign({ title: 'Grandma visiting', calendar: 'Family', color: '#f472b6' }, allDay(5)),
+      Object.assign({ title: 'Work: sprint review', calendar: 'Dad', color: '#60a5fa' }, at(3, 13, 0, 1)),
+      Object.assign({ title: 'Library storytime', calendar: 'Kids', color: '#34d399' }, at(6, 10, 30, 1)),
+    ],
+  };
+}
+
+class DemoBackend {
+  constructor() {
+    this.mode = 'demo';
+    try { this.data = JSON.parse(localStorage.getItem('fqb_demo') || 'null'); } catch (e) { this.data = null; }
+    if (!this.data || !this.data.quests || !this.data.groceries || !('repeat' in (this.data.groceries[0] || {})) || !this.data.todos || !this.data.todos.some(t => t.repeat) || !this.data.display || !this.data.todos.some(t => t.subtasks)) this.data = demoSeed();
+    // Events/dinner are relative to "now" so regenerate them each load
+    const fresh = demoSeed(); this.data.events = fresh.events; if (!this.data.dinner || !this.data.dinner.length) this.data.dinner = fresh.dinner;
+  }
+  save() { try { localStorage.setItem('fqb_demo', JSON.stringify(this.data)); } catch (e) {} }
+  reset() { this.data = demoSeed(); this.save(); }
+  async getState() {
+    await sleep(120);
+    const today = dayKey(new Date());
+    (this.data.groceries || []).forEach(g => { if (String(g.repeat || '').trim() && !g.status && (!g.next_add || g.next_add <= today)) g.status = 'needed'; });
+    return JSON.parse(JSON.stringify(this.data));
+  }
+  async post(action, b) {
+    await sleep(120);
+    const d = this.data;
+    const find = (arr, id) => arr.find(r => r.id === id);
+    switch (action) {
+      case 'addGrocery': { const ex = d.groceries.find(g => g.item.trim().toLowerCase() === b.item.trim().toLowerCase()); if (ex) { ex.status = 'needed'; if (b.store !== undefined) ex.store = b.store; if (b.priority !== undefined) ex.priority = b.priority; if (b.repeat !== undefined) ex.repeat = b.repeat; if (b.note) ex.note = b.note; } else d.groceries.push({ id: uid(), item: b.item.trim(), note: b.note || '', status: 'needed', store: b.store || '', priority: b.priority || '', repeat: b.repeat || '', next_add: '', added_by: b.by || 'Wall', updated_at: new Date().toISOString() }); break; }
+      case 'updateGrocery': { const g = find(d.groceries, b.id); if (g) { ['item', 'note', 'store', 'priority', 'repeat'].forEach(k => { if (b[k] !== undefined) g[k] = b[k]; }); if (!g.repeat) g.next_add = ''; } break; }
+      case 'setGroceryStatus': { const g = find(d.groceries, b.id); if (g) g.status = b.status; break; }
+      case 'deleteGrocery': d.groceries = d.groceries.filter(g => g.id !== b.id); break;
+      case 'doneShopping': d.groceries.forEach(g => { if (g.status === 'cart') g.status = ''; }); break;
+      case 'clearList': { const keep = new Set((b.keep || []).map(String)); const today = dayKey(new Date()); d.groceries.forEach(g => { const st = String(g.status || '').toLowerCase(); if ((st === 'needed' || st === 'cart') && !keep.has(String(g.id))) { g.status = ''; if (String(g.repeat || '').trim()) g.next_add = stepDue(today, g.repeat); } }); break; }
+      case 'emailList': return { ok: true, to: 'demo', count: d.groceries.filter(g => g.status === 'needed').length };
+      case 'addTodo': d.todos = d.todos || []; d.todos.push({ id: uid(), task: b.task.trim(), tags: b.tags || '', assigned_to: b.assigned_to || '', due: b.due || '', repeat: b.repeat || '', done: 'FALSE', notes: b.notes || '', subtasks: b.subtasks || '', added_by: b.by || 'Wall', created_at: new Date().toISOString(), done_at: '' }); break;
+      case 'updateTodo': { const t = find(d.todos, b.id); if (t) ['task', 'tags', 'assigned_to', 'due', 'repeat', 'notes', 'subtasks'].forEach(k => { if (b[k] !== undefined) t[k] = b[k]; }); break; }
+      case 'setTodoDone': { const t = find(d.todos, b.id); if (t) { if (b.done && t.repeat) { t.due = nextDue(t.due, t.repeat); t.done = 'FALSE'; t.done_at = new Date().toISOString(); } else { t.done = b.done ? 'TRUE' : 'FALSE'; t.done_at = b.done ? new Date().toISOString() : ''; } } break; }
+      case 'deleteTodo': d.todos = d.todos.filter(t => t.id !== b.id); break;
+      case 'saveDisplay': { d.display = d.display || []; const row = find(d.display, b.id); if (row) { row.start = b.start; row.mode = b.mode; row.days = b.days; } else d.display.push({ id: uid(), start: b.start, mode: b.mode, days: b.days, note: '' }); break; }
+      case 'deleteDisplay': d.display = (d.display || []).filter(x => x.id !== b.id); break;
+      case 'setConfig': d.config[b.key] = String(b.value); break;
+      case 'submitQuest': { const q = find(d.quests, b.questId); d.queue.push({ id: uid(), type: 'quest', ref_id: q.id, title: q.title, member: b.member, points: q.points, submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
+      case 'redeemReward': { const r = find(d.rewards, b.rewardId); d.queue.push({ id: uid(), type: 'reward', ref_id: r.id, title: r.title, member: b.member, points: String(-Math.abs(+r.cost)), submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
+      case 'reviewQueue': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const k = find(d.queue, b.id); if (k) { k.status = b.status; k.reviewed_at = new Date().toISOString(); } break; }
+      case 'adjustPoints': d.queue.push({ id: uid(), type: 'adjust', ref_id: '', title: b.reason || 'Bonus', member: b.member, points: String(+b.points), submitted_at: new Date().toISOString(), status: 'approved', reviewed_at: new Date().toISOString() }); break;
+      case 'saveQuest': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const row = { title: b.title, points: String(parseInt(b.points, 10) || 0), assigned_to: b.assigned_to || 'Anyone', repeat: b.repeat || 'daily', icon: b.icon || '⭐', active: b.active === false || b.active === 'FALSE' ? 'FALSE' : 'TRUE', notes: b.notes || '' }; const q = b.id && find(d.quests, b.id); if (q) Object.assign(q, row); else d.quests.push(Object.assign({ id: uid() }, row)); break; }
+      case 'deleteQuest': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); d.quests = d.quests.filter(x => x.id !== b.id); break; }
+      case 'saveReward': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const row = { title: b.title, cost: String(parseInt(b.cost, 10) || 0), icon: b.icon || '🎁', active: b.active === false || b.active === 'FALSE' ? 'FALSE' : 'TRUE' }; const r = b.id && find(d.rewards, b.id); if (r) Object.assign(r, row); else d.rewards.push(Object.assign({ id: uid() }, row)); break; }
+      case 'deleteReward': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); d.rewards = d.rewards.filter(x => x.id !== b.id); break; }
+      case 'setDinner': { const row = d.dinner.find(x => x.date === b.date); if (row) row.meal = b.meal; else d.dinner.push({ date: b.date, meal: b.meal, note: '' }); break; }
+      default: throw new Error('Unknown action ' + action);
+    }
+    this.save();
+    return { ok: true };
+  }
+}
+
+class SheetsBackend {
+  constructor(url) { this.mode = 'live'; this.url = url; }
+  async getState() {
+    const r = await fetch(this.url + '?action=state&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    return j;
+  }
+  async post(action, body) {
+    // text/plain body avoids a CORS preflight, which Apps Script cannot answer
+    const r = await fetch(this.url, { method: 'POST', redirect: 'follow', body: JSON.stringify(Object.assign({ action }, body)) });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    return j;
+  }
+  async listPhotos() {
+    const r = await fetch(this.url + '?action=photos', { redirect: 'follow' });
+    const j = await r.json(); if (j.error) throw new Error(j.error); return j;
+  }
+  async getPhoto(id) {
+    const r = await fetch(this.url + '?action=photo&id=' + encodeURIComponent(id), { redirect: 'follow' });
+    const j = await r.json(); if (j.error) throw new Error(j.error); return `data:${j.mime};base64,${j.data}`;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   App state
+   ------------------------------------------------------------------------ */
+const App = {
+  backend: null, state: null, screen: null, kid: null, ptab: 'queue', unlocked: false, forcePhone: false, todoTag: null, todoShowDone: false, gStore: null, gEssOnly: false, gKeep: [], server: null, todoSort: 'due',
+  weather: null, lastOk: null, error: null, refreshTimer: null,
+};
+
+function scriptUrl() {
+  let u = '';
+  try { u = localStorage.getItem('fqb_url') || ''; } catch (e) {}
+  return (u || CFG.APPS_SCRIPT_URL || '').trim();
+}
+
+function cfg(key, fallback) {
+  const c = (App.state && App.state.config) || {};
+  const v = c[key];
+  return v === undefined || v === '' ? fallback : v;
+}
+
+function members(role) {
+  const list = ((App.state && App.state.members) || []).filter(m => m.name && (m.active === '' || m.active === undefined || isTrue(m.active)));
+  return role ? list.filter(m => (m.role || '').toLowerCase() === role) : list;
+}
+
+function balance(name) {
+  let approved = 0, pending = 0;
+  for (const k of (App.state.queue || [])) {
+    if (k.member !== name) continue;
+    const p = parseInt(k.points || '0', 10) || 0;
+    if (k.status === 'approved') approved += p; else if (k.status === 'pending' && p > 0) pending += p;
+  }
+  return { approved, pending };
+}
+
+function questStatus(quest, memberName) {
+  const monday = isTrue(cfg('week_starts_monday', 'TRUE'));
+  const now = new Date();
+  const period = (quest.repeat || 'daily').toLowerCase();
+  const entries = (App.state.queue || []).filter(k => k.type === 'quest' && k.ref_id === quest.id && k.member === memberName && k.status !== 'rejected');
+  for (const k of entries) {
+    const t = toDate(k.submitted_at);
+    let same = true;
+    if (period === 'daily' || period === 'weekdays') same = dayKey(t) === dayKey(now);
+    else if (period === 'weekly') same = weekKey(t, monday) === weekKey(now, monday);
+    else if (period === 'biweekly') same = (now - t) < 14 * 86400000;
+    else if (period === 'monthly') same = t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth();
+    if (same) return k.status === 'pending' ? 'pending' : 'done';
+  }
+  return 'available';
+}
+
+/* ------------------------------------------------------------------------
+   Loading
+   ------------------------------------------------------------------------ */
+async function refresh(showErrors) {
+  try {
+    const s = await App.backend.getState();
+    App.state = s; App.lastOk = new Date(); App.error = null;
+    render();
+  } catch (e) {
+    App.error = e.message || String(e);
+    if (!App.state) render(); else updatePill();
+    if (showErrors) toast('Could not reach Google Sheet: ' + App.error, true);
+    console.warn('refresh failed', e);
+  }
+}
+
+function scheduleRefresh() {
+  clearInterval(App.refreshTimer);
+  App.refreshTimer = setInterval(() => refresh(false), Math.max(15, +CFG.REFRESH_SEC || 60) * 1000);
+}
+
+async function act(action, body, opts) {
+  opts = opts || {};
+  try {
+    await App.backend.post(action, body);
+    if (opts.toast) toast(opts.toast);
+    await refresh(true);
+    return true;
+  } catch (e) {
+    toast((opts.fail || 'That didn’t save') + ': ' + (e.message || e), true);
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   Rendering
+   ------------------------------------------------------------------------ */
+function render() {
+  updatePill();
+  if (!App.state) return;
+  $('#family-name').textContent = cfg('family_name', '');
+  renderHome(); renderCalendar(); renderGroceries(); renderQuests(); renderTodos(); renderParent();
+  const dueNow = (App.state.todos || []).filter(t => !isTrue(t.done) && t.due && t.due <= dayKey(new Date())).length;
+  const bt = $('#badge-todo'); bt.textContent = dueNow; bt.classList.toggle('on', dueNow > 0);
+  const pending = (App.state.queue || []).filter(k => k.status === 'pending').length;
+  const bq = $('#badge-queue'); bq.textContent = pending; bq.classList.toggle('on', pending > 0);
+  const toBuy = (App.state.groceries || []).filter(g => gStatus(g) === 'needed').length;
+  const bg = $('#badge-groc'); bg.textContent = toBuy; bg.classList.toggle('on', toBuy > 0);
+}
+
+function updatePill() {
+  const p = $('#mode-pill');
+  if (App.backend.mode === 'demo') { p.textContent = 'DEMO'; p.className = 'pill'; }
+  else if (App.error) { p.textContent = 'OFFLINE'; p.className = 'pill err'; }
+  else { p.textContent = 'LIVE'; p.className = 'pill live'; }
+}
+
+function showScreen(name) {
+  App.screen = name;
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
+  $$('#nav .navbtn').forEach(b => b.classList.toggle('active', b.dataset.screen === name));
+  if (name === 'parent' && !App.unlocked) renderParent();
+  if (name === 'todo' && App.state) renderTodos();
+  if (name === 'home') tickClock();
+}
+
+/* ---------- Clock ---------- */
+function tickClock() {
+  const now = new Date();
+  let h = now.getHours(); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+  $('#clock-time').innerHTML = `${h}:${pad(now.getMinutes())}<small>${ampm}</small>`;
+  $('#clock-date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  $('#sleep-time').textContent = `${h}:${pad(now.getMinutes())}`;
+  $('#sleep-date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+/* ---------- Home ---------- */
+function eventsOn(date) {
+  const k = dayKey(date);
+  return (App.state.events || []).filter(ev => {
+    const s = toDate(ev.start), e = toDate(ev.end);
+    if (ev.allDay) { const endK = dayKey(new Date(e.getTime() - 1)); return dayKey(s) <= k && k <= endK; }
+    return dayKey(s) === k;
+  }).sort((a, b) => (b.allDay ? 1 : 0) - (a.allDay ? 1 : 0) || (a.start < b.start ? -1 : 1));
+}
+
+function dinnerFor(date) {
+  const k = dayKey(date);
+  const row = (App.state.dinner || []).find(d => String(d.date).slice(0, 10) === k);
+  return row && row.meal ? row : null;
+}
+
+function evRow(ev) {
+  const t = ev.allDay ? 'all day' : fmtTime(toDate(ev.start));
+  return `<div class="row"><span class="dot" style="background:${esc(ev.color || '#60a5fa')}"></span><span class="t">${esc(t)}</span><span>${esc(ev.title)}</span></div>`;
+}
+function taskRow(t, refDay) {
+  const late = t.due && t.due < refDay;
+  return `<div class="row task"><span class="dot" style="background:${late ? 'var(--bad)' : 'var(--info)'}"></span><span class="t">${late ? '⚠️ late' : '📝 task'}</span><span>${esc(t.task)}${t.assigned_to ? ` <span class="muted">· ${esc(t.assigned_to)}</span>` : ''}${t.repeat ? ' <span class="muted">↻</span>' : ''}</span></div>`;
+}
+// Events + open tasks for one day, events first, capped at max rows
+function agendaRows(date, evs, max) {
+  const key = dayKey(date);
+  const tasks = todosOn(date).sort((a, b) => (a.due || '') < (b.due || '') ? -1 : 1);
+  const rows = evs.map(evRow).concat(tasks.map(t => taskRow(t, key)));
+  const extra = rows.length - max;
+  return { html: rows.slice(0, max).join('') + (extra > 0 ? `<div class="row muted"><span class="dot" style="background:transparent"></span><span class="t"></span><span>+${extra} more</span></div>` : ''), count: evs.length + tasks.length };
+}
+
+function renderHome() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const todayName = DAYS[now.getDay()];
+  const schoolDays = String(cfg('school_days', 'Mon,Tue,Wed,Thu,Fri')).split(',').map(s => s.trim().slice(0, 3).toLowerCase());
+  const isSchoolDay = schoolDays.includes(todayName.toLowerCase());
+  const dep = parseHM(cfg('school_departure', '07:45'), 465);
+  const from = parseHM(cfg('school_countdown_from', '06:00'), 360);
+  const today = eventsOn(now);
+  const upcoming = today.filter(ev => ev.allDay || toDate(ev.end) > now);
+  const dinner = dinnerFor(now);
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tmrEvents = eventsOn(tomorrow);
+  let html = '';
+
+  if (isSchoolDay && mins >= from && mins < dep + 15) {
+    const left = dep - mins;
+    html += `<div class="kicker">🎒 School morning</div>`;
+    if (left > 0) html += `<div class="big huge">${left} min</div><div class="sub">until it's time to leave (${esc(cfg('school_departure', '07:45'))})</div>`;
+    else html += `<div class="big huge">Time to go! 🚗</div><div class="sub">Shoes, backpacks, water bottles</div>`;
+    const ag = agendaRows(now, upcoming, 3);
+    if (ag.count) html += `<div class="rows">${ag.html}</div>`;
+  } else if (now.getHours() < 15) {
+    html += `<div class="kicker">📋 Today</div>`;
+    const ag = agendaRows(now, upcoming, 5);
+    if (ag.count) html += `<div class="big">${ag.count} thing${ag.count === 1 ? '' : 's'} on the agenda</div><div class="rows">${ag.html}</div>`;
+    else html += `<div class="big">Nothing scheduled 🎉</div><div class="sub">Enjoy the free day</div>`;
+    const tm = agendaRows(tomorrow, tmrEvents, 3);
+    if (tm.count) html += `<div class="subk">Tomorrow · ${esc(DAYS[tomorrow.getDay()])}</div><div class="rows">${tm.html}</div>`;
+    const nb = (App.state.groceries || []).filter(g => gStatus(g) === 'needed').length;
+    const nt = (App.state.todos || []).filter(t => !isTrue(t.done) && t.due && t.due <= dayKey(now)).length;
+    html += `<div class="chips">${dinner ? `<span class="chip">🍽️ Dinner: ${esc(dinner.meal)}</span>` : '<span class="chip muted">🍽️ No dinner planned yet</span>'}${nb ? `<span class="chip">🛒 ${nb} to buy</span>` : ''}${nt ? `<span class="chip">📝 ${nt} to-do${nt === 1 ? '' : 's'} due</span>` : ''}</div>`;
+  } else {
+    html += `<div class="kicker">🌙 Tonight</div>`;
+    html += dinner ? `<div class="big">🍽️ ${esc(dinner.meal)}</div>${dinner.note ? `<div class="sub">${esc(dinner.note)}</div>` : ''}` : `<div class="big">No dinner plan yet</div><div class="sub">Parents → Dinner plan to set one</div>`;
+    const left = agendaRows(now, upcoming, 3);
+    if (left.count) html += `<div class="subk">Still today</div><div class="rows">${left.html}</div>`;
+    const tm = agendaRows(tomorrow, tmrEvents, 4);
+    if (tm.count) html += `<div class="subk">Tomorrow · ${esc(DAYS[tomorrow.getDay()])}</div><div class="rows">${tm.html}</div>`;
+  }
+  $('#smart').innerHTML = html;
+
+  const kids = members('kid');
+  let lh = `<div class="kicker">🏆 Quest points</div>`;
+  if (!kids.length) lh += `<div class="muted">Add kids on the Members tab</div>`;
+  for (const k of kids.map(k => ({ k, b: balance(k.name) })).sort((a, b) => b.b.approved - a.b.approved)) {
+    lh += `<div class="lrow"><span class="av" style="background:${esc(k.k.color || '#334')}">${esc(k.k.emoji || '⭐')}</span><span>${esc(k.k.name)}</span><span class="pts">${k.b.approved}${k.b.pending ? ` <span class="pend">+${k.b.pending} pending</span>` : ''}</span></div>`;
+  }
+  $('#leader').innerHTML = lh;
+  renderWeather();
+}
+
+/* ---------- Weather (Open-Meteo, no API key) ---------- */
+const WMO = [[0, '☀️', 'Clear'], [1, '🌤️', 'Mostly clear'], [2, '⛅', 'Partly cloudy'], [3, '☁️', 'Overcast'], [45, '🌫️', 'Fog'], [48, '🌫️', 'Fog'],
+  [51, '🌦️', 'Drizzle'], [53, '🌦️', 'Drizzle'], [55, '🌦️', 'Drizzle'], [56, '🌧️', 'Freezing drizzle'], [57, '🌧️', 'Freezing drizzle'],
+  [61, '🌧️', 'Light rain'], [63, '🌧️', 'Rain'], [65, '🌧️', 'Heavy rain'], [66, '🌧️', 'Freezing rain'], [67, '🌧️', 'Freezing rain'],
+  [71, '🌨️', 'Light snow'], [73, '🌨️', 'Snow'], [75, '❄️', 'Heavy snow'], [77, '🌨️', 'Snow grains'], [80, '🌦️', 'Showers'], [81, '🌧️', 'Showers'], [82, '⛈️', 'Heavy showers'],
+  [85, '🌨️', 'Snow showers'], [86, '🌨️', 'Snow showers'], [95, '⛈️', 'Thunderstorm'], [96, '⛈️', 'Thunderstorm'], [99, '⛈️', 'Thunderstorm']];
+const wmo = (c) => (WMO.find(w => w[0] === c) || [0, '🌡️', '']);
+
+async function loadWeather() {
+  const lat = cfg('lat', '34.05'), lon = cfg('lon', '-118.24');
+  const unit = String(cfg('weather_units', 'F')).toUpperCase() === 'C' ? 'celsius' : 'fahrenheit';
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=${unit}&timezone=auto&forecast_days=4`;
+  try {
+    const r = await fetch(url); const j = await r.json();
+    App.weather = { temp: Math.round(j.current.temperature_2m), feels: Math.round(j.current.apparent_temperature), code: j.current.weather_code,
+      days: j.daily.time.map((t, i) => ({ t, hi: Math.round(j.daily.temperature_2m_max[i]), lo: Math.round(j.daily.temperature_2m_min[i]), code: j.daily.weather_code[i] })) };
+  } catch (e) { console.warn('weather failed', e); }
+  renderWeather();
+}
+
+function renderWeather() {
+  const w = App.weather; const el = $('#weather');
+  if (!w) { el.innerHTML = `<div class="desc muted">weather loading…</div>`; return; }
+  const [, icon, desc] = wmo(w.code);
+  const d0 = w.days[0] || {};
+  el.innerHTML = `<div class="now"><span>${icon}</span><span>${w.temp}°</span></div><div class="desc">${desc} · feels ${w.feels}°</div>
+    <div class="hilo">H ${d0.hi}° · L ${d0.lo}°</div>
+    <div class="days">${w.days.slice(1).map(d => { const dt = new Date(d.t + 'T12:00:00'); return `<div><div>${DAYS[dt.getDay()]}</div><div class="i">${wmo(d.code)[1]}</div><div>${d.hi}°/${d.lo}°</div></div>`; }).join('')}</div>`;
+}
+
+/* ---------- Calendar ---------- */
+function renderCalendar() {
+  const now = new Date(); const wrap = $('#cal-week'); let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now); d.setDate(d.getDate() + i); d.setHours(0, 0, 0, 0);
+    const evs = eventsOn(d); const dinner = dinnerFor(d);
+    html += `<div class="cal-day ${i === 0 ? 'today' : ''}"><div class="dh"><div class="dn">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAYS[d.getDay()]}</div><div class="dd">${d.getDate()}</div></div><div class="evs">`;
+    if (!evs.length && !todosOn(d).length) html += `<div class="muted" style="text-align:center;font-size:15px;padding:10px 0">—</div>`;
+    for (const ev of evs) {
+      const past = !ev.allDay && toDate(ev.end) < now;
+      html += `<div class="ev ${ev.allDay ? 'allday' : ''} ${past ? 'past' : ''}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${ev.allDay ? 'All day' : esc(fmtTime(toDate(ev.start)))}</div><div class="en">${esc(ev.title)}</div></div>`;
+    }
+    const tds = todosOn(d); const todayK = dayKey(now);
+    for (const t of tds) {
+      const late = i === 0 && t.due < todayK;
+      html += `<div class="ev task ${late ? 'late' : ''}" data-todo="${esc(t.id)}"><div class="et">${late ? '⚠ Overdue' : '📝 Task'}${t.repeat ? ' ↻' : ''}${t.assigned_to ? ' · ' + esc(t.assigned_to) : ''}</div><div class="en">${esc(t.task)}</div></div>`;
+    }
+    html += `</div>${dinner ? `<div class="dinner">🍽️ <b>${esc(dinner.meal)}</b></div>` : ''}</div>`;
+  }
+  wrap.innerHTML = html;
+  const n = (App.state.events || []).length;
+  $('#cal-sub').textContent = App.backend.mode === 'demo' ? 'sample events — connect your Google Calendar to see yours' : `${n} event${n === 1 ? '' : 's'} in the next ${cfg('calendar_days', '14')} days`;
+}
+
+/* ---------- Groceries (pantry-style master list) ---------- */
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
+const gStatus = (g) => { const s = String(g.status || '').toLowerCase(); return s === 'needed' || s === 'true' ? 'needed' : s === 'cart' ? 'cart' : ''; };
+const gLetter = (g) => { const c = (g.item || '').trim().charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; };
+const byName = (a, b) => a.item.localeCompare(b.item, undefined, { sensitivity: 'base' });
+
+const storesOf = (g) => String(g.store || '').split(',').map(x => x.trim()).filter(Boolean);
+const isNice = (g) => String(g.priority || '').toLowerCase() === 'nice';
+const gRepeat = (g) => String(g.repeat || '').trim();
+const metaHtml = (g) => { const st = storesOf(g); const r = gRepeat(g); return (st.length || isNice(g) || r) ? `<div class="meta">${st.map(x => `<span class="spill">${esc(x)}</span>`).join('')}${isNice(g) ? '<span class="npill">nice to have</span>' : ''}${r ? `<span class="rpill">↻ ${esc(repeatLabel(r))}</span>` : ''}</div>` : ''; };
+function groupByStore(items) {
+  const map = {};
+  items.forEach(g => { const st = storesOf(g)[0] || 'Any store'; const k = st.toLowerCase(); (map[k] = map[k] || { store: st, items: [] }).items.push(g); });
+  const keys = Object.keys(map).sort((a, b) => a === 'any store' ? 1 : b === 'any store' ? -1 : a.localeCompare(b));
+  return keys.map(k => { map[k].items.sort((a, b) => (isNice(a) ? 1 : 0) - (isNice(b) ? 1 : 0) || byName(a, b)); return map[k]; });
+}
+
+function renderGroceries() {
+  const everything = (App.state.groceries || []).filter(g => g.item).slice().sort(byName);
+  // Store filter chips (from every item) + essentials toggle
+  const storeNames = {}; everything.forEach(g => storesOf(g).forEach(x => { storeNames[x.toLowerCase()] = storeNames[x.toLowerCase()] || x; }));
+  if (App.gStore && !storeNames[App.gStore]) App.gStore = null;
+  const matchStore = (g) => !App.gStore || storesOf(g).some(x => x.toLowerCase() === App.gStore);
+  const matchPrio = (g) => !App.gEssOnly || !isNice(g);
+  const all = everything.filter(matchStore).filter(matchPrio);
+  const needed = all.filter(g => gStatus(g) !== '');
+  const toBuy = needed.length;
+  const allNeeded = everything.filter(g => gStatus(g) !== '').length;
+  if (!App.gtab) App.gtab = allNeeded ? 'need' : 'all';
+  $$('.gtab').forEach(b => b.classList.toggle('active', b.dataset.gtab === App.gtab));
+  $('#groc-need-cnt').textContent = allNeeded; $('#groc-all-cnt').textContent = everything.length;
+  const cntFor = (k) => everything.filter(g => (App.gtab === 'need' ? gStatus(g) !== '' : true) && storesOf(g).some(x => x.toLowerCase() === k)).length;
+  const storeKeys = Object.keys(storeNames).sort((a, b) => a.localeCompare(b));
+  $('#gfilters').innerHTML = storeKeys.length || App.gEssOnly ? `<button class="tag ${App.gStore ? '' : 'active'}" data-store="">All stores</button>` +
+    storeKeys.map(k => `<button class="tag ${App.gStore === k ? 'active' : ''}" data-store="${esc(k)}">${esc(storeNames[k])} <span class="n">${cntFor(k)}</span></button>`).join('') +
+    `<span class="spacer"></span><button class="toggle ${App.gEssOnly ? 'on' : ''}" id="groc-essonly">${App.gEssOnly ? '✓ Essentials only' : 'Essentials only'}</button>` : `<button class="toggle ${App.gEssOnly ? 'on' : ''}" id="groc-essonly">${App.gEssOnly ? '✓ Essentials only' : 'Essentials only'}</button>`;
+  const keeping = App.gKeep.filter(id => everything.some(g => g.id === id && gStatus(g) !== '')).length;
+  $('#groc-count').innerHTML = `${needed.length}<small>${needed.length === 1 ? 'item' : 'items'} to buy${App.gStore ? ` at ${esc(storeNames[App.gStore])}` : ''}${keeping ? ` · keeping ${keeping}` : ''}</small>`;
+  $('#groc-clear').style.display = toBuy && App.gtab === 'need' ? '' : 'none';
+  $('#groc-clear').textContent = keeping ? `🧹 Clear all but ${keeping}` : '🧹 Clear list';
+  $('#groc-send').style.display = needed.length && App.gtab === 'need' ? '' : 'none';
+  $('#groc-hint').textContent = App.gtab === 'need' ? 'what to get · after the trip, tap what you still need and clear the rest' : 'tap anything you’re out of to put it on the list · hold to edit';
+  const list = $('#groc-list'), rail = $('#letter-rail');
+
+  if (App.gtab === 'need') {
+    rail.classList.add('hidden');
+    const row = (g) => { const k = App.gKeep.includes(g.id); return `<button class="gitem ${k ? 'keep' : ''} ${isNice(g) ? 'nice' : ''}" data-id="${esc(g.id)}"><span class="box">${k ? '📌' : ''}</span><span><div class="name">${esc(g.item)}</div>${g.note ? `<div class="note">${esc(g.note)}</div>` : ''}${metaHtml(g)}</span>${k ? '<span class="keeplbl">KEEPING</span>' : ''}</button>`; };
+    const groups = groupByStore(needed);
+    const multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
+    list.innerHTML = toBuy ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + grp.items.map(row).join('')).join('')
+      : `<div class="empty">${App.gStore || App.gEssOnly ? 'Nothing needed with this filter' : "Nothing on the list — everything's stocked 🎉"}<br><span style="font-size:16px">Tap <b>All items</b> and mark what you're out of.</span></div>`;
+    return;
+  }
+
+  rail.classList.remove('hidden');
+  const groups = {};
+  all.forEach(g => { (groups[gLetter(g)] = groups[gLetter(g)] || []).push(g); });
+  const chip = (g) => { const s = gStatus(g); return `<button class="gchip ${s} ${isNice(g) ? 'nice' : ''}" data-id="${esc(g.id)}"><span class="box">${s === 'cart' ? '✓' : s === 'needed' ? '🛒' : ''}</span><span><div class="name">${esc(g.item)}</div>${g.note ? `<div class="note">${esc(g.note)}</div>` : ''}${metaHtml(g)}</span></button>`; };
+  list.innerHTML = all.length ? LETTERS.filter(L => groups[L]).map(L => `<div class="lsec" data-letter="${L}"><div class="lhead">${L}</div><div class="lgrid">${groups[L].map(chip).join('')}</div></div>`).join('')
+    : `<div class="empty">${App.gStore || App.gEssOnly ? 'No items match this filter.' : 'No items yet. Tap <b>Add item</b> to build your master list.'}</div>`;
+  rail.innerHTML = LETTERS.map(L => `<span class="${groups[L] ? 'has' : ''}" data-l="${L}">${L}</span>`).join('');
+}
+
+/* Grocery item editor */
+const GE = {
+  state: null,
+  open(g, presetName) {
+    this.state = g ? { id: g.id, name: g.item, note: g.note || '', stores: storesOf(g), nice: isNice(g), repeat: gRepeat(g) }
+      : { name: presetName || '', note: '', stores: App.gStore ? [App.gStore] : [], nice: false, repeat: '' };
+    if (!g && App.gStore) { const disp = (App.state.groceries || []).flatMap(storesOf).find(x => x.toLowerCase() === App.gStore); this.state.stores = [disp || App.gStore]; }
+    $('#ge-title').textContent = g ? 'Edit item' : 'New item';
+    $('#ge-del').style.display = g ? '' : 'none';
+    this.draw(); $('#groc-ed').classList.add('open');
+  },
+  close() { $('#groc-ed').classList.remove('open'); this.state = null; },
+  async del() {
+    const s = this.state; if (!s || !s.id) return;
+    if (!await Modal.confirm({ icon: '🗑️', title: `Remove ${s.name}?`, body: 'It comes off the master list. You can always add it again.', ok: 'Remove', okClass: 'bad' })) return;
+    this.close();
+    act('deleteGrocery', { id: s.id }, { toast: `Removed ${s.name}` });
+  },
+  allStores() {
+    const seen = {}; const out = [];
+    (App.state.groceries || []).forEach(g => storesOf(g).forEach(x => { if (!seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); } }));
+    this.state.stores.forEach(x => { if (!seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); } });
+    return out.sort((a, b) => a.localeCompare(b));
+  },
+  draw() {
+    const s = this.state; if (!s) return;
+    const nf = $('#ge-name'); nf.textContent = s.name || 'Tap to type the item…'; nf.classList.toggle('ph', !s.name);
+    const tf = $('#ge-note'); tf.textContent = s.note || 'Optional'; tf.classList.toggle('ph', !s.note);
+    $('#ge-store').innerHTML = `<button data-store="" class="${s.stores.length ? '' : 'storeon'}">Any store</button>` + this.allStores().map(x => `<button data-store="${esc(x)}" class="${s.stores.some(y => y.toLowerCase() === x.toLowerCase()) ? 'storeon' : ''}">${esc(x)}</button>`).join('') + `<button class="newtag" data-newstore>＋ store</button>`;
+    $('#ge-prio').innerHTML = `<button class="prio-ess ${s.nice ? '' : 'on'}" data-prio="">⭐ Essential</button><button class="prio-nice ${s.nice ? 'on' : ''}" data-prio="nice">☆ Nice to have</button>`;
+    const GR = [['', 'Only when I add it'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']];
+    $('#ge-repeat').innerHTML = GR.map(x => `<button data-grepeat="${x[0]}" class="${s.repeat === x[0] ? 'rpton' : ''}">${x[0] ? '↻ ' : ''}${x[1]}</button>`).join('');
+    $('#ge-repeat-note').textContent = s.repeat ? `Goes back on the list ${repeatLabel(s.repeat).toLowerCase()} after you clear it — no need to add it by hand.` : '';
+  },
+  async save() {
+    const s = this.state; if (!s.name.trim()) { toast('Give the item a name first', true); return; }
+    const body = { item: s.name.trim(), note: s.note, store: s.stores.join(', '), priority: s.nice ? 'nice' : '', repeat: s.repeat };
+    this.close();
+    if (s.id) {
+      const g = (App.state.groceries || []).find(x => x.id === s.id); if (g) Object.assign(g, body); renderGroceries();
+      await act('updateGrocery', Object.assign({ id: s.id }, body), { toast: 'Item updated' });
+    } else {
+      const ex = (App.state.groceries || []).find(g => g.item.trim().toLowerCase() === body.item.toLowerCase());
+      if (ex) Object.assign(ex, body, { status: 'needed' }); App.gtab = 'need'; renderGroceries();
+      await act('addGrocery', Object.assign({ by: 'Wall' }, body), { toast: ex ? `${ex.item} was already on your list — marked as needed` : `Added ${body.item}` });
+    }
+  },
+};
+
+function jumpToLetter(L) {
+  const sec = $(`#groc-list .lsec[data-letter="${L}"]`); if (!sec) return false;
+  if (isPhone()) sec.scrollIntoView({ block: 'start', behavior: 'instant' });
+  else { const list = $('#groc-list'); list.scrollTo({ top: sec.offsetTop, behavior: 'instant' }); }
+  $$('#letter-rail span').forEach(s => s.classList.toggle('cur', s.dataset.l === L));
+  return true;
+}
+
+function railLetterAt(y) {
+  const rail = $('#letter-rail'); const r = rail.getBoundingClientRect();
+  const i = Math.min(LETTERS.length - 1, Math.max(0, Math.floor((y - r.top) / r.height * LETTERS.length)));
+  // Snap to the nearest letter that actually has items
+  const has = $$('#letter-rail span.has').map(s => s.dataset.l);
+  if (!has.length) return null;
+  let best = has[0], bd = 99;
+  has.forEach(L => { const d = Math.abs(LETTERS.indexOf(L) - i); if (d < bd) { bd = d; best = L; } });
+  return best;
+}
+
+function showBubble(L, y) {
+  const b = $('#letter-bubble'); const rail = $('#letter-rail').getBoundingClientRect();
+  b.textContent = L; b.classList.add('on');
+  b.style.left = (rail.left - 130) + 'px'; b.style.top = Math.min(window.innerHeight - 120, Math.max(10, y - 55)) + 'px';
+}
+
+/* ---------- Quests ---------- */
+function renderQuests() {
+  const kids = members('kid');
+  if (!kids.length) { $('#kid-tabs').innerHTML = ''; $('#quest-grid').innerHTML = `<div class="empty">Add family members with role <b>kid</b> on the Members tab of your Sheet.</div>`; $('#rewards').innerHTML = ''; return; }
+  if (!App.kid || !kids.find(k => k.name === App.kid)) App.kid = kids[0].name;
+  $('#kid-tabs').innerHTML = kids.map(k => { const b = balance(k.name); return `<button class="kid-tab ${k.name === App.kid ? 'active' : ''}" style="--kid:${esc(k.color || '#f59e0b')}" data-kid="${esc(k.name)}"><span class="av" style="background:${esc(k.color || '#334')}">${esc(k.emoji || '⭐')}</span><span>${esc(k.name)}<div class="pts">${b.approved} pts</div></span></button>`; }).join('');
+
+  const kid = kids.find(k => k.name === App.kid);
+  const quests = (App.state.quests || []).filter(q => q.title && (q.active === '' || q.active === undefined || isTrue(q.active)))
+    .filter(q => { const a = (q.assigned_to || 'Anyone').trim().toLowerCase(); return a === 'anyone' || a === '' || a === kid.name.toLowerCase() || a.split(',').map(s => s.trim().toLowerCase()).includes(kid.name.toLowerCase()); });
+  const order = { available: 0, pending: 1, done: 2 };
+  const wknd = [0, 6].includes(new Date().getDay());
+  const items = quests.filter(q => !(wknd && String(q.repeat).toLowerCase() === 'weekdays')).map(q => ({ q, s: questStatus(q, kid.name) })).sort((a, b) => order[a.s] - order[b.s]);
+  const label = { pending: 'WAITING ⏳', done: 'DONE ✓' };
+  const rep = { daily: 'today', weekdays: 'today', weekly: 'this week', biweekly: 'every 2 weeks', monthly: 'this month', once: 'one time' };
+  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s !== 'available' ? 'disabled' : ''}><div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div><div class="qm"><span>${rep[(q.repeat || 'daily').toLowerCase()] || esc(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`).join('')
+    : `<div class="empty">No quests for ${esc(kid.name)} yet. Add some on the Quests tab.</div>`;
+
+  const b = balance(kid.name);
+  const rewards = (App.state.rewards || []).filter(r => r.title && (r.active === '' || r.active === undefined || isTrue(r.active)));
+  $('#rewards').innerHTML = `<div class="bal"><div class="l">${esc(kid.name)}'s points</div><div class="n">${b.approved}</div>${b.pending ? `<div class="p">+${b.pending} waiting for approval</div>` : ''}</div>
+    <div class="sect">Rewards</div>` + (rewards.length ? rewards.map(r => { const cost = parseInt(r.cost || 0, 10); const ok = b.approved >= cost; return `<button class="reward ${ok ? '' : 'locked'}" data-r="${esc(r.id)}" ${ok ? '' : 'disabled'}><span class="ri">${esc(r.icon || '🎁')}</span><span class="rt">${esc(r.title)}</span><span class="rc">${cost} pts</span></button>`; }).join('') : `<div class="muted">Add rewards on the Rewards tab.</div>`);
+}
+
+/* ---------- To-do ---------- */
+const tagList = (t) => String(t.tags || '').split(',').map(s => s.trim().replace(/^#/, '')).filter(Boolean);
+const tagKey = (s) => s.toLowerCase();
+function extractHashtags(text) {
+  const tags = []; const clean = text.replace(/(^|\s)#([\w-]+)/g, (m, sp, tag) => { tags.push(tag); return sp; }).replace(/\s{2,}/g, ' ').trim();
+  return { clean, tags };
+}
+function dueLabel(due) {
+  if (!due) return '';
+  const today = dayKey(new Date()); const tmr = dayKey(new Date(Date.now() + 86400000));
+  if (due === today) return 'Today'; if (due === tmr) return 'Tomorrow';
+  const d = new Date(due + 'T12:00:00'); const diff = Math.round((d - new Date(today + 'T12:00:00')) / 86400000);
+  if (diff < 0) return `${-diff} day${diff === -1 ? '' : 's'} overdue`;
+  if (diff < 7) return DAYS[d.getDay()];
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+const REPEATS = [['', 'Doesn’t repeat'], ['daily', 'Daily'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly'], ['every:3', 'Every 3 days']];
+function repeatLabel(r) {
+  r = String(r || '').toLowerCase(); if (!r) return '';
+  const f = REPEATS.find(x => x[0] === r); if (f) return f[1];
+  if (r.startsWith('every:')) { const n = parseInt(r.slice(6), 10) || 1; return n === 1 ? 'Daily' : `Every ${n} days`; }
+  return r;
+}
+// One step forward from a given yyyy-mm-dd for a repeat rule
+function stepDue(fromKey, repeat) {
+  const d = new Date(fromKey + 'T12:00:00'); const r = String(repeat).toLowerCase();
+  if (r === 'daily') d.setDate(d.getDate() + 1); else if (r === 'weekly') d.setDate(d.getDate() + 7); else if (r === 'biweekly') d.setDate(d.getDate() + 14);
+  else if (r === 'monthly') d.setMonth(d.getMonth() + 1); else if (r.startsWith('every:')) d.setDate(d.getDate() + Math.max(1, parseInt(r.slice(6), 10) || 1)); else d.setDate(d.getDate() + 7);
+  return dayKey(d);
+}
+function nextDue(due, repeat) {
+  const today = dayKey(new Date());
+  let k = /^\d{4}-\d{2}-\d{2}$/.test(String(due)) && due >= today ? due : today;
+  k = stepDue(k, repeat); let guard = 0;
+  while (k <= today && guard++ < 400) k = stepDue(k, repeat);
+  return k;
+}
+// Open tasks that land on a given day: dated tasks on their due date, repeating
+// tasks projected forward from their due date across the calendar window.
+function todosOn(date) {
+  const k = dayKey(date), today = dayKey(new Date());
+  const out = [];
+  for (const t of (App.state.todos || [])) {
+    if (!t.task || isTrue(t.done) || !/^\d{4}-\d{2}-\d{2}$/.test(String(t.due || ''))) continue;
+    if (t.due === k) { out.push(t); continue; }
+    if (k === today && t.due < today) { out.push(t); continue; }       // overdue shows under today
+    if (t.repeat && t.due < k) {                                        // future occurrences
+      let d = t.due, guard = 0;
+      while (d < k && guard++ < 120) d = stepDue(d, t.repeat);
+      if (d === k) out.push(t);
+    }
+  }
+  return out;
+}
+const subtasksOf = (t) => { try { const a = JSON.parse(t.subtasks || '[]'); return Array.isArray(a) ? a.filter(x => x && x.t) : []; } catch (e) { return []; } };
+
+function renderTodos() {
+  const lock = $('#todo-lock'), panel = $('#todo-panel');
+  if (isTrue(cfg('todos_require_pin', 'FALSE')) && !App.unlocked) {
+    panel.style.display = 'none'; lock.style.display = 'block'; lock.innerHTML = pinPadHtml('📝 Parent PIN'); App.pin = ''; return;
+  }
+  lock.style.display = 'none'; panel.style.display = '';
+  const all = (App.state.todos || []).filter(t => t.task);
+  const open = all.filter(t => !isTrue(t.done)), done = all.filter(t => isTrue(t.done));
+  const today = dayKey(new Date());
+  // Tag chips with open counts
+  const counts = {}; const display = {};
+  open.forEach(t => tagList(t).forEach(tag => { const k = tagKey(tag); counts[k] = (counts[k] || 0) + 1; display[k] = display[k] || tag; }));
+  if (App.todoTag && !counts[App.todoTag]) App.todoTag = null;
+  const tags = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
+  $('#tfilters').innerHTML = `<button class="tag ${App.todoTag ? '' : 'active'}" data-tag="">All <span class="n">${open.length}</span></button>` +
+    tags.map(k => `<button class="tag ${App.todoTag === k ? 'active' : ''}" data-tag="${esc(k)}">#${esc(display[k])} <span class="n">${counts[k]}</span></button>`).join('') +
+    `<span class="spacer"></span><button class="toggle ${App.todoShowDone ? 'on' : ''}" id="todo-showdone">${App.todoShowDone ? '✓ Showing done' : 'Show done'} (${done.length})</button>`;
+  const match = (t) => !App.todoTag || tagList(t).some(tag => tagKey(tag) === App.todoTag);
+  const SORTS = [['due', 'Due'], ['name', 'A–Z'], ['who', 'Who'], ['new', 'Newest']];
+  $('#tfilters').insertAdjacentHTML('beforeend', `<span class="sortlbl">Sort</span>` + SORTS.map(x => `<button class="tag ${App.todoSort === x[0] ? 'active' : ''}" data-sort="${x[0]}">${x[1]}</button>`).join(''));
+  // move the "Show done" toggle to the very end
+  const tog = $('#todo-showdone'); if (tog) $('#tfilters').appendChild(tog);
+  const rank = (t) => t.due ? (t.due < today ? 0 : t.due === today ? 1 : 2) : 3;
+  const byDue = (a, b) => rank(a) - rank(b) || (a.due || '9').localeCompare(b.due || '9') || (a.created_at || '').localeCompare(b.created_at || '');
+  const sorters = {
+    due: byDue,
+    name: (a, b) => a.task.localeCompare(b.task, undefined, { sensitivity: 'base' }),
+    who: (a, b) => (a.assigned_to || '~').localeCompare(b.assigned_to || '~') || byDue(a, b),
+    new: (a, b) => (b.created_at || '').localeCompare(a.created_at || ''),
+  };
+  const visOpen = open.filter(match).sort(sorters[App.todoSort] || byDue);
+  const visDone = App.todoShowDone ? done.filter(match).sort((a, b) => (b.done_at || '').localeCompare(a.done_at || '')) : [];
+  const who = (n) => { const m = members().find(x => x.name === n); return m ? `<span class="who" title="${esc(n)}">${esc(m.emoji || '')}</span>` : ''; };
+  const row = (t) => { const d = isTrue(t.done); const cls = d ? 'done' : t.due && t.due < today ? 'overdue' : t.due === today ? 'today' : '';
+    const st = subtasksOf(t); const sd = st.filter(x => x.d).length;
+    return `<button class="todo ${cls}" data-id="${esc(t.id)}"><span class="box" data-check="${esc(t.id)}">${d ? '✓' : ''}</span><span style="min-width:0"><div class="tt">${esc(t.task)}</div><div class="tm">${tagList(t).map(x => `<span class="pill">#${esc(x)}</span>`).join('')}${t.due ? `<span class="due">📅 ${esc(dueLabel(t.due))}</span>` : ''}${t.repeat ? `<span class="rpt">↻ ${esc(repeatLabel(t.repeat))}</span>` : ''}${st.length ? `<span class="sub">☑ ${sd}/${st.length}</span>` : ''}${t.notes ? '<span class="sub">📝</span>' : ''}${t.assigned_to ? `<span>${esc(t.assigned_to)}</span>` : ''}</div></span>${who(t.assigned_to)}</button>`; };
+  // Group headers when sorting by due date (Asana-style "My Tasks")
+  const groupOf = (t) => { if (!t.due) return ['nodate', 'No date']; if (t.due < today) return ['overdue', 'Overdue']; if (t.due === today) return ['today', 'Today'];
+    const tmr = dayKey(new Date(Date.now() + 86400000)); if (t.due === tmr) return ['tomorrow', 'Tomorrow'];
+    const wk = dayKey(new Date(Date.now() + 6 * 86400000)); return t.due <= wk ? ['week', 'This week'] : ['later', 'Later']; };
+  let html = '';
+  if (App.todoSort === 'due') { let last = ''; for (const t of visOpen) { const [g, lbl] = groupOf(t); if (g !== last) { html += `<div class="tgroup ${g}">${lbl}</div>`; last = g; } html += row(t); } }
+  else if (App.todoSort === 'who') { let last = null; for (const t of visOpen) { const w = t.assigned_to || 'Anyone'; if (w !== last) { html += `<div class="tgroup">${esc(w)}</div>`; last = w; } html += row(t); } }
+  else html = visOpen.map(row).join('');
+  $('#todo-list').innerHTML = (visOpen.length ? html : `<div class="empty">${App.todoTag ? `Nothing open tagged #${esc(display[App.todoTag] || App.todoTag)}` : 'Nothing on the list 🎉'}</div>`) +
+    (visDone.length ? `<div class="sect">Done</div>` + visDone.map(row).join('') : '');
+  const dueNow = open.filter(t => t.due && t.due <= today).length;
+  $('#todo-count').innerHTML = `${open.length}<small>open${dueNow ? ` · ${dueNow} due now` : ''}</small>`;
+}
+
+/* Task detail — the "open the task" view */
+const TD = {
+  id: null,
+  task() { return (App.state.todos || []).find(x => x.id === this.id) || null; },
+  open(t) { this.id = t.id; this.draw(); $('#todo-dt').classList.add('open'); },
+  close() { $('#todo-dt').classList.remove('open'); this.id = null; },
+  draw() {
+    const t = this.task(); if (!t) { this.close(); return; }
+    const d = isTrue(t.done), today = dayKey(new Date());
+    $('#td-box').textContent = d ? '✓' : ''; $('#td-box').classList.toggle('done', d);
+    $('#td-title').textContent = t.task; $('#td-title').classList.toggle('done', d);
+    const late = t.due && t.due < today && !d;
+    $('#td-chips').innerHTML =
+      `<button data-td="due" class="${t.due ? (late ? 'late' : '') : 'empty'}">📅 ${t.due ? esc(dueLabel(t.due)) : 'Add due date'}</button>` +
+      `<button data-td="repeat" class="${t.repeat ? '' : 'empty'}">↻ ${t.repeat ? esc(repeatLabel(t.repeat)) : 'Repeat'}</button>` +
+      `<button data-td="who" class="${t.assigned_to ? '' : 'empty'}">${t.assigned_to ? esc((members().find(m => m.name === t.assigned_to) || {}).emoji || '👤') + ' ' + esc(t.assigned_to) : '👤 Assign'}</button>` +
+      (tagList(t).length ? tagList(t).map(x => `<button data-td="tags">#${esc(x)}</button>`).join('') : `<button data-td="tags" class="empty"># Add tags</button>`);
+    const n = $('#td-notes'); n.textContent = t.notes || 'Tap to add notes — measurements, links, what to ask…'; n.classList.toggle('ph', !t.notes);
+    const st = subtasksOf(t); const sd = st.filter(x => x.d).length;
+    $('#td-steps-n').textContent = st.length ? `${sd} of ${st.length} done` : '';
+    $('#td-steps').innerHTML = st.map((x, i) => `<div class="step ${x.d ? 'd' : ''}"><button class="sb" data-step="${i}">${x.d ? '✓' : ''}</button><button class="st" data-step="${i}" style="background:none;text-align:left">${esc(x.t)}</button><button class="sx" data-stepdel="${i}">✕</button></div>`).join('');
+    const when = (iso) => iso ? toDate(iso).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+    $('#td-meta').textContent = `${t.added_by ? 'Added by ' + t.added_by : 'Added'}${t.created_at ? ' · ' + when(t.created_at) : ''}${d && t.done_at ? ' · done ' + when(t.done_at) : ''}`;
+    $('#td-box').title = t.repeat && !d ? 'Complete — moves to the next date' : d ? 'Reopen' : 'Mark complete';
+  },
+  async saveSteps(st) { const t = this.task(); if (!t) return; t.subtasks = JSON.stringify(st); this.draw(); renderTodos(); await act('updateTodo', { id: t.id, subtasks: t.subtasks }); },
+  async complete() {
+    const t = this.task(); if (!t) return;
+    if (t.repeat && !isTrue(t.done)) { const nd = nextDue(t.due, t.repeat); t.due = nd; this.draw(); renderTodos(); act('setTodoDone', { id: t.id, done: true }, { toast: `Done ✓ — next: ${dueLabel(nd)}` }); return; }
+    t.done = isTrue(t.done) ? 'FALSE' : 'TRUE'; t.done_at = isTrue(t.done) ? new Date().toISOString() : ''; this.draw(); renderTodos();
+    act('setTodoDone', { id: t.id, done: isTrue(t.done) }, { toast: isTrue(t.done) ? 'Done ✓' : 'Reopened' });
+  },
+};
+
+/* Task editor */
+const TE = {
+  state: null,
+  open(t) {
+    this.state = t ? { id: t.id, task: t.task, tags: tagList(t), due: t.due || '', who: t.assigned_to || '', repeat: t.repeat || '' } : { task: '', tags: App.todoTag ? [App.todoTag] : [], due: '', who: '', repeat: '' };
+    $('#te-title').textContent = t ? 'Edit task' : 'New task';
+    this.draw(); $('#todo-ed').classList.add('open');
+    if (!t) setTimeout(() => this.editTask(), 80);
+  },
+  close() { $('#todo-ed').classList.remove('open'); this.state = null; },
+  allTags() {
+    const seen = {}; const out = [];
+    (App.state.todos || []).forEach(t => tagList(t).forEach(x => { if (!seen[tagKey(x)]) { seen[tagKey(x)] = 1; out.push(x); } }));
+    this.state.tags.forEach(x => { if (!seen[tagKey(x)]) { seen[tagKey(x)] = 1; out.push(x); } });
+    return out.sort((a, b) => a.localeCompare(b));
+  },
+  draw() {
+    const s = this.state; if (!s) return;
+    const tf = $('#te-task'); tf.textContent = s.task || 'Tap to type the task…'; tf.classList.toggle('ph', !s.task);
+    $('#te-tags').innerHTML = this.allTags().map(x => `<button data-tag="${esc(x)}" class="${s.tags.some(y => tagKey(y) === tagKey(x)) ? 'tagon' : ''}">#${esc(x)}</button>`).join('') + `<button class="newtag" data-newtag>＋ tag</button>`;
+    const now = new Date(); const d = (n) => { const x = new Date(now); x.setDate(x.getDate() + n); return dayKey(x); };
+    const sat = (6 - now.getDay() + 7) % 7 || 7, mon = (8 - now.getDay()) % 7 || 7;
+    const opts = [['', 'No date'], [d(0), 'Today'], [d(1), 'Tomorrow'], [d(sat), 'Saturday'], [d(mon), 'Next Mon']];
+    const custom = s.due && !opts.some(o => o[0] === s.due);
+    $('#te-due').innerHTML = opts.map(o => `<button data-due="${o[0]}" class="${s.due === o[0] ? 'dueon' : ''}">${o[1]}</button>`).join('') + `<button data-pickdate class="${custom ? 'dueon' : ''}">📅 ${custom ? esc(new Date(s.due + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' })) : 'Pick…'}</button>`;
+    $('#te-who').innerHTML = `<button data-who="" class="${!s.who ? 'whoon' : ''}">Anyone</button>` + members('parent').map(m => `<button data-who="${esc(m.name)}" class="${s.who === m.name ? 'whoon' : ''}">${esc(m.emoji)} ${esc(m.name)}</button>`).join('');
+    const known = REPEATS.some(x => x[0] === s.repeat);
+    $('#te-repeat').innerHTML = REPEATS.map(x => `<button data-repeat="${x[0]}" class="${s.repeat === x[0] ? 'rpton' : ''}">${x[1]}</button>`).join('') + `<button data-repeat-custom class="${!known && s.repeat ? 'rpton' : 'newtag'}">${!known && s.repeat ? '↻ ' + esc(repeatLabel(s.repeat)) : '＋ every N days'}</button>`;
+    $('#te-repeat-note').textContent = s.repeat ? `Checking it off moves it to the next date${s.due ? '' : ' (starting from today)'} instead of finishing it.` : '';
+  },
+  async editTask() {
+    const v = await KB.open({ title: 'What needs doing? (#tags welcome)', initial: this.state.task, placeholder: 'e.g. Call the plumber #house' });
+    if (v === null) return;
+    const { clean, tags } = extractHashtags(v);
+    this.state.task = clean; tags.forEach(x => { if (!this.state.tags.some(y => tagKey(y) === tagKey(x))) this.state.tags.push(x); });
+    this.draw();
+  },
+  async save() {
+    const s = this.state; if (!s.task) { toast('Give the task a name first', true); return; }
+    const body = { task: s.task, tags: s.tags.join(', '), assigned_to: s.who, due: s.due, repeat: s.repeat };
+    this.close();
+    if (s.id) await act('updateTodo', Object.assign({ id: s.id }, body), { toast: 'Task updated' });
+    else await act('addTodo', Object.assign({ by: 'Wall' }, body), { toast: 'Task added' });
+    if (TD.id) TD.draw();
+  },
+};
+
+/* Display period editor */
+const QREPEATS = [['once', 'One time'], ['daily', 'Every day'], ['weekdays', 'School days (Mon–Fri)'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']];
+const QHINTS = { once: 'Disappears for that kid after it’s approved once.', daily: 'Comes back every morning.', weekdays: 'Comes back every morning, hidden on Saturday and Sunday.', weekly: 'Can be done once per week (the week resets on ' + 'Monday' + ').', biweekly: 'Can be done again 14 days after the last time.', monthly: 'Can be done once per calendar month.' };
+const QE = {
+  state: null, kind: 'quest',
+  open(kind, item) {
+    this.kind = kind;
+    this.state = kind === 'quest'
+      ? (item ? { id: item.id, title: item.title, icon: item.icon || '⭐', points: parseInt(item.points, 10) || 0, who: item.assigned_to || 'Anyone', repeat: String(item.repeat || 'daily').toLowerCase(), active: item.active === '' || item.active === undefined || isTrue(item.active), notes: item.notes || '' } : { id: '', title: '', icon: '⭐', points: 5, who: 'Anyone', repeat: 'daily', active: true, notes: '' })
+      : (item ? { id: item.id, title: item.title, icon: item.icon || '🎁', points: parseInt(item.cost, 10) || 0, active: item.active === '' || item.active === undefined || isTrue(item.active) } : { id: '', title: '', icon: '🎁', points: 50, active: true });
+    $('#qe-title').textContent = (item ? 'Edit ' : 'New ') + kind;
+    $('#qe-del').style.display = item ? '' : 'none';
+    $('#qe-questonly').style.display = kind === 'quest' ? '' : 'none';
+    $('#qe-ptslabel').textContent = kind === 'quest' ? 'Points earned' : 'Points it costs';
+    this.draw(); $('#quest-ed').classList.add('open');
+  },
+  close() { $('#quest-ed').classList.remove('open'); this.state = null; },
+  draw() {
+    const s = this.state; if (!s) return;
+    $('#qe-icon').textContent = s.icon;
+    const nm = $('#qe-name'); nm.textContent = s.title || (this.kind === 'quest' ? 'What’s the quest?' : 'What’s the reward?'); nm.classList.toggle('ph', !s.title);
+    const pts = this.kind === 'quest' ? [1, 2, 5, 10, 15, 25, 50] : [10, 25, 50, 100, 200, 500];
+    $('#qe-points').innerHTML = pts.map(p => `<button data-qpts="${p}" class="${s.points === p ? 'modeon' : ''}">${p}</button>`).join('') + `<button data-qpts="custom" class="${pts.includes(s.points) ? '' : 'modeon'}">${pts.includes(s.points) ? 'Other…' : s.points + ' ✎'}</button>`;
+    if (this.kind === 'quest') {
+      const kids = members('kid');
+      $('#qe-who').innerHTML = [['Anyone', '👧👦 Anyone']].concat(kids.map(k => [k.name, `${k.emoji || '⭐'} ${k.name}`])).map(w => `<button data-qwho="${esc(w[0])}" class="${s.who.toLowerCase() === w[0].toLowerCase() ? 'modeon' : ''}">${esc(w[1])}</button>`).join('');
+      $('#qe-repeat').innerHTML = QREPEATS.map(r => `<button data-qrep="${r[0]}" class="${s.repeat === r[0] ? 'modeon' : ''}">${r[1]}</button>`).join('');
+      $('#qe-hint').textContent = QHINTS[s.repeat] || '';
+    }
+    $('#qe-active').innerHTML = `<button data-qact="1" class="${s.active ? 'modeon' : ''}">Active</button><button data-qact="0" class="${s.active ? '' : 'modeon'}">Paused (hidden from kids)</button>`;
+  },
+  async save() {
+    const s = this.state; if (!s.title.trim()) { toast('Give it a name first', true); return; }
+    this.close();
+    if (this.kind === 'quest') await act('saveQuest', { id: s.id, title: s.title.trim(), icon: s.icon, points: s.points, assigned_to: s.who, repeat: s.repeat, active: s.active, notes: s.notes, pin: App.pinValue }, { toast: 'Quest saved' });
+    else await act('saveReward', { id: s.id, title: s.title.trim(), icon: s.icon, cost: s.points, active: s.active, pin: App.pinValue }, { toast: 'Reward saved' });
+  },
+  async del() {
+    const s = this.state; const kind = this.kind;
+    if (!await Modal.confirm({ icon: '🗑️', title: `Delete “${s.title}”?`, body: kind === 'quest' ? 'Points already earned from it stay on the ledger. Use <b>Paused</b> instead if you might bring it back.' : 'Rewards already claimed are unaffected.', ok: 'Delete', okClass: 'bad' })) return;
+    this.close();
+    await act(kind === 'quest' ? 'deleteQuest' : 'deleteReward', { id: s.id, pin: App.pinValue }, { toast: 'Deleted' });
+  },
+};
+
+const DE = {
+  state: null,
+  open(p) {
+    this.state = p ? { id: p.id, start: p.start, mode: p.mode, days: String(p.days || 'all').toLowerCase() }
+      : { start: '20:00', mode: 'clock', days: 'all' };
+    $('#de-title').textContent = p ? 'Edit period' : 'New period';
+    $('#de-del').style.display = p && !String(p.id).startsWith('_legacy') ? '' : 'none';
+    this.draw(); $('#disp-ed').classList.add('open');
+  },
+  close() { $('#disp-ed').classList.remove('open'); this.state = null; },
+  draw() {
+    const s = this.state; if (!s) return;
+    $('#de-time').textContent = s.start;
+    $('#de-mode').innerHTML = MODES.map(m => `<button data-dmode="${m[0]}" class="${s.mode === m[0] ? 'modeon' : ''}">${m[1]}</button>`).join('');
+    $('#de-days').innerHTML = DAYSETS.map(d => `<button data-ddays="${d[0]}" class="${s.days === d[0] ? 'modeon' : ''}">${d[1]}</button>`).join('');
+  },
+  async save() {
+    const s = this.state; const id = String(s.id || '').startsWith('_legacy') ? '' : (s.id || '');
+    this.close();
+    await act('saveDisplay', { id: id, start: s.start, mode: s.mode, days: s.days, pin: App.pinValue }, { toast: 'Schedule saved' });
+    Display.applied = null; Display.tick();
+  },
+  async del() {
+    const s = this.state; this.close();
+    await act('deleteDisplay', { id: s.id, pin: App.pinValue }, { toast: 'Period removed' });
+    Display.applied = null; Display.tick();
+  },
+};
+
+function pinPadHtml(title) {
+  return `<div class="pinpad"><h1 style="justify-content:center">🔒 ${esc(title || 'Parent PIN')}</h1><div class="dots pin-dots"><span></span><span></span><span></span><span></span></div>
+    <div class="keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}">${k}</button>`).join('')}</div><div class="msg pin-msg"></div>
+    ${App.backend.mode === 'demo' ? '<div class="note">Demo PIN is <b>1234</b>. Change it on the Config tab once you connect your Sheet.</div>' : ''}</div>`;
+}
+
+/* ---------- Parent ---------- */
+function renderParent() {
+  const lock = $('#parent-lock'), panel = $('#parent-panel');
+  if (!App.unlocked) {
+    panel.style.display = 'none'; lock.style.display = 'block';
+    lock.innerHTML = pinPadHtml('Parent PIN');
+    App.pin = '';
+    return;
+  }
+  lock.style.display = 'none'; panel.style.display = 'block';
+  $$('.ptab').forEach(b => b.classList.toggle('active', b.dataset.ptab === App.ptab));
+  const body = $('#pbody');
+  if (App.ptab === 'queue') {
+    const q = (App.state.queue || []).filter(k => k.status === 'pending').sort((a, b) => a.submitted_at < b.submitted_at ? 1 : -1);
+    const recent = (App.state.queue || []).filter(k => k.status !== 'pending').sort((a, b) => (b.reviewed_at || b.submitted_at) < (a.reviewed_at || a.submitted_at) ? -1 : 1).slice(0, 8);
+    const mem = (n) => members().find(m => m.name === n) || {};
+    const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'} · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status)}</div></span>${acts ? `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>` : ''}</div>`;
+    body.innerHTML = (q.length ? q.map(k => row(k, true)).join('') : `<div class="empty">Nothing waiting for approval 🎉</div>`) + (recent.length ? `<div class="sect">Recent</div>` + recent.map(k => row(k, false)).join('') : '');
+  } else if (App.ptab === 'dinner') {
+    let html = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() + i); const din = dinnerFor(d);
+      html += `<button class="drow" data-date="${dayKey(d)}"><span class="dd">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAYS[d.getDay()]}<br><small>${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</small></span><span class="dm ${din ? '' : 'none'}">${din ? esc(din.meal) : 'tap to plan'}</span></button>`;
+    }
+    body.innerHTML = html;
+  } else if (App.ptab === 'quests') {
+    const on = (x) => x.active === '' || x.active === undefined || isTrue(x.active);
+    const quests = (App.state.quests || []).filter(q => q.title).slice().sort((a, b) => on(b) - on(a) || a.title.localeCompare(b.title));
+    const rewards = (App.state.rewards || []).filter(r => r.title).slice().sort((a, b) => on(b) - on(a) || (+a.cost || 0) - (+b.cost || 0));
+    body.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><label class="sect" style="margin:0">Quests · ${quests.length}</label><button class="btn primary sm" id="quest-add">＋ New quest</button></div>
+      ${quests.length ? quests.map(q => `<button class="prow ${on(q) ? '' : 'off'}" data-qedit="${esc(q.id)}"><span class="pt" style="font-size:26px">${esc(q.icon || '⭐')}</span><span><div class="pm">${esc(q.title)}</div><div class="pd">${esc(QREPEATS.find(r => r[0] === String(q.repeat || 'daily').toLowerCase())?.[1] || q.repeat)} · ${esc(q.assigned_to || 'Anyone')}${on(q) ? '' : ' · paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">+${esc(q.points || 0)}</span></button>`).join('') : '<div class="empty">No quests yet — tap New quest.</div>'}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:26px 0 10px"><label class="sect" style="margin:0">Rewards · ${rewards.length}</label><button class="btn primary sm" id="reward-add">＋ New reward</button></div>
+      ${rewards.length ? rewards.map(r => `<button class="prow ${on(r) ? '' : 'off'}" data-redit="${esc(r.id)}"><span class="pt" style="font-size:26px">${esc(r.icon || '🎁')}</span><span><div class="pm">${esc(r.title)}</div><div class="pd">${on(r) ? 'Available' : 'Paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">${esc(r.cost || 0)} pts</span></button>`).join('') : '<div class="empty">No rewards yet.</div>'}
+      <div class="note" style="margin-top:14px">Tap a quest or reward to edit or delete it. Kids see quests that are assigned to them or to Anyone; a paused quest is hidden without losing its history.</div>`;
+  } else if (App.ptab === 'bonus') {
+    const kids = members('kid'); App.bonus = App.bonus || { member: '', points: 5, reason: '' };
+    if (!kids.find(k => k.name === App.bonus.member)) App.bonus.member = kids[0] ? kids[0].name : '';
+    body.innerHTML = `<div class="form"><label>Who</label><div class="seg">${kids.map(k => `<button data-bm="${esc(k.name)}" class="${App.bonus.member === k.name ? 'active' : ''}">${esc(k.emoji)} ${esc(k.name)}</button>`).join('')}</div>
+      <label>Points</label><div class="seg">${[-10, -5, 5, 10, 25, 50].map(p => `<button data-bp="${p}" class="${App.bonus.points === p ? 'active' : ''}">${p > 0 ? '+' : ''}${p}</button>`).join('')}</div>
+      <label>Reason</label><button class="field ${App.bonus.reason ? '' : 'ph'}" id="bonus-reason">${esc(App.bonus.reason) || 'e.g. Helped grandma, great report card…'}</button>
+      <div class="row"><button class="btn primary" id="bonus-go">Give ${App.bonus.points > 0 ? '+' : ''}${App.bonus.points} to ${esc(App.bonus.member || '…')}</button></div></div>`;
+  } else if (App.ptab === 'display') {
+    const now = new Date();
+    const cur = periodAt(now), eff = Display.effective(), nx = nextChange(now);
+    const hw = Display.hw;
+    const ov = Display.override;
+    const wakeLeft = Display.wakeUntil > Date.now() ? Math.ceil((Display.wakeUntil - Date.now()) / 60000) : 0;
+    const periods = displayPeriods();
+    const legacy = !(App.state.display || []).length;
+    body.innerHTML = `
+      <div class="dstatus">
+        <div><div class="now">${esc(modeLabel(eff))}</div>
+          <div class="sub">${ov ? `Manual override${ov.until ? ` · ${Math.ceil((ov.until - Date.now()) / 60000)} min left` : ''}` : wakeLeft ? `Woken by touch · back to ${esc(modeLabel(cur.mode))} in ${wakeLeft} min` : nx ? `Until ${esc(nx.at)}${nx.tomorrow ? ' tomorrow' : ''}, then ${esc(modeLabel(nx.mode))}` : 'Following the schedule'}</div></div>
+        <span class="hw ${hw.supported ? 'ok' : 'no'}">${hw.supported ? `⏻ Screen power: ${esc(hw.method)}` : '⏻ Screen power not available — "off" shows black'}</span>
+      </div>
+      <label class="sect">Right now</label>
+      <div class="seg" style="margin-bottom:18px">
+        ${MODES.map(m => `<button data-ovr="${m[0]}" class="${ov && ov.mode === m[0] ? 'modeon' : ''}">${m[1]}</button>`).join('')}
+        <button data-ovr="" class="${ov ? '' : 'modeon'}">↻ Follow schedule</button>
+      </div>
+      <label class="sect">Daily schedule${legacy ? ' <span style="text-transform:none;letter-spacing:0">(showing the old night-mode times — save one to start a real schedule)</span>' : ''}</label>
+      ${periods.map(p => `<button class="prow ${p.id === cur.id ? 'cur' : ''}" data-period="${esc(p.id)}"><span class="pt">${esc(p.start)}</span><span><div class="pm">${esc(modeLabel(p.mode))}</div><div class="pd">${esc(daysLabel(p.days))}</div></span>${p.id === cur.id ? '<span class="badge2">NOW</span>' : ''}</button>`).join('')}
+      <div class="row" style="margin:14px 0 24px"><button class="btn primary" id="disp-add">＋ Add period</button></div>
+      <label class="sect">Timing</label>
+      <div class="form">
+        <div class="row"><button class="btn sm" data-cfg="touch_wake_min">Touch keeps it awake: <b style="margin-left:8px">${esc(cfg('touch_wake_min', '2'))} min</b></button>
+        <button class="btn sm" data-cfg="idle_timeout_sec">Back to home after: <b style="margin-left:8px">${esc(cfg('idle_timeout_sec', '90'))} s</b></button>
+        <button class="btn sm" data-cfg="photo_interval_sec">Each photo shows for: <b style="margin-left:8px">${esc(cfg('photo_interval_sec', '20'))} s</b></button>
+        <button class="btn sm" data-cfg="clock_dim">Dim clock brightness: <b style="margin-left:8px">${esc(cfg('clock_dim', '35'))}%</b></button></div>
+        <div class="note">Touch the screen during a clock or off period and the full board comes back for the touch-wake time, then it settles again.</div>
+      </div>`;
+  } else if (App.ptab === 'settings') {
+    const live = App.backend.mode === 'live';
+    body.innerHTML = `<div class="form">
+      <label>Google Sheet connection</label>
+      <div class="note">${live ? `Connected. Last successful sync: <b>${App.lastOk ? esc(fmtTime(App.lastOk)) : '—'}</b>${App.error ? `<br><span style="color:var(--bad)">Last error: ${esc(App.error)}</span>` : ''}` : 'Running in <b>demo mode</b>. Paste your Apps Script Web app URL (ends in <code>/exec</code>) to go live. See README.md for the 5-minute setup.'}</div>
+      <input class="text" id="set-url" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(scriptUrl())}">
+      <div class="row"><button class="btn primary" id="set-save">Save & connect</button><button class="btn ghost" id="set-refresh">Refresh now</button>${App.backend.mode === 'demo' ? '<button class="btn ghost" id="set-reset">Reset demo data</button>' : ''}</div>
+      <label>Use it from your phone</label>
+      <div class="note">${App.server && App.server.lan_ip ? `On the same Wi-Fi, open <b style="font-size:20px">http://${esc(App.server.lan_ip)}:${esc(App.server.port)}</b>${App.server.hostname ? ` or <b style="font-size:20px">http://${esc(App.server.hostname)}:${esc(App.server.port)}</b>` : ''} in any browser. Add it to your phone's home screen for an app-like icon. (You can also edit the Google Sheet directly from the Sheets app.)` : 'Start the app with run-windows.bat (or the Pi service) and this shows the address to open on your phone.'}</div>
+      <label>Display</label>
+      <div class="note">Photos: <b>${esc(Photos.sourceLabel())}</b> (${Photos.list.length} loaded) <button class="btn sm" id="set-photos" style="margin-left:8px">↻ Rescan photos</button> · Weather ${esc(cfg('lat', ''))}, ${esc(cfg('lon', ''))}<br>Screen schedule, sleep times and timeouts are on the <b>Display</b> tab above.</div>
+      <div class="row"><button class="btn ghost" id="set-reload">Reload app</button><button class="btn ghost" id="set-fs">Toggle fullscreen</button></div>
+      <div class="note">Family Quest Board v1.0</div></div>`;
+  }
+}
+
+function when(iso) {
+  if (!iso) return '';
+  const d = toDate(iso); const now = new Date();
+  if (dayKey(d) === dayKey(now)) return 'today ' + fmtTime(d);
+  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + fmtTime(d);
+}
+
+/* ------------------------------------------------------------------------
+   Photos / slideshow
+   ------------------------------------------------------------------------ */
+const Photos = {
+  list: [], idx: -1, source: 'none', timer: null, layer: 0, cache: new Map(), note: '',
+  sourceLabel() { return ({ local: 'local folder (server.py)', drive: 'Google Drive' + (this.folder ? ' folder “' + this.folder + '”' : ''), none: 'none — showing gradient' }[this.source]) + (this.note ? ' · ' + this.note : ''); },
+  async init() {
+    const want = CFG.PHOTO_SOURCE || 'auto';
+    if (want === 'auto' || want === 'local') {
+      try {
+        const r = await fetch('/api/photos', { cache: 'no-store' });
+        if (r.ok) { const j = await r.json(); this.list = (j.photos || []).map(p => ({ url: p.url, name: p.name })); this.source = 'local'; }
+      } catch (e) { /* not served by server.py */ }
+    }
+    if (!this.list.length && (want === 'auto' || want === 'drive')) await this.loadDrive();
+    this.shuffle();
+    this.start();
+    // Re-scan every 10 minutes so new photos appear without a restart
+    setInterval(() => this.rescan(), 600000);
+  },
+  async loadDrive() {
+    if (App.backend.mode !== 'live') { this.note = 'connect your Sheet to use Drive photos'; return false; }
+    try {
+      const j = await App.backend.listPhotos();
+      const ps = Array.isArray(j) ? j : (j.photos || []);
+      this.folder = j.folder || ''; this.note = j.error || (ps.length ? '' : 'folder is empty');
+      const fresh = ps.map(p => ({ id: p.id, name: p.name }));
+      const changed = fresh.length !== this.list.length || fresh.some((p, i) => p.id !== this.list[i].id);
+      if (changed) { this.list = fresh; this.shuffle(); this.idx = -1; }
+      if (this.list.length) this.source = 'drive';
+      return changed;
+    } catch (e) { console.warn('drive photos failed', e); this.note = 'Drive error: ' + (e.message || e); return false; }
+  },
+  async rescan() {
+    let changed = false;
+    if (this.source === 'local') {
+      try { const r = await fetch('/api/photos', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); const fresh = (j.photos || []).map(p => ({ url: p.url, name: p.name })); if (fresh.length !== this.list.length) { this.list = fresh; this.shuffle(); this.idx = -1; changed = true; } } } catch (e) {}
+    } else if (CFG.PHOTO_SOURCE !== 'local') {
+      changed = await this.loadDrive();
+    }
+    if (changed && !this.timer) this.start();
+    if (changed) $('#gradient-bg').style.display = this.list.length ? 'none' : 'block';
+  },
+  shuffle() { for (let i = this.list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.list[i], this.list[j]] = [this.list[j], this.list[i]]; } },
+  async src(p) {
+    if (p.url) return p.url;
+    if (this.cache.has(p.id)) return this.cache.get(p.id);
+    const data = await App.backend.getPhoto(p.id);
+    if (this.cache.size > 25) this.cache.delete(this.cache.keys().next().value);
+    this.cache.set(p.id, data); return data;
+  },
+  // Fit a photo to the screen. Same-ish aspect ratio → gentle Ken Burns zoom.
+  // Portrait on a landscape screen (or vice versa) → fill the short side and
+  // slowly pan along the long side so the whole photo gets seen, alternating
+  // top→bottom / bottom→top each time.
+  place(el, im) {
+    if (el._pan) { el._pan.cancel(); el._pan = null; }
+    el.classList.remove('kb', 'pan'); el.style.width = el.style.height = el.style.transform = '';
+    const box = el.parentElement.getBoundingClientRect();
+    const W = box.width || window.innerWidth, H = box.height || window.innerHeight;
+    if (!im || !im.naturalWidth || !im.naturalHeight || !W || !H) { el.classList.add('kb'); return; }
+    const imgAR = im.naturalWidth / im.naturalHeight, scrAR = W / H;
+    let w, h, dx = 0, dy = 0;
+    if (imgAR < scrAR) { w = W; h = W / imgAR; dy = h - H; }       // taller than screen → vertical pan
+    else { h = H; w = H * imgAR; dx = w - W; }                     // wider than screen → horizontal pan
+    const overflow = Math.max(dx / W, dy / H);
+    if (overflow < 0.12) { el.classList.add('kb'); return; }       // close enough: just zoom
+    // Don't sweep the whole photo. Faces live in the upper-middle of a
+    // portrait shot, so drift gently between "top edge at 14% down" and
+    // "screen centred at 46%". Sideways overflow (landscape photo on a phone)
+    // pans the middle half.
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    let x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+    if (dy) { y0 = clamp(0.14 * h, 0, dy); y1 = clamp(0.46 * h - H / 2, y0, dy); }
+    if (dx) { x0 = clamp(0.25 * dx, 0, dx); x1 = clamp(0.75 * dx, x0, dx); }
+    const travel = Math.max(x1 - x0, y1 - y0);
+    el.classList.add('pan'); el.style.width = w + 'px'; el.style.height = h + 'px';
+    if (travel < 0.03 * Math.max(W, H)) { el.style.transform = `translate(${-x0}px, ${-y0}px)`; return; } // nothing to pan, just frame it well
+    const secs = Math.max(5, +cfg('photo_interval_sec', 20));
+    const dur = (secs + 4) * 1000;                                   // longer than the slot: still gliding when it fades out
+    this.panDir = !this.panDir;
+    const from = this.panDir ? `translate(${-x0}px, ${-y0}px)` : `translate(${-x1}px, ${-y1}px)`;
+    const to = this.panDir ? `translate(${-x1}px, ${-y1}px)` : `translate(${-x0}px, ${-y0}px)`;
+    el._pan = el.animate([{ transform: from }, { transform: to }], { duration: dur, easing: 'linear', fill: 'forwards' });
+  },
+  start() {
+    clearInterval(this.timer);
+    $('#gradient-bg').style.display = this.list.length ? 'none' : 'block';
+    if (!this.list.length) return;
+    this.next();
+    this.timer = setInterval(() => this.next(), Math.max(5, +cfg('photo_interval_sec', 20)) * 1000);
+  },
+  async next() {
+    if (!this.list.length || App.screen !== 'home' || Display.applied !== 'photos') return;
+    this.idx = (this.idx + 1) % this.list.length;
+    const p = this.list[this.idx];
+    let url; try { url = await this.src(p); } catch (e) { console.warn('photo load failed', p, e); return; }
+    const im = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+    const a = $('#photo-a'), b = $('#photo-b');
+    const show = this.layer === 0 ? a : b, hide = this.layer === 0 ? b : a;
+    show.style.backgroundImage = `url("${url}")`;
+    this.place(show, im);
+    show.classList.add('show'); hide.classList.remove('show', 'kb');
+    this.layer = 1 - this.layer;
+    // Preload the next one
+    const n = this.list[(this.idx + 1) % this.list.length];
+    if (n) this.src(n).then(u => { const im = new Image(); im.src = u; }).catch(() => {});
+  },
+};
+
+/* ------------------------------------------------------------------------
+   Keyboard, modal, PIN, toast
+   ------------------------------------------------------------------------ */
+const KB = {
+  resolve: null, shift: false, multi: false,
+  field() { return this.multi ? $('#kb-area') : $('#kb-input'); },
+  layout: [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"], ['⇧', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '⌫'], ['cancel', 'space', 'done']],
+  open(opts) {
+    return new Promise((resolve) => {
+      this.resolve = resolve; this.shift = true;
+      $('#kb-title').textContent = opts.title || 'Type';
+      this.multi = !!opts.multiline;
+      $('#kb-input').style.display = this.multi ? 'none' : ''; $('#kb-area').style.display = this.multi ? '' : 'none';
+      const inp = this.field(); inp.value = opts.initial || ''; inp.placeholder = opts.placeholder || '';
+      this.draw(); $('#kb').classList.toggle('native', isPhone()); $('#kb').classList.add('open'); setTimeout(() => inp.focus(), 50);
+    });
+  },
+  draw() {
+    $('#kb-rows').innerHTML = `<div class="kb-row native-row"><button class="wide cancel" data-k="cancel">Cancel</button><button class="wide done" data-k="done">Done ✓</button></div>` + this.layout.map(row => `<div class="kb-row">${row.map(k => {
+      if (k === 'space') return `<button class="space" data-k=" ">space</button>` + (this.multi ? `<button data-k="\n">↵</button>` : '');
+      if (k === 'done') return `<button class="wide done" data-k="done">Done ✓</button>`;
+      if (k === 'cancel') return `<button class="wide cancel" data-k="cancel">Cancel</button>`;
+      if (k === '⇧') return `<button data-k="shift" style="${this.shift ? 'background:var(--info);color:#06213f' : ''}">⇧</button>`;
+      if (k === '⌫') return `<button data-k="bs">⌫</button>`;
+      return `<button data-k="${k}">${this.shift ? k.toUpperCase() : k}</button>`;
+    }).join('')}</div>`).join('');
+  },
+  press(k) {
+    const inp = this.field();
+    if (k === 'done') return this.close(inp.value.trim());
+    if (k === 'cancel') return this.close(null);
+    if (k === 'shift') { this.shift = !this.shift; this.draw(); return; }
+    if (k === 'bs') { inp.value = inp.value.slice(0, -1); return; }
+    inp.value += this.shift ? k.toUpperCase() : k;
+    if (this.shift && k !== ' ') { this.shift = false; this.draw(); }
+    if (k === ' ' || inp.value === '') { /* keep */ }
+  },
+  close(v) { $('#kb').classList.remove('open'); const r = this.resolve; this.resolve = null; if (r) r(v); },
+};
+
+const Modal = {
+  resolve: null,
+  confirm(o) {
+    return new Promise((resolve) => {
+      this.resolve = resolve;
+      $('#m-icon').textContent = o.icon || '❓'; $('#m-title').textContent = o.title || ''; $('#m-body').innerHTML = o.body || '';
+      $('#m-ok').textContent = o.ok || 'Yes'; $('#m-ok').className = 'btn ' + (o.okClass || 'primary'); $('#m-cancel').textContent = o.cancel || 'Cancel';
+      const alt = $('#m-alt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '';
+      $('#modal').classList.add('open');
+    });
+  },
+  close(v) { $('#modal').classList.remove('open'); const r = this.resolve; this.resolve = null; if (r) r(v); },
+};
+
+let toastTimer;
+function toast(msg, isErr) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'on' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ''; }, isErr ? 6000 : 2500);
+}
+
+/* ------------------------------------------------------------------------
+   Idle + night mode
+   ------------------------------------------------------------------------ */
+let idleTimer;
+function bumpIdle() {
+  clearTimeout(idleTimer);
+  if (isPhone()) return;
+  const secs = Math.max(20, parseInt(cfg('idle_timeout_sec', '90'), 10) || 90);
+  idleTimer = setTimeout(() => { if (!KB.resolve && !Modal.resolve && !TE.state && !GE.state && !DE.state && !TD.id) { App.unlocked = false; showScreen(CFG.HOME_SCREEN || 'home'); renderParent(); renderTodos(); Photos.next(); } }, secs * 1000);
+}
+
+const MODES = [['photos', '🖼 Photos + board'], ['clock', '🕐 Dim clock only'], ['off', '⏻ Screen off']];
+const modeLabel = (m) => (MODES.find(x => x[0] === m) || ['', m])[1];
+const DAYSETS = [['all', 'Every day'], ['weekdays', 'Weekdays'], ['weekends', 'Weekends']];
+const daysLabel = (d) => (DAYSETS.find(x => x[0] === String(d || 'all').toLowerCase()) || ['', d])[1];
+
+function dayMatches(days, date) {
+  const d = String(days || 'all').toLowerCase().trim();
+  const dow = date.getDay(); // 0 = Sun
+  if (!d || d === 'all') return true;
+  if (d === 'weekdays') return dow >= 1 && dow <= 5;
+  if (d === 'weekends') return dow === 0 || dow === 6;
+  return d.split(',').map(x => x.trim().slice(0, 3).toLowerCase()).includes(DAYS[dow].toLowerCase());
+}
+
+/* The display schedule: rows of {start, mode, days}. Falls back to the legacy
+   night_start/night_end config when the Display tab is empty. */
+function displayPeriods() {
+  const rows = (App.state && App.state.display || []).filter(r => /^\d{1,2}:\d{2}$/.test(String(r.start || '')));
+  if (rows.length) return rows.slice().sort((a, b) => parseHM(a.start, 0) - parseHM(b.start, 0));
+  return [
+    { id: '_legacy_on', start: cfg('night_end', '06:00'), mode: 'photos', days: 'all' },
+    { id: '_legacy_off', start: cfg('night_start', '21:30'), mode: 'off', days: 'all' },
+  ].sort((a, b) => parseHM(a.start, 0) - parseHM(b.start, 0));
+}
+
+// The period in effect at `when` — the latest one today that has already started,
+// wrapping to yesterday's last period before the first start time.
+function periodAt(when) {
+  const all = displayPeriods();
+  const mins = when.getHours() * 60 + when.getMinutes();
+  const today = all.filter(p => dayMatches(p.days, when));
+  let cur = null;
+  for (const p of today) if (parseHM(p.start, 0) <= mins) cur = p;
+  if (cur) return cur;
+  for (let back = 1; back <= 7; back++) {
+    const d = new Date(when); d.setDate(d.getDate() - back);
+    const prev = all.filter(p => dayMatches(p.days, d));
+    if (prev.length) return prev[prev.length - 1];
+  }
+  return { mode: 'photos', start: '00:00', days: 'all' };
+}
+
+function nextChange(when) {
+  const all = displayPeriods();
+  const mins = when.getHours() * 60 + when.getMinutes();
+  const later = all.filter(p => dayMatches(p.days, when) && parseHM(p.start, 0) > mins);
+  if (later.length) return { at: later[0].start, mode: later[0].mode, tomorrow: false };
+  for (let fwd = 1; fwd <= 7; fwd++) {
+    const d = new Date(when); d.setDate(d.getDate() + fwd);
+    const next = all.filter(p => dayMatches(p.days, d));
+    if (next.length) return { at: next[0].start, mode: next[0].mode, tomorrow: fwd === 1, days: fwd };
+  }
+  return null;
+}
+
+const Display = {
+  applied: null, wakeUntil: 0, override: null,
+  hw: { supported: null, method: null, on: true },
+
+  async init() {
+    try {
+      const r = await fetch('/api/display', { cache: 'no-store' });
+      if (r.ok) this.hw = Object.assign(this.hw, await r.json());
+    } catch (e) { this.hw.supported = false; }
+    this.tick();
+    setInterval(() => this.tick(), 20000);
+    // Pick up overrides set from a phone
+    if (this.hw.supported !== null) setInterval(() => this.pollOverride(), 20000);
+  },
+
+  async pollOverride() {
+    try {
+      const r = await fetch('/api/override', { cache: 'no-store' });
+      if (!r.ok) return;
+      const o = await r.json();
+      const mode = o.mode || null;
+      if (mode !== (this.override && this.override.mode || null)) {
+        this.override = mode ? { mode, until: o.until ? Date.now() + o.seconds_left * 1000 : 0 } : null;
+        this.tick();
+        if (App.screen === 'parent' && App.ptab === 'display') renderParent();
+      }
+    } catch (e) {}
+  },
+
+  // What the schedule alone says right now
+  scheduled() { return periodAt(new Date()).mode; },
+
+  // What should actually be on screen, counting override and touch-wake
+  effective() {
+    if (isPhone()) return 'photos';
+    if (this.override) {
+      if (!this.override.until || Date.now() < this.override.until) return this.override.mode;
+      this.override = null;
+    }
+    const s = this.scheduled();
+    if (s !== 'photos' && Date.now() < this.wakeUntil) return 'photos';
+    return s;
+  },
+
+  tick() { if (App.state) this.apply(this.effective()); },
+
+  apply(mode) {
+    if (mode === this.applied) return;
+    const prev = this.applied;
+    this.applied = mode;
+    const el = $('#sleep');
+    el.classList.toggle('on', mode !== 'photos');
+    el.classList.toggle('clock', mode === 'clock');
+    el.classList.toggle('off', mode === 'off');
+    el.style.setProperty('--dim', String(Math.min(100, Math.max(10, parseInt(cfg('clock_dim', '35'), 10) || 35)) / 100));
+    this.power(mode !== 'off');
+    if (mode === 'photos' && prev !== null) { showScreen(CFG.HOME_SCREEN || 'home'); Photos.next(); }
+    tickClock();
+  },
+
+  async power(on) {
+    if (this.hw.supported === false || this.hw.on === on) return;
+    try {
+      const r = await fetch('/api/display', { method: 'POST', body: JSON.stringify({ state: on ? 'on' : 'off' }) });
+      if (r.ok) { const j = await r.json(); this.hw.supported = j.supported; this.hw.method = j.method; this.hw.on = j.state !== 'off'; }
+    } catch (e) { this.hw.supported = false; }
+  },
+
+  // Touch during a clock/off period: full board for touch_wake_min
+  wake() {
+    const mins = Math.max(0.5, parseFloat(cfg('touch_wake_min', '2')) || 2);
+    this.wakeUntil = Date.now() + mins * 60000;
+    if (this.override && this.override.mode !== 'photos') this.setOverride(null);
+    this.tick();
+  },
+
+  async setOverride(mode, minutes) {
+    this.override = mode ? { mode, until: minutes ? Date.now() + minutes * 60000 : 0 } : null;
+    this.wakeUntil = 0;
+    this.tick();
+    try { await fetch('/api/override', { method: 'POST', body: JSON.stringify({ mode: mode || null, minutes: minutes || 0 }) }); } catch (e) {}
+  },
+};
+
+/* ------------------------------------------------------------------------
+   Events
+   ------------------------------------------------------------------------ */
+function bind() {
+  document.addEventListener('pointerdown', () => {
+    bumpIdle();
+    if (Display.applied !== 'photos' || Display.scheduled() !== 'photos') Display.wake();
+  }, true);
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  $('#nav').addEventListener('click', e => { const b = e.target.closest('.navbtn'); if (b) showScreen(b.dataset.screen); });
+
+  // Groceries
+  $('.gtabs').addEventListener('click', e => { const b = e.target.closest('.gtab'); if (b) { App.gtab = b.dataset.gtab; renderGroceries(); } });
+  let pressTimer = null, pressFired = false;
+  const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+  $('#groc-list').addEventListener('pointerdown', e => {
+    const b = e.target.closest('.gchip, .gitem'); if (!b) return;
+    pressFired = false;
+    pressTimer = setTimeout(async () => {
+      pressFired = true;
+      const g = App.state.groceries.find(x => x.id === b.dataset.id); if (!g) return;
+      GE.open(g);
+    }, 650);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('#groc-list').addEventListener(ev, cancelPress));
+  $('#groc-list').addEventListener('pointermove', e => { if (pressTimer && (Math.abs(e.movementX) + Math.abs(e.movementY)) > 6) cancelPress(); });
+  $('#groc-list').addEventListener('click', e => {
+    if (pressFired) { pressFired = false; return; }
+    const b = e.target.closest('.gchip, .gitem'); if (!b) return;
+    const g = App.state.groceries.find(x => x.id === b.dataset.id); if (!g) return;
+    if (App.gtab === 'need') {
+      // Shopping list: tap marks an item to KEEP when you clear the rest.
+      const i = App.gKeep.indexOf(g.id);
+      if (i >= 0) App.gKeep.splice(i, 1); else App.gKeep.push(g.id);
+      renderGroceries();
+      return;
+    }
+    // All items: stocked ↔ needed
+    const next = gStatus(g) === '' ? 'needed' : '';
+    g.status = next; renderGroceries();
+    act('setGroceryStatus', { id: g.id, status: next });
+  });
+  $('#groc-add').addEventListener('click', async () => {
+    const v = await KB.open({ title: 'Add an item (it joins the master list)', placeholder: 'e.g. Apples' });
+    if (!v) return;
+    const ex = (App.state.groceries || []).find(g => g.item.trim().toLowerCase() === v.toLowerCase());
+    if (ex) { ex.status = 'needed'; App.gtab = 'need'; renderGroceries(); act('setGroceryStatus', { id: ex.id, status: 'needed' }, { toast: `${ex.item} is already on your list — marked as needed` }); return; }
+    GE.open(null, v);
+  });
+  $('#gfilters').addEventListener('click', e => {
+    if (e.target.closest('#groc-essonly')) { App.gEssOnly = !App.gEssOnly; renderGroceries(); return; }
+    const b = e.target.closest('[data-store]'); if (b) { App.gStore = b.dataset.store || null; renderGroceries(); }
+  });
+  $('#groc-ed').addEventListener('click', async e => {
+    if (e.target.id === 'groc-ed' || e.target.closest('#ge-cancel')) { GE.close(); return; }
+    if (e.target.closest('#ge-save')) { GE.save(); return; }
+    if (e.target.closest('#ge-del')) { GE.del(); return; }
+    if (e.target.closest('#ge-name')) { const v = await KB.open({ title: 'Item name', initial: GE.state.name, placeholder: 'e.g. Apples' }); if (v !== null && GE.state) { GE.state.name = v; GE.draw(); } return; }
+    if (e.target.closest('#ge-note')) { const v = await KB.open({ title: 'Note', initial: GE.state.note, placeholder: 'brand, size, flavor…' }); if (v !== null && GE.state) { GE.state.note = v; GE.draw(); } return; }
+    const st = e.target.closest('[data-store]'); if (st) { const x = st.dataset.store; if (!x) GE.state.stores = []; else { const i = GE.state.stores.findIndex(y => y.toLowerCase() === x.toLowerCase()); if (i >= 0) GE.state.stores.splice(i, 1); else GE.state.stores.push(x); } GE.draw(); return; }
+    if (e.target.closest('[data-newstore]')) { const v = await KB.open({ title: 'New store', placeholder: 'e.g. Costco' }); if (v && GE.state) { if (!GE.state.stores.some(y => y.toLowerCase() === v.toLowerCase())) GE.state.stores.push(v.trim()); GE.draw(); } return; }
+    const pr = e.target.closest('[data-prio]'); if (pr) { GE.state.nice = pr.dataset.prio === 'nice'; GE.draw(); return; }
+    const gr = e.target.closest('[data-grepeat]'); if (gr) { GE.state.repeat = gr.dataset.grepeat; GE.draw(); return; }
+  });
+  $('#groc-send').addEventListener('click', async () => {
+    const items = (App.state.groceries || []).filter(g => gStatus(g) === 'needed').filter(g => !App.gStore || storesOf(g).some(x => x.toLowerCase() === App.gStore)).filter(g => !App.gEssOnly || !isNice(g));
+    if (!items.length) { toast('The shopping list is empty'); return; }
+    const to = cfg('shopping_email', '') || 'the Google account that owns the Sheet';
+    const groups = groupByStore(items);
+    const storeLabel = App.gStore ? ` — ${groups[0].store}` : '';
+    const text = `Shopping list — ${new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}${storeLabel}\n` +
+      groups.map(grp => `\n${grp.store.toUpperCase()}\n${grp.items.map(g => `☐ ${g.item}${g.note ? ` (${g.note})` : ''}${isNice(g) ? '  ~nice to have' : ''}`).join('\n')}\n`).join('') +
+      `\n${items.length} items · ${cfg('family_name', 'Family Quest Board')}`;
+    const canShare = !!navigator.share;
+    const choice = await Modal.confirm({
+      icon: '✉️', title: `Send ${items.length} item${items.length === 1 ? '' : 's'}${storeLabel}?`,
+      body: `<b>Email</b> goes to ${esc(to)}<br><span style="font-size:15px">(change it on the Config tab: <code>shopping_email</code>)</span>`,
+      ok: 'Email it', alt: canShare ? '📲 Share…' : '📋 Copy text',
+    });
+    if (choice === true) {
+      if (App.backend.mode === 'demo') { toast(`Demo mode — once connected, this emails the list to ${to}`); return; }
+      toast('Sending…');
+      try { const r = await App.backend.post('emailList', { store: App.gStore ? groups[0].store : '' }); toast(`Emailed ${r.count} items to ${r.to}`); }
+      catch (e) { toast('Email failed: ' + (e.message || e), true); }
+    } else if (choice === 'alt') {
+      if (canShare) { try { await navigator.share({ title: 'Shopping list', text }); } catch (e) { /* user cancelled */ } }
+      else { try { await navigator.clipboard.writeText(text); toast('Copied — paste it into a text or note'); } catch (e) { toast('Could not copy on this device', true); } }
+    }
+  });
+  $('#groc-clear').addEventListener('click', async () => {
+    const onList = (App.state.groceries || []).filter(g => gStatus(g) !== '');
+    const keep = App.gKeep.filter(id => onList.some(g => g.id === id));
+    const clearing = onList.length - keep.length;
+    if (!clearing) { toast('Everything on the list is marked to keep'); return; }
+    const keptNames = keep.map(id => (onList.find(g => g.id === id) || {}).item).filter(Boolean);
+    const ok = await Modal.confirm({
+      icon: '🧹', title: keep.length ? `Clear all but ${keep.length}?` : clearing === 1 ? 'Clear the last item?' : `Clear all ${clearing} items?`,
+      body: `${clearing} item${clearing === 1 ? '' : 's'} go back to stocked.` + (keptNames.length ? `<br><br><b>Staying on the list:</b> ${esc(keptNames.join(', '))}` : ''),
+      ok: 'Clear them',
+    });
+    if (!ok) return;
+    onList.forEach(g => { if (!keep.includes(g.id)) g.status = ''; });
+    App.gKeep = []; renderGroceries();
+    act('clearList', { keep }, { toast: keep.length ? `Cleared ${clearing}, kept ${keep.length}` : 'List cleared' });
+  });
+  // A–Z rail: tap a letter, or slide a finger along it
+  const rail = $('#letter-rail');
+  const railMove = (e) => { const L = railLetterAt(e.clientY); if (L) { jumpToLetter(L); showBubble(L, e.clientY); } };
+  rail.addEventListener('pointerdown', e => { rail.setPointerCapture(e.pointerId); railMove(e); });
+  rail.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') railMove(e); });
+  ['pointerup', 'pointercancel'].forEach(ev => rail.addEventListener(ev, () => { $('#letter-bubble').classList.remove('on'); }));
+
+  $('#cal-week').addEventListener('click', e => { const b = e.target.closest('[data-todo]'); if (!b) return; const t = (App.state.todos || []).find(x => x.id === b.dataset.todo); if (t) { showScreen('todo'); TD.open(t); } });
+
+  // Quests
+  $('#kid-tabs').addEventListener('click', e => { const b = e.target.closest('.kid-tab'); if (b) { App.kid = b.dataset.kid; renderQuests(); } });
+  $('#quest-grid').addEventListener('click', async e => {
+    const b = e.target.closest('.quest'); if (!b || b.disabled) return;
+    const q = App.state.quests.find(x => x.id === b.dataset.q); if (!q) return;
+    if (await Modal.confirm({ icon: q.icon || '⭐', title: `${q.title} — done?`, body: `${esc(App.kid)} will get <b>+${esc(q.points)} points</b> once a parent approves it.`, ok: 'Yes, done!' })) {
+      act('submitQuest', { questId: q.id, member: App.kid }, { toast: `Nice work, ${App.kid}! Waiting for a parent to approve.` });
+    }
+  });
+  $('#rewards').addEventListener('click', async e => {
+    const b = e.target.closest('.reward'); if (!b || b.disabled) return;
+    const r = App.state.rewards.find(x => x.id === b.dataset.r); if (!r) return;
+    if (await Modal.confirm({ icon: r.icon || '🎁', title: `Redeem ${r.title}?`, body: `This will use <b>${esc(r.cost)} points</b> once a parent approves it.`, ok: 'Redeem' })) {
+      act('redeemReward', { rewardId: r.id, member: App.kid }, { toast: 'Sent to a parent for approval!' });
+    }
+  });
+
+  // PIN pads (parent zone, and the to-do screen when todos_require_pin is on)
+  document.addEventListener('click', e => {
+    const key = e.target.closest('.pinpad [data-k]'); if (!key || App.unlocked) return;
+    const pad = key.closest('.pinpad'); const k = key.dataset.k;
+    App.pin = k === '⌫' ? (App.pin || '').slice(0, -1) : ((App.pin || '') + k).slice(0, 4);
+    $$('.pin-dots span', pad).forEach((d, i) => d.classList.toggle('on', i < App.pin.length));
+    if (App.pin.length === 4) {
+      if (App.pin === String(cfg('pin', '1234'))) { App.unlocked = true; App.pinValue = App.pin; renderParent(); renderTodos(); }
+      else { $('.pin-msg', pad).textContent = 'Wrong PIN'; App.pin = ''; setTimeout(() => { $$('.pin-dots span', pad).forEach(d => d.classList.remove('on')); $('.pin-msg', pad).textContent = ''; }, 700); }
+    }
+  });
+
+  // To-do
+  $('#tfilters').addEventListener('click', e => {
+    if (e.target.closest('#todo-showdone')) { App.todoShowDone = !App.todoShowDone; renderTodos(); return; }
+    const t = e.target.closest('[data-tag]'); if (t) { App.todoTag = t.dataset.tag || null; renderTodos(); }
+  });
+  $('#tfilters').addEventListener('click', e => { const so = e.target.closest('[data-sort]'); if (so) { App.todoSort = so.dataset.sort; renderTodos(); } });
+  // Row: the circle completes, anywhere else opens the task
+  $('#todo-list').addEventListener('click', e => {
+    const b = e.target.closest('.todo'); if (!b) return;
+    const t = (App.state.todos || []).find(x => x.id === b.dataset.id); if (!t) return;
+    if (e.target.closest('[data-check]')) {
+      if (t.repeat && !isTrue(t.done)) {
+        b.classList.add('flash');
+        const nd = nextDue(t.due, t.repeat); t.due = nd;
+        setTimeout(() => renderTodos(), 350);
+        act('setTodoDone', { id: t.id, done: true }, { toast: `Done ✓ — next: ${dueLabel(nd)}` });
+        return;
+      }
+      t.done = isTrue(t.done) ? 'FALSE' : 'TRUE'; t.done_at = isTrue(t.done) ? new Date().toISOString() : ''; renderTodos();
+      act('setTodoDone', { id: t.id, done: isTrue(t.done) }, { toast: isTrue(t.done) ? 'Done ✓' : 'Reopened' });
+      return;
+    }
+    TD.open(t);
+  });
+  // Task detail panel
+  $('#todo-dt').addEventListener('click', async e => {
+    if (e.target.id === 'todo-dt' || e.target.closest('#td-close')) { TD.close(); return; }
+    const t = TD.task(); if (!t) { TD.close(); return; }
+    if (e.target.closest('#td-box')) { TD.complete(); return; }
+    if (e.target.closest('#td-edit') || e.target.closest('[data-td]')) { TE.open(t); return; }
+    if (e.target.closest('#td-title')) { const v = await KB.open({ title: 'Task', initial: t.task }); if (v) { t.task = v; TD.draw(); renderTodos(); act('updateTodo', { id: t.id, task: v }); } return; }
+    if (e.target.closest('#td-notes')) { const v = await KB.open({ title: 'Notes', initial: t.notes || '', multiline: true, placeholder: 'Anything useful for whoever does this…' }); if (v !== null) { t.notes = v; TD.draw(); renderTodos(); act('updateTodo', { id: t.id, notes: v }); } return; }
+    if (e.target.closest('#td-addstep')) { const v = await KB.open({ title: 'New step', placeholder: 'e.g. Buy the part' }); if (v) { const st = subtasksOf(t); st.push({ t: v, d: false }); TD.saveSteps(st); } return; }
+    const sd = e.target.closest('[data-stepdel]'); if (sd) { const st = subtasksOf(t); st.splice(+sd.dataset.stepdel, 1); TD.saveSteps(st); return; }
+    const sp = e.target.closest('[data-step]'); if (sp) { const st = subtasksOf(t); const i = +sp.dataset.step; if (sp.classList.contains('st')) { const v = await KB.open({ title: 'Edit step', initial: st[i].t }); if (v) { st[i].t = v; TD.saveSteps(st); } } else { st[i].d = !st[i].d; TD.saveSteps(st); } return; }
+    if (e.target.closest('#td-del')) { if (await Modal.confirm({ icon: '🗑️', title: `Delete "${t.task}"?`, body: 'This can’t be undone.', ok: 'Delete', okClass: 'bad' })) { TD.close(); act('deleteTodo', { id: t.id }, { toast: 'Task deleted' }); } return; }
+  });
+  $('#todo-add').addEventListener('click', () => TE.open(null));
+  $('#todo-ed').addEventListener('click', async e => {
+    if (e.target.id === 'todo-ed' || e.target.closest('#te-cancel')) { TE.close(); return; }
+    if (e.target.closest('#te-save')) { TE.save(); return; }
+    if (e.target.closest('#te-task')) { TE.editTask(); return; }
+    const tg = e.target.closest('[data-tag]'); if (tg) { const x = tg.dataset.tag; const i = TE.state.tags.findIndex(y => tagKey(y) === tagKey(x)); if (i >= 0) TE.state.tags.splice(i, 1); else TE.state.tags.push(x); TE.draw(); return; }
+    if (e.target.closest('[data-newtag]')) { const v = await KB.open({ title: 'New tag', placeholder: 'e.g. house' }); if (v) { const x = v.replace(/^#/, '').trim(); if (x && !TE.state.tags.some(y => tagKey(y) === tagKey(x))) TE.state.tags.push(x); TE.draw(); } return; }
+    const du = e.target.closest('[data-due]'); if (du) { TE.state.due = du.dataset.due; TE.draw(); return; }
+    if (e.target.closest('[data-pickdate]')) { const inp = $('#te-date'); inp.value = TE.state.due || dayKey(new Date()); try { inp.showPicker(); } catch (_) { inp.click(); } return; }
+    const w = e.target.closest('[data-who]'); if (w) { TE.state.who = w.dataset.who; TE.draw(); return; }
+    const rp = e.target.closest('[data-repeat]'); if (rp) { TE.state.repeat = rp.dataset.repeat; TE.draw(); return; }
+    if (e.target.closest('[data-repeat-custom]')) { const v = await KB.open({ title: 'Repeat every how many days?', placeholder: 'e.g. 10', initial: TE.state.repeat.startsWith('every:') ? TE.state.repeat.slice(6) : '' }); const n = parseInt(v, 10); if (n > 0) { TE.state.repeat = 'every:' + n; TE.draw(); } return; }
+  });
+  $('#quest-ed').addEventListener('click', async e => {
+    if (e.target.id === 'quest-ed' || e.target.closest('#qe-cancel')) { QE.close(); return; }
+    if (e.target.closest('#qe-save')) { QE.save(); return; }
+    if (e.target.closest('#qe-del')) { QE.del(); return; }
+    if (e.target.closest('#qe-name')) { const v = await KB.open({ title: QE.kind === 'quest' ? 'Quest' : 'Reward', initial: QE.state.title, placeholder: QE.kind === 'quest' ? 'e.g. Empty the dishwasher' : 'e.g. 30 min screen time' }); if (v !== null) { QE.state.title = v.trim(); QE.draw(); } return; }
+    if (e.target.closest('#qe-icon')) { const v = await KB.open({ title: 'Icon — paste or type an emoji', initial: QE.state.icon }); if (v !== null && v.trim()) { QE.state.icon = firstGrapheme(v.trim()); QE.draw(); } return; }
+    const qp = e.target.closest('[data-qpts]'); if (qp) { if (qp.dataset.qpts === 'custom') { const v = await KB.open({ title: 'How many points?', placeholder: 'e.g. 30', initial: '' }); const n = parseInt(v, 10); if (n >= 0) { QE.state.points = n; QE.draw(); } } else { QE.state.points = +qp.dataset.qpts; QE.draw(); } return; }
+    const qw = e.target.closest('[data-qwho]'); if (qw) { QE.state.who = qw.dataset.qwho; QE.draw(); return; }
+    const qr = e.target.closest('[data-qrep]'); if (qr) { QE.state.repeat = qr.dataset.qrep; QE.draw(); return; }
+    const qa = e.target.closest('[data-qact]'); if (qa) { QE.state.active = qa.dataset.qact === '1'; QE.draw(); return; }
+  });
+  $('#disp-ed').addEventListener('click', e => {
+    if (e.target.id === 'disp-ed' || e.target.closest('#de-cancel')) { DE.close(); return; }
+    if (e.target.closest('#de-save')) { DE.save(); return; }
+    if (e.target.closest('#de-del')) { DE.del(); return; }
+    if (e.target.closest('#de-time')) { const inp = $('#de-timeinput'); inp.value = DE.state.start; try { inp.showPicker(); } catch (_) { inp.click(); } return; }
+    const dm = e.target.closest('[data-dmode]'); if (dm) { DE.state.mode = dm.dataset.dmode; DE.draw(); return; }
+    const dd = e.target.closest('[data-ddays]'); if (dd) { DE.state.days = dd.dataset.ddays; DE.draw(); return; }
+  });
+  $('#de-timeinput').addEventListener('change', e => { if (DE.state && e.target.value) { DE.state.start = e.target.value; DE.draw(); } });
+  $('#te-date').addEventListener('change', e => { if (TE.state && e.target.value) { TE.state.due = e.target.value; TE.draw(); } });
+
+  // Parent
+  $('#screen-parent').addEventListener('click', async e => {
+    if (e.target.closest('.pinpad')) return;
+    if (e.target.closest('#parent-lockbtn')) { App.unlocked = false; renderParent(); renderTodos(); return; }
+    const pt = e.target.closest('.ptab'); if (pt) { App.ptab = pt.dataset.ptab; renderParent(); return; }
+    const rv = e.target.closest('[data-review]'); if (rv) { rv.closest('.qrow').style.opacity = .4; act('reviewQueue', { id: rv.dataset.id, status: rv.dataset.review, pin: App.pinValue }, { toast: rv.dataset.review === 'approved' ? 'Approved ✓' : 'Rejected' }); return; }
+    const dr = e.target.closest('.drow'); if (dr) {
+      const cur = dinnerFor(new Date(dr.dataset.date + 'T12:00:00'));
+      const v = await KB.open({ title: 'Dinner on ' + dr.dataset.date, initial: cur ? cur.meal : '', placeholder: 'What’s for dinner?' });
+      if (v !== null) act('setDinner', { date: dr.dataset.date, meal: v, pin: App.pinValue }, { toast: 'Dinner plan saved' });
+      return;
+    }
+    const bm = e.target.closest('[data-bm]'); if (bm) { App.bonus.member = bm.dataset.bm; renderParent(); return; }
+    const bp = e.target.closest('[data-bp]'); if (bp) { App.bonus.points = +bp.dataset.bp; renderParent(); return; }
+    if (e.target.closest('#bonus-reason')) { const v = await KB.open({ title: 'Reason', initial: App.bonus.reason }); if (v !== null) { App.bonus.reason = v; renderParent(); } return; }
+    if (e.target.closest('#bonus-go')) { if (!App.bonus.member) return; if (await act('adjustPoints', { member: App.bonus.member, points: App.bonus.points, reason: App.bonus.reason || 'Bonus', pin: App.pinValue }, { toast: 'Points updated' })) { App.bonus.reason = ''; renderParent(); } return; }
+    const ovr = e.target.closest('[data-ovr]');
+    if (ovr) { const m = ovr.dataset.ovr || null; Display.setOverride(m, 0); renderParent(); toast(m ? `Showing ${modeLabel(m).replace(/^\S+\s/, '')}` : 'Back on schedule'); return; }
+    const per = e.target.closest('[data-period]');
+    if (per) { const p = displayPeriods().find(x => String(x.id) === per.dataset.period); if (p) DE.open(p); return; }
+    if (e.target.closest('#disp-add')) { DE.open(null); return; }
+    if (e.target.closest('#quest-add')) { QE.open('quest', null); return; }
+    if (e.target.closest('#reward-add')) { QE.open('reward', null); return; }
+    const qe = e.target.closest('[data-qedit]'); if (qe) { const q = (App.state.quests || []).find(x => x.id === qe.dataset.qedit); if (q) QE.open('quest', q); return; }
+    const re = e.target.closest('[data-redit]'); if (re) { const r = (App.state.rewards || []).find(x => x.id === re.dataset.redit); if (r) QE.open('reward', r); return; }
+    const cfgBtn = e.target.closest('[data-cfg]');
+    if (cfgBtn) {
+      const key = cfgBtn.dataset.cfg;
+      const label = { touch_wake_min: 'Minutes a touch keeps the board awake', idle_timeout_sec: 'Seconds before returning to the home screen', photo_interval_sec: 'Seconds each photo is shown', clock_dim: 'Dim clock brightness (10-100)' }[key] || key;
+      const v = await KB.open({ title: label, initial: String(cfg(key, '')) });
+      if (v !== null && v !== '' && !isNaN(parseFloat(v))) {
+        App.state.config[key] = String(parseFloat(v));
+        renderParent(); Display.applied = null; Display.tick();
+        act('setConfig', { key, value: parseFloat(v), pin: App.pinValue }, { toast: 'Saved' });
+      }
+      return;
+    }
+    if (e.target.closest('#set-save')) {
+      const u = $('#set-url').value.trim(); try { localStorage.setItem('fqb_url', u); } catch (_) {}
+      try { await fetch('/api/config', { method: 'POST', body: JSON.stringify({ url: u }) }); } catch (_) { /* no local server (static hosting) */ }
+      if (!u) { toast('URL cleared — back to demo mode'); } location.reload(); return;
+    }
+    if (e.target.closest('#set-refresh')) { toast('Refreshing…'); refresh(true); return; }
+    if (e.target.closest('#set-photos')) { toast('Scanning photos…'); await Photos.rescan(); renderParent(); toast(Photos.list.length ? `${Photos.list.length} photos ready` : (Photos.note || 'No photos found'), !Photos.list.length); return; }
+    if (e.target.closest('#set-reset')) { App.backend.reset(); refresh(true); toast('Demo data reset'); return; }
+    if (e.target.closest('#set-reload')) { location.reload(); return; }
+    if (e.target.closest('#set-fs')) { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); return; }
+  });
+
+  // Keyboard
+  $('#kb-rows').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) KB.press(b.dataset.k); });
+  $('#kb-input').addEventListener('keydown', e => { if (e.key === 'Enter') KB.press('done'); if (e.key === 'Escape') KB.press('cancel'); });
+  $('#kb-area').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) KB.press('done'); if (e.key === 'Escape') KB.press('cancel'); });
+  $('#kb').addEventListener('click', e => { if (e.target.id === 'kb') KB.close(null); });
+
+  // Modal
+  $('#m-ok').addEventListener('click', () => Modal.close(true));
+  $('#m-alt').addEventListener('click', () => Modal.close('alt'));
+  $('#m-cancel').addEventListener('click', () => Modal.close(false));
+
+  // Sleep screen
+  $('#sleep').addEventListener('click', () => Display.wake());
+}
+
+/* ------------------------------------------------------------------------
+   Boot
+   ------------------------------------------------------------------------ */
+async function boot() {
+  forcePhoneLayoutIfNeeded();
+  const url = scriptUrl();
+  App.backend = url ? new SheetsBackend(url) : new DemoBackend();
+  bind();
+  tickClock(); setInterval(tickClock, 1000);
+  showScreen(CFG.HOME_SCREEN || 'home');
+  $('#smart').innerHTML = `<div class="kicker">Loading</div><div class="big"><span class="spin"></span> ${url ? 'Reading your Google Sheet…' : 'Starting demo…'}</div>`;
+  await refresh(true);
+  if (!App.state) {
+    // Live backend failed on first load — fall back to demo so the screen is never blank
+    toast('Could not reach the Sheet, showing demo data. Check Parents → Settings.', true);
+    const live = App.backend; App.backend = new DemoBackend(); await refresh(false); App.backend.mode = 'demo'; App.failedLive = live;
+  }
+  bumpIdle();
+  scheduleRefresh();
+  fetch('/api/health', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { App.server = j; }).catch(() => {});
+  loadWeather(); setInterval(loadWeather, 15 * 60000);
+  setInterval(() => { if (App.state) { renderHome(); Display.tick(); } }, 30000);
+  Display.init();
+  Photos.init();
+}
+
+window.addEventListener('DOMContentLoaded', boot);
+window.FQB = App;
+App.Display = Display; App.periodAt = periodAt; App.displayPeriods = displayPeriods; App.Photos = Photos;
+})();
+</script>
+</body>
+</html>
