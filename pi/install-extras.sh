@@ -27,6 +27,21 @@ if ! command -v wlopm >/dev/null 2>&1; then
   sudo apt-get install -y -qq wlopm >/dev/null 2>&1 || true
 fi
 
+# Keep the HDMI port "connected" even when the monitor sleeps. Some portable
+# monitors disconnect entirely on power-off; when they reappear the desktop
+# crashes to the login screen. Forcing the connector on prevents that.
+CMDLINE=/boot/firmware/cmdline.txt; [ -f "$CMDLINE" ] || CMDLINE=/boot/cmdline.txt
+if [ -f "$CMDLINE" ] && ! grep -q "video=HDMI-A-" "$CMDLINE"; then
+  for c in /sys/class/drm/card*-HDMI-A-*; do
+    [ "$(cat "$c/status" 2>/dev/null)" = "connected" ] || continue
+    PORT="${c##*-HDMI-A-}"; MODE="$(head -1 "$c/modes" 2>/dev/null)"; MODE="${MODE:-1920x1080}"
+    sudo cp "$CMDLINE" "$CMDLINE.fqb-backup"
+    sudo sed -i "1 s|\$| video=HDMI-A-$PORT:${MODE}@60D|" "$CMDLINE"
+    echo "Forced HDMI-A-$PORT on (${MODE}) - takes effect after the next reboot"
+    break
+  done
+fi
+
 # Hardware watchdog: if the whole Pi locks up, it resets itself in ~15 s
 if [ ! -f /etc/systemd/system.conf.d/fqb-watchdog.conf ]; then
   sudo mkdir -p /etc/systemd/system.conf.d

@@ -49,6 +49,11 @@ if ! curl -fs -m 8 "http://localhost:$PORT/api/health" >/dev/null 2>&1; then
     rescue "server not answering - restarting it" "sudo systemctl restart fqb-server.service"
 fi
 
+# 2a. Sitting at the login screen (the desktop session ended): auto-login again now
+if pgrep -u lightdm -f 'pi-greeter|lightdm-gtk-greeter' >/dev/null 2>&1 && ! pgrep -u "$ME" -x labwc >/dev/null && ! pgrep -u "$ME" -x wayfire >/dev/null; then
+  rescue "login screen showing - restarting auto-login" "sudo systemctl restart lightdm"
+fi
+
 # 2. Browser missing (crashed, or the Pi fell back to the login screen)
 if ! pgrep -u "$ME" -f 'user-data-dir=.*fqb-kiosk' >/dev/null; then
   missing_since=$(cat "$STATE/missing_since" 2>/dev/null || echo "$now")
