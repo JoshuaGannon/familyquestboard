@@ -1378,7 +1378,8 @@ function showDay(k) {
     ${!evs.length && !tds.length ? '<div class="muted">Nothing scheduled.</div>' : ''}
     ${din ? `<div class="ad">🍽️ Dinner: <b style="color:var(--text)">${esc(din.meal)}</b></div>` : ''}
   </div>`;
-  Modal.confirm({ icon: '📅', title: d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }), body, ok: 'Close', noCancel: true, wide: true });
+  Modal.confirm({ icon: '📅', title: d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }), body, ok: 'Close', alt: '＋ Add a task for this day', noCancel: true, wide: true })
+    .then(r => { if (r === 'alt') TE.open(null, { due: k }); });
 }
 function showEvent(ev) {
   const s = toDate(ev.start);
@@ -1695,8 +1696,8 @@ const TD = {
 /* Task editor */
 const TE = {
   state: null,
-  open(t) {
-    this.state = t ? { id: t.id, task: t.task, tags: tagList(t), due: t.due || '', who: t.assigned_to || '', repeat: t.repeat || '' } : { task: '', tags: App.todoTag ? [App.todoTag] : [], due: '', who: '', repeat: '' };
+  open(t, preset) {
+    this.state = t ? { id: t.id, task: t.task, tags: tagList(t), due: t.due || '', who: t.assigned_to || '', repeat: t.repeat || '' } : Object.assign({ task: '', tags: App.todoTag ? [App.todoTag] : [], due: '', who: '', repeat: '' }, preset || {});
     $('#te-title').textContent = t ? 'Edit task' : 'New task';
     this.draw(); $('#todo-ed').classList.add('open');
     if (!t) setTimeout(() => this.editTask(), 80);
