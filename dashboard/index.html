@@ -1741,6 +1741,9 @@ function renderParent() {
       <label>Display</label>
       <div class="note">Photos: <b>${esc(Photos.sourceLabel())}</b> (${Photos.list.length} loaded) <button class="btn sm" id="set-photos" style="margin-left:8px">↻ Rescan photos</button> · Weather ${esc(cfg('lat', ''))}, ${esc(cfg('lon', ''))}<br>Screen schedule, sleep times and timeouts are on the <b>Display</b> tab above.</div>
       <div class="row"><button class="btn ghost" id="set-reload">Reload app</button><button class="btn ghost" id="set-fs">Toggle fullscreen</button></div>
+      <label>Wall controls</label>
+      <div class="note">Works from your phone even when the wall screen is frozen.</div>
+      <div class="row"><button class="btn primary" data-sys="restart_app">↻ Restart app</button><button class="btn ghost" data-sys="exit_app">✕ Close app (1 hr)</button><button class="btn ghost" data-sys="reboot">⏻ Reboot Pi</button></div>
       <div class="note">Family Quest Board v1.0</div></div>`;
   }
 }
@@ -2342,6 +2345,21 @@ function bind() {
     if (e.target.closest('#set-photos')) { toast('Scanning photos…'); await Photos.rescan(); renderParent(); toast(Photos.list.length ? `${Photos.list.length} photos ready` : (Photos.note || 'No photos found'), !Photos.list.length); return; }
     if (e.target.closest('#set-reset')) { App.backend.reset(); refresh(true); toast('Demo data reset'); return; }
     if (e.target.closest('#set-reload')) { location.reload(); return; }
+    const sb = e.target.closest('[data-sys]');
+    if (sb) {
+      const a = sb.dataset.sys;
+      const info = {
+        restart_app: { icon: '↻', title: 'Restart the board app?', body: 'Closes and reopens the wall screen. Takes about 10 seconds.', ok: 'Restart' },
+        exit_app: { icon: '✕', title: 'Close the board app?', body: 'Leaves full screen and shows the Pi desktop. It reopens on its own in 1 hour, or tap <b>Restart app</b>.', ok: 'Close it' },
+        reboot: { icon: '⏻', title: 'Reboot the Pi?', body: 'The whole Pi restarts. The board is back in about a minute.', ok: 'Reboot', okClass: 'bad' },
+      }[a];
+      if (!(await Modal.confirm(info))) return;
+      try {
+        const r = await fetch('/api/system', { method: 'POST', body: JSON.stringify({ action: a }) });
+        const j = await r.json(); toast(j.message || (j.ok ? 'Done' : 'Failed'), !j.ok);
+      } catch (_) { toast('Could not reach the Pi', true); }
+      return;
+    }
     if (e.target.closest('#set-fs')) { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); return; }
   });
 

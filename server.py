@@ -75,6 +75,42 @@ _override = {"mode": None, "until": 0}
 # /api/heartbeat every 30 s; pi/watchdog.sh relaunches it if that goes stale.
 _heartbeat = {"at": time.time()}
 
+# Wall controls, usable from a phone even when the wall's browser is frozen:
+# restart the kiosk browser, close it for an hour, or reboot the Pi.
+PI_DIR = os.path.join(HERE, "pi")
+PAUSE_FILE = os.path.join(PI_DIR, ".watchdog", "paused_until")
+
+
+def _spawn(cmd):
+    subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True, cwd=HERE)
+
+
+def _pause_watchdog(seconds):
+    os.makedirs(os.path.dirname(PAUSE_FILE), exist_ok=True)
+    if seconds > 0:
+        with open(PAUSE_FILE, "w") as f:
+            f.write(str(int(time.time() + seconds)))
+    elif os.path.exists(PAUSE_FILE):
+        os.remove(PAUSE_FILE)
+
+
+def system_action(action):
+    if not sys.platform.startswith("linux") or not os.path.exists(os.path.join(PI_DIR, "relaunch-kiosk.sh")):
+        return False, "Only available on the Raspberry Pi"
+    if action == "restart_app":
+        _pause_watchdog(0)
+        _spawn(["bash", os.path.join(PI_DIR, "relaunch-kiosk.sh")])
+        return True, "Restarting the board app…"
+    if action == "exit_app":
+        _pause_watchdog(3600)
+        _spawn(["pkill", "-f", "user-data-dir=.*fqb-kiosk"])
+        return True, "Board closed. It comes back on its own in 1 hour, or tap Restart app."
+    if action == "reboot":
+        _spawn(["bash", "-c", "sleep 2; sudo reboot"])
+        return True, "Rebooting the Pi — back in about a minute."
+    return False, "Unknown action"
+
 
 def screen_probe():
     with _screen_lock:
@@ -275,6 +311,11 @@ class Handler(SimpleHTTPRequestHandler):
                 _override.update({"mode": str(mode),
                                   "until": time.time() + mins * 60 if mins > 0 else 0})
             self._send_json(override_state())
+            return
+        if path == "/api/system":
+            body = self._read_json()
+            ok, msg = system_action(str(body.get("action", "")))
+            self._send_json({"ok": ok, "message": msg})
             return
         if path == "/api/heartbeat":
             self._read_json()

@@ -14,6 +14,10 @@ ME="$(id -un)"
 now=$(date +%s)
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; tail -n 300 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"; }
 
+# Closed on purpose from Parents -> Settings: leave it closed until the pause runs out
+paused=$(cat "$STATE/paused_until" 2>/dev/null || echo 0)
+[ "$now" -lt "${paused:-0}" ] && exit 0
+
 # Give things time to settle after boot or after we just acted
 uptime_s=$(cut -d. -f1 /proc/uptime)
 [ "$uptime_s" -lt 240 ] && exit 0

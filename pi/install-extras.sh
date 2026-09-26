@@ -14,6 +14,14 @@ chmod +x "$PROJECT/pi/"*.sh
   echo "*/10 * * * * $PROJECT/pi/sync-photos.sh >/dev/null 2>&1"
 ) | crontab -
 
+# The server can relaunch the kiosk (Parents -> Settings -> Restart app). Keep a
+# server restart from taking the browser down with it.
+if [ -f /etc/systemd/system/fqb-server.service ] && [ ! -f /etc/systemd/system/fqb-server.service.d/killmode.conf ]; then
+  sudo mkdir -p /etc/systemd/system/fqb-server.service.d
+  printf '[Service]\nKillMode=process\n' | sudo tee /etc/systemd/system/fqb-server.service.d/killmode.conf >/dev/null
+  sudo systemctl daemon-reload
+fi
+
 # wlopm = clean hardware screen off on Wayland (no session crash)
 if ! command -v wlopm >/dev/null 2>&1; then
   sudo apt-get install -y -qq wlopm >/dev/null 2>&1 || true
