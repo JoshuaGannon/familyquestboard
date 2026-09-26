@@ -1925,8 +1925,9 @@ function toast(msg, isErr) {
 /* ------------------------------------------------------------------------
    Idle + night mode
    ------------------------------------------------------------------------ */
-let idleTimer;
+let idleTimer, lastTouch = Date.now();
 function bumpIdle() {
+  lastTouch = Date.now();
   clearTimeout(idleTimer);
   if (isPhone()) return;
   const secs = Math.max(20, parseInt(cfg('idle_timeout_sec', '90'), 10) || 90);
@@ -2032,7 +2033,13 @@ const Display = {
     return s;
   },
 
-  tick() { if (App.state) this.apply(this.effective()); },
+  tick() {
+    if (!App.state) return;
+    this.apply(this.effective());
+    // Screen should be off but the panel didn't power down (e.g. the display
+    // wasn't ready at boot): try again every 5 minutes instead of giving up.
+    if (this.applied === 'off' && !isPhone() && (this.hw.on || !this.hw.supported) && Date.now() - (this.hw.lastTry || 0) > 300000) this.power(false);
+  },
 
   apply(mode) {
     if (mode === this.applied) return;
@@ -2049,11 +2056,12 @@ const Display = {
   },
 
   async power(on) {
-    if (this.hw.supported === false || this.hw.on === on) return;
+    if (this.hw.supported && this.hw.on === on) return;
+    this.hw.lastTry = Date.now();
     try {
       const r = await fetch('/api/display', { method: 'POST', body: JSON.stringify({ state: on ? 'on' : 'off' }) });
       if (r.ok) { const j = await r.json(); this.hw.supported = j.supported; this.hw.method = j.method; this.hw.on = j.state !== 'off'; }
-    } catch (e) { this.hw.supported = false; }
+    } catch (e) { /* server busy or restarting: the tick below retries */ }
   },
 
   // Touch during a clock/off period: full board for touch_wake_min
@@ -2376,6 +2384,21 @@ async function boot() {
   setInterval(() => { if (App.state) { renderHome(); Display.tick(); } }, 30000);
   Display.init();
   Photos.init();
+  keepAlive();
+}
+
+/* Keep the wall healthy over days of uptime:
+   - heartbeat so pi/watchdog.sh can tell if the page has frozen
+   - a fresh page load about once an hour, only when nobody is using it */
+function keepAlive() {
+  if (isPhone()) return;
+  const beat = () => fetch('/api/heartbeat', { method: 'POST', body: '{}' }).catch(() => {});
+  beat(); setInterval(beat, 30000);
+  const bootAt = Date.now();
+  setInterval(() => {
+    const busy = KB.resolve || Modal.resolve || TE.state || GE.state || DE.state || TD.id;
+    if (Date.now() - bootAt > 60 * 60000 && Date.now() - lastTouch > 5 * 60000 && App.screen === (CFG.HOME_SCREEN || 'home') && Display.applied === 'photos' && !busy) location.reload();
+  }, 60000);
 }
 
 window.addEventListener('DOMContentLoaded', boot);

@@ -5,3 +5,5 @@ pi/pi-target.txt
 pi/autopull.log
 __pycache__/
 *.pyc
+pi/.watchdog/
+pi/watchdog.log

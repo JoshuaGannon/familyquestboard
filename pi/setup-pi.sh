@@ -110,6 +110,10 @@ if [ -d "$PROJECT/.git" ]; then
   ( crontab -u "$USER_NAME" -l 2>/dev/null | grep -v "autopull.sh"; echo "$PULL_LINE" ) | crontab -u "$USER_NAME" -
 fi
 
+# ---------------------------------------------------------------- reliability
+echo "== Watchdog, nightly browser refresh, clean screen-off"
+sudo -u "$USER_NAME" bash "$PROJECT/pi/install-extras.sh" || true
+
 # ---------------------------------------------------------------- photo sync
 echo "== Photo sync (Google Drive → $PHOTOS)"
 CRON_LINE="*/10 * * * * $PROJECT/pi/sync-photos.sh >/dev/null 2>&1"

@@ -71,6 +71,10 @@ _screen_lock = threading.Lock()
 # The wall reads this each tick and it wins over the scheduled mode.
 _override = {"mode": None, "until": 0}
 
+# Freeze detection: the wall's own browser (localhost only, not phones) posts
+# /api/heartbeat every 30 s; pi/watchdog.sh relaunches it if that goes stale.
+_heartbeat = {"at": time.time()}
+
 
 def screen_probe():
     with _screen_lock:
@@ -272,6 +276,12 @@ class Handler(SimpleHTTPRequestHandler):
                                   "until": time.time() + mins * 60 if mins > 0 else 0})
             self._send_json(override_state())
             return
+        if path == "/api/heartbeat":
+            self._read_json()
+            if self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+                _heartbeat["at"] = time.time()
+            self._send_json({"ok": True})
+            return
         if path == "/api/config":
             body = self._read_json()
             url = str(body.get("url", "")).strip()
@@ -310,6 +320,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path == "/api/override":
             self._send_json(override_state())
+            return
+        if path == "/api/heartbeat":
+            self._send_json({"age": int(time.time() - _heartbeat["at"])})
             return
         if path == "/api/photos":
             photos = list_photos(self.photos_dir)

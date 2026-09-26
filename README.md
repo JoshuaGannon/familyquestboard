@@ -376,3 +376,20 @@ from SSH: `pkill chromium`. It comes back on the next login/reboot.
 
 Editing the look: everything visual is CSS at the top of `dashboard/index.html`
 (colors in `:root`).
+
+## Staying healthy on the wall (Pi)
+
+The board looks after itself so you shouldn't need to reboot it by hand:
+
+- **Hourly refresh** — about once an hour, when nobody has touched it for 5 minutes
+  and it's on the Home screen, the page quietly reloads.
+- **Nightly refresh** — the kiosk browser is restarted fresh at 3:30 AM.
+- **Watchdog** (`pi/watchdog.sh`, every minute) — restarts the server if it stops
+  answering, relaunches the browser if the page freezes (no heartbeat for 5 min) or
+  the browser disappears, and gets back past the login screen by restarting
+  auto-login. Three rescues in 30 minutes → full reboot. See `pi/watchdog.log`.
+- **Hardware watchdog** — if the whole Pi locks up, it resets itself.
+- **Screen off** uses `wlopm` (true power-off). `wlr-randr --off` is no longer used
+  because removing the only display can crash the desktop to the login screen.
+
+These are installed by `pi/install-extras.sh`, which runs automatically on every update.
