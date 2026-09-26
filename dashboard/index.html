@@ -997,6 +997,9 @@ function balance(name) {
   return { approved, pending };
 }
 
+// A quest repeat of "3" or "every:3" means every 3 days
+function everyDays(r) { const m = /^(?:every[:\s]*)?(\d+)(?:\s*days?)?$/i.exec(String(r || '').trim()); return m ? Math.max(1, +m[1]) : 0; }
+
 function questStatus(quest, memberName) {
   const monday = isTrue(cfg('week_starts_monday', 'TRUE'));
   const now = new Date();
@@ -1009,6 +1012,10 @@ function questStatus(quest, memberName) {
     else if (period === 'weekly') same = weekKey(t, monday) === weekKey(now, monday);
     else if (period === 'biweekly') same = (now - t) < 14 * 86400000;
     else if (period === 'monthly') same = t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth();
+    else if (everyDays(period)) {   // "3" or "every:3" -> available again 3 calendar days after the last time
+      const d0 = new Date(t.getFullYear(), t.getMonth(), t.getDate()), d1 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      same = Math.round((d1 - d0) / 86400000) < everyDays(period);
+    }
     if (same) return k.status === 'pending' ? 'pending' : 'done';
   }
   return 'available';
@@ -1381,7 +1388,8 @@ function renderQuests() {
   const items = quests.filter(q => !(wknd && String(q.repeat).toLowerCase() === 'weekdays')).map(q => ({ q, s: questStatus(q, kid.name) })).sort((a, b) => order[a.s] - order[b.s]);
   const label = { pending: 'WAITING ⏳', done: 'DONE ✓' };
   const rep = { daily: 'today', weekdays: 'today', weekly: 'this week', biweekly: 'every 2 weeks', monthly: 'this month', once: 'one time' };
-  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s !== 'available' ? 'disabled' : ''}><div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div><div class="qm"><span>${rep[(q.repeat || 'daily').toLowerCase()] || esc(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`).join('')
+  const repTxt = (r) => { const n = everyDays(r); return n ? (n === 1 ? 'today' : `every ${n} days`) : (rep[(r || 'daily').toLowerCase()] || esc(r)); };
+  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s !== 'available' ? 'disabled' : ''}><div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div><div class="qm"><span>${repTxt(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`).join('')
     : `<div class="empty">No quests for ${esc(kid.name)} yet. Add some on the Quests tab.</div>`;
 
   const b = balance(kid.name);
@@ -1688,7 +1696,7 @@ function renderParent() {
     const quests = (App.state.quests || []).filter(q => q.title).slice().sort((a, b) => on(b) - on(a) || a.title.localeCompare(b.title));
     const rewards = (App.state.rewards || []).filter(r => r.title).slice().sort((a, b) => on(b) - on(a) || (+a.cost || 0) - (+b.cost || 0));
     body.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><label class="sect" style="margin:0">Quests · ${quests.length}</label><button class="btn primary sm" id="quest-add">＋ New quest</button></div>
-      ${quests.length ? quests.map(q => `<button class="prow ${on(q) ? '' : 'off'}" data-qedit="${esc(q.id)}"><span class="pt" style="font-size:26px">${esc(q.icon || '⭐')}</span><span><div class="pm">${esc(q.title)}</div><div class="pd">${esc(QREPEATS.find(r => r[0] === String(q.repeat || 'daily').toLowerCase())?.[1] || q.repeat)} · ${esc(q.assigned_to || 'Anyone')}${on(q) ? '' : ' · paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">+${esc(q.points || 0)}</span></button>`).join('') : '<div class="empty">No quests yet — tap New quest.</div>'}
+      ${quests.length ? quests.map(q => `<button class="prow ${on(q) ? '' : 'off'}" data-qedit="${esc(q.id)}"><span class="pt" style="font-size:26px">${esc(q.icon || '⭐')}</span><span><div class="pm">${esc(q.title)}</div><div class="pd">${esc(QREPEATS.find(r => r[0] === String(q.repeat || 'daily').toLowerCase())?.[1] || (everyDays(q.repeat) ? 'Every ' + everyDays(q.repeat) + ' days' : q.repeat))} · ${esc(q.assigned_to || 'Anyone')}${on(q) ? '' : ' · paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">+${esc(q.points || 0)}</span></button>`).join('') : '<div class="empty">No quests yet — tap New quest.</div>'}
       <div style="display:flex;justify-content:space-between;align-items:center;margin:26px 0 10px"><label class="sect" style="margin:0">Rewards · ${rewards.length}</label><button class="btn primary sm" id="reward-add">＋ New reward</button></div>
       ${rewards.length ? rewards.map(r => `<button class="prow ${on(r) ? '' : 'off'}" data-redit="${esc(r.id)}"><span class="pt" style="font-size:26px">${esc(r.icon || '🎁')}</span><span><div class="pm">${esc(r.title)}</div><div class="pd">${on(r) ? 'Available' : 'Paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">${esc(r.cost || 0)} pts</span></button>`).join('') : '<div class="empty">No rewards yet.</div>'}
       <div class="note" style="margin-top:14px">Tap a quest or reward to edit or delete it. Kids see quests that are assigned to them or to Anyone; a paused quest is hidden without losing its history.</div>`;
