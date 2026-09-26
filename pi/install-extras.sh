@@ -5,11 +5,11 @@ PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ME="$(id -un)"
 chmod +x "$PROJECT/pi/"*.sh
 
-# Cron: watchdog every minute, a fresh browser every night at 3:30,
+# Cron: watchdog every minute, a fresh browser every hour (when idle),
 # GitHub auto-pull every minute (git checkouts only), Drive photo sync every 10 min
-( crontab -l 2>/dev/null | grep -v -e "pi/watchdog.sh" -e "fqb-nightly" -e "pi/autopull.sh" -e "pi/sync-photos.sh" ;
+( crontab -l 2>/dev/null | grep -v -e "pi/watchdog.sh" -e "fqb-nightly" -e "fqb-hourly" -e "pi/autopull.sh" -e "pi/sync-photos.sh" ;
   echo "* * * * * $PROJECT/pi/watchdog.sh >/dev/null 2>&1"
-  echo "30 3 * * * $PROJECT/pi/relaunch-kiosk.sh >/dev/null 2>&1 # fqb-nightly"
+  echo "5 * * * * $PROJECT/pi/hourly-refresh.sh >/dev/null 2>&1 # fqb-hourly"
   [ -d "$PROJECT/.git" ] && echo "* * * * * $PROJECT/pi/autopull.sh >/dev/null 2>&1"
   echo "*/10 * * * * $PROJECT/pi/sync-photos.sh >/dev/null 2>&1"
 ) | crontab -
@@ -40,6 +40,14 @@ if [ -f "$CMDLINE" ] && ! grep -q "video=HDMI-A-" "$CMDLINE"; then
     echo "Forced HDMI-A-$PORT on (${MODE}) - takes effect after the next reboot"
     break
   done
+fi
+
+# Keep system logs across reboots so freezes can be diagnosed afterwards
+# (Pi OS ships a volatile journal; this drop-in overrides it)
+if [ ! -f /etc/systemd/journald.conf.d/zz-fqb-persistent.conf ]; then
+  sudo mkdir -p /etc/systemd/journald.conf.d /var/log/journal
+  printf '[Journal]\nStorage=persistent\nSystemMaxUse=200M\n' | sudo tee /etc/systemd/journald.conf.d/zz-fqb-persistent.conf >/dev/null
+  sudo systemctl restart systemd-journald || true
 fi
 
 # Hardware watchdog: if the whole Pi locks up, it resets itself in ~15 s

@@ -318,9 +318,14 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json({"ok": ok, "message": msg})
             return
         if path == "/api/heartbeat":
-            self._read_json()
+            body = self._read_json()
             if self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
                 _heartbeat["at"] = time.time()
+                try:
+                    _heartbeat["idle"] = int(body.get("idle", 0))
+                except (TypeError, ValueError):
+                    _heartbeat["idle"] = 0
+                _heartbeat["busy"] = bool(body.get("busy"))
             self._send_json({"ok": True})
             return
         if path == "/api/config":
@@ -363,7 +368,9 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(override_state())
             return
         if path == "/api/heartbeat":
-            self._send_json({"age": int(time.time() - _heartbeat["at"])})
+            age = int(time.time() - _heartbeat["at"])
+            self._send_json({"age": age, "idle": _heartbeat.get("idle", 0) + age,
+                             "busy": _heartbeat.get("busy", False)})
             return
         if path == "/api/photos":
             photos = list_photos(self.photos_dir)

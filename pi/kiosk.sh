@@ -30,4 +30,7 @@ exec "$CHROMIUM" \
   --touch-events=enabled \
   --autoplay-policy=no-user-gesture-required \
   --check-for-update-interval=31536000 \
-  --password-store=basic
+  --password-store=basic \
+  --disable-background-timer-throttling \
+  --disable-backgrounding-occluded-windows \
+  --disable-renderer-backgrounding

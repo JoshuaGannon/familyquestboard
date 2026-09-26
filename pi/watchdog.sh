@@ -22,7 +22,7 @@ paused=$(cat "$STATE/paused_until" 2>/dev/null || echo 0)
 uptime_s=$(cut -d. -f1 /proc/uptime)
 [ "$uptime_s" -lt 240 ] && exit 0
 last_action=$(cat "$STATE/last_action" 2>/dev/null || echo 0)
-[ $((now - last_action)) -lt 300 ] && exit 0
+[ $((now - last_action)) -lt 180 ] && exit 0
 # Don't fight an update that's in progress
 pgrep -f 'pi/update.sh' >/dev/null && exit 0
 
@@ -65,7 +65,7 @@ rm -f "$STATE/missing_since"
 
 # 3. Page frozen: the wall's browser checks in every 30 s
 age=$(curl -fs -m 8 "http://localhost:$PORT/api/heartbeat" 2>/dev/null | sed -n 's/.*"age": *\([0-9]*\).*/\1/p')
-if [ -n "$age" ] && [ "$age" -gt 300 ]; then
+if [ -n "$age" ] && [ "$age" -gt 150 ]; then
   rescue "page frozen (no heartbeat for ${age}s) - relaunching kiosk" "bash '$PROJECT/pi/relaunch-kiosk.sh'"
 fi
 exit 0

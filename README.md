@@ -381,11 +381,13 @@ Editing the look: everything visual is CSS at the top of `dashboard/index.html`
 
 The board looks after itself so you shouldn't need to reboot it by hand:
 
-- **Hourly refresh** — about once an hour, when nobody has touched it for 5 minutes
-  and it's on the Home screen, the page quietly reloads.
-- **Nightly refresh** — the kiosk browser is restarted fresh at 3:30 AM.
+- **Hourly fresh start** (`pi/hourly-refresh.sh`) — the server restarts the wall
+  browser every hour (frees all its memory), waiting while anyone is using the
+  board, and skipping hours when the screen is scheduled off.
+- **Photos from Google Drive** are shrunk to screen size as they load, so full
+  camera-resolution photos don't run a 2 GB Pi out of memory.
 - **Watchdog** (`pi/watchdog.sh`, every minute) — restarts the server if it stops
-  answering, relaunches the browser if the page freezes (no heartbeat for 5 min) or
+  answering, relaunches the browser if the page freezes or crashes (no heartbeat for ~2.5 min) or
   the browser disappears, and gets back past the login screen by restarting
   auto-login. Three rescues in 30 minutes → full reboot. See `pi/watchdog.log`.
 - **Hardware watchdog** — if the whole Pi locks up, it resets itself.
