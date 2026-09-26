@@ -7,3 +7,4 @@ __pycache__/
 *.pyc
 pi/.watchdog/
 pi/watchdog.log
+.claude-ssh/
