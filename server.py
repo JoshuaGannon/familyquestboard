@@ -75,6 +75,71 @@ _override = {"mode": None, "until": 0}
 # /api/heartbeat every 30 s; pi/watchdog.sh relaunches it if that goes stale.
 _heartbeat = {"at": time.time()}
 
+# Extras: data for features that live on the Pi rather than in the Google Sheet
+# (sticky notes, countdowns, "who's got it", reward goals, quest options like
+# auto-approve, streak settings, coupons, streak-locked prizes). One JSON file.
+EXTRAS_FILE = os.path.join(HERE, "data", "extras.json")
+_extras_lock = threading.Lock()
+
+
+def _extras_load():
+    try:
+        with open(EXTRAS_FILE, encoding="utf-8") as f:
+            d = json.load(f)
+            return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _extras_save(d):
+    os.makedirs(os.path.dirname(EXTRAS_FILE), exist_ok=True)
+    tmp = EXTRAS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, EXTRAS_FILE)
+
+
+def extras_op(body):
+    """ops: set {key, value} | merge {key, value: {..}} (dict merge, None deletes)
+            push {key, value} (append to list, keeps last 300)
+            remove {key, id} (drop list item by id)
+            award {key: coupon-dedupe-key, value: coupon} (once per key)"""
+    op = body.get("op")
+    key = str(body.get("key", ""))
+    with _extras_lock:
+        d = _extras_load()
+        if op == "set":
+            d[key] = body.get("value")
+        elif op == "merge":
+            cur = d.get(key) if isinstance(d.get(key), dict) else {}
+            for k, v in (body.get("value") or {}).items():
+                if v is None:
+                    cur.pop(k, None)
+                else:
+                    cur[k] = v
+            d[key] = cur
+        elif op == "push":
+            lst = d.get(key) if isinstance(d.get(key), list) else []
+            lst.append(body.get("value"))
+            d[key] = lst[-300:]
+        elif op == "remove":
+            lst = d.get(key) if isinstance(d.get(key), list) else []
+            d[key] = [x for x in lst if not (isinstance(x, dict) and x.get("id") == body.get("id"))]
+        elif op == "award":
+            awarded = d.get("awarded") if isinstance(d.get("awarded"), list) else []
+            if key in awarded:
+                return d, False
+            awarded.append(key)
+            d["awarded"] = awarded[-2000:]
+            coupons = d.get("coupons") if isinstance(d.get("coupons"), list) else []
+            coupons.append(body.get("value"))
+            d["coupons"] = coupons[-500:]
+        else:
+            raise ValueError("unknown op")
+        _extras_save(d)
+        return d, True
+
+
 # Wall controls, usable from a phone even when the wall's browser is frozen:
 # restart the kiosk browser, close it for an hour, or reboot the Pi.
 PI_DIR = os.path.join(HERE, "pi")
@@ -312,6 +377,13 @@ class Handler(SimpleHTTPRequestHandler):
                                   "until": time.time() + mins * 60 if mins > 0 else 0})
             self._send_json(override_state())
             return
+        if path == "/api/extras":
+            try:
+                d, changed = extras_op(self._read_json())
+                self._send_json({"ok": True, "changed": changed, "extras": d})
+            except Exception as e:  # noqa: BLE001
+                self._send_json({"ok": False, "error": str(e)}, 400)
+            return
         if path == "/api/system":
             body = self._read_json()
             ok, msg = system_action(str(body.get("action", "")))
@@ -366,6 +438,10 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path == "/api/override":
             self._send_json(override_state())
+            return
+        if path == "/api/extras":
+            with _extras_lock:
+                self._send_json(_extras_load())
             return
         if path == "/api/heartbeat":
             age = int(time.time() - _heartbeat["at"])
