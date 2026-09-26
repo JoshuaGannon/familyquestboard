@@ -57,6 +57,15 @@ if [ ! -f /etc/systemd/system.conf.d/fqb-watchdog.conf ]; then
   sudo systemctl daemon-reexec || true
 fi
 
+# The board has its own on-screen keyboard; the system one (squeekboard) only
+# pops up over it when a touch lands on a text field. Keep it off.
+if [ -f /etc/xdg/autostart/squeekboard.desktop ] && [ ! -f "$HOME/.config/autostart/squeekboard.desktop" ]; then
+  mkdir -p "$HOME/.config/autostart"
+  cp /etc/xdg/autostart/squeekboard.desktop "$HOME/.config/autostart/"
+  echo "Hidden=true" >> "$HOME/.config/autostart/squeekboard.desktop"
+  pkill -x squeekboard 2>/dev/null || true
+fi
+
 # Make sure nothing puts up a lock / password screen
 for f in /etc/xdg/autostart/light-locker.desktop /etc/xdg/autostart/xscreensaver.desktop; do
   [ -f "$f" ] && { mkdir -p "$HOME/.config/autostart"; cp "$f" "$HOME/.config/autostart/"; echo "Hidden=true" >> "$HOME/.config/autostart/$(basename "$f")"; }

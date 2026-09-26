@@ -162,6 +162,42 @@
   .ev.past { opacity: .45; }
   .cal-day .dinner { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 14px; color: var(--muted); }
   .cal-day .dinner b { color: var(--text); }
+  .cal-day { cursor: pointer; }
+  .cal-day.past { opacity: .6; }
+  .cal-day .dh .dw { font-size: 14px; font-weight: 700; color: var(--muted); margin-top: 2px; white-space: nowrap; }
+  .cal-day .dh .dw span { font-size: 18px; vertical-align: -2px; }
+  .ev { cursor: pointer; }
+  .ev .el { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Calendar toolbar */
+  .cal-bar { margin-left: auto; display: flex; gap: 8px; align-items: center; font-size: 16px; }
+  .cal-bar button { background: var(--card); border-radius: 12px; padding: 8px 14px; font-weight: 700; color: var(--muted); min-height: 44px; }
+  .cal-bar button.on { background: var(--info); color: #06213f; }
+  .cal-bar .sep { width: 10px; }
+  .cal-cals { display: flex; gap: 8px; flex-wrap: wrap; margin: -8px 0 12px; }
+  .cal-cals button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 10px; background: var(--card); font-size: 14px; font-weight: 700; }
+  .cal-cals button i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .cal-cals button.off { opacity: .4; text-decoration: line-through; }
+  /* Month view */
+  .cal-month { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto; grid-auto-rows: 1fr; gap: 6px; height: calc(100% - 118px); }
+  .cal-month .mhd { text-align: center; font-size: 13px; font-weight: 800; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; padding-bottom: 2px; }
+  .mcell { background: var(--card); border-radius: 12px; padding: 6px 8px; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px; cursor: pointer; text-align: left; }
+  .mcell.other { opacity: .35; }
+  .mcell.past:not(.other) { opacity: .65; }
+  .mcell.today { outline: 3px solid var(--accent); }
+  .mcell .mtop { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 700; }
+  .mcell .mnum { font-size: 18px; font-weight: 800; color: var(--text); }
+  .mcell.today .mnum { color: var(--accent-2); }
+  .mcell .mw { margin-left: auto; white-space: nowrap; }
+  .mev { font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--info); padding-left: 5px; border-radius: 2px; }
+  .mev.all { background: rgba(255,255,255,.08); }
+  .mev.task { border-color: var(--accent); color: var(--muted); }
+  .mmore { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .mdin { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: auto; }
+  /* Day / event details */
+  .agenda { text-align: left; max-height: 58vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; color: var(--text); font-size: 17px; }
+  .agenda .ev { cursor: default; }
+  .agenda .aw { color: var(--muted); font-size: 16px; margin-bottom: 4px; }
+  .agenda .ad { color: var(--muted); font-size: 16px; border-top: 1px dashed var(--line); padding-top: 8px; }
 
   /* ---------- Groceries ---------- */
   .gtabs { display: flex; gap: 10px; margin-bottom: 14px; }
@@ -201,6 +237,24 @@
   .seg button.storeon { background: var(--info); color: #06213f; }
   .seg button.prio-ess.on { background: var(--accent); color: #1a1200; }
   .seg button.prio-nice.on { background: var(--card-hi); color: var(--text); border: 2px solid var(--muted); }
+  /* Compact grocery layout: several columns of small tiles so the whole list fits */
+  .cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .cgrid .gitem { margin: 0; min-height: 50px; padding: 7px 12px; border-radius: 12px; gap: 8px; border-width: 2px; }
+  .cgrid .gitem .name { font-size: 17px; line-height: 1.2; }
+  .cgrid .gitem .note { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+  .cgrid .gitem > span:nth-child(2) { min-width: 0; }
+  .cgrid .gitem .meta, .lgrid .gchip .meta { margin-top: 2px; gap: 4px; }
+  .cgrid .spill, .cgrid .npill, .cgrid .rpill, .lgrid .spill, .lgrid .npill, .lgrid .rpill { font-size: 10.5px; padding: 1px 6px; border-radius: 6px; }
+  .cgrid .gitem.keep .box { width: 26px; height: 26px; border-radius: 8px; font-size: 14px; }
+  .cgrid .gitem .keeplbl { font-size: 10px; }
+  .groc-list .shead { font-size: 17px; margin: 4px 0 6px; }
+  .lgrid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .lgrid .gchip { min-height: 48px; padding: 6px 10px; gap: 8px; border-radius: 12px; border-width: 2px; }
+  .lgrid .gchip .box { width: 24px; height: 24px; border-radius: 7px; border-width: 2px; font-size: 13px; }
+  .lgrid .gchip .name { font-size: 16px; }
+  .lgrid .gchip .note { font-size: 11.5px; }
+  .groc-list .lhead { font-size: 18px; padding: 2px 6px 4px; }
+  .groc-list .lsec { margin-bottom: 8px; }
   /* Shopping-list rows */
   .gitem { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 18px; padding: 14px 18px; min-height: 76px; width: 100%; text-align: left; margin-bottom: 10px; border: 3px solid transparent; }
   .gitem .box { display: none; }
@@ -481,6 +535,13 @@
     .cal-day .dh { display: flex; align-items: baseline; gap: 10px; text-align: left; }
     .cal-day .dh .dd { font-size: 22px; }
     .cal-day .evs { overflow: visible; }
+    .cal-bar { width: 100%; margin: 6px 0 0; flex-wrap: wrap; }
+    .screen h1:has(.cal-bar) { flex-wrap: wrap; }
+    .cal-month { height: auto; gap: 3px; }
+    .mcell { min-height: 58px; padding: 4px; }
+    .mcell .mw, .mcell .mdin { display: none; }
+    .mev { font-size: 0; height: 5px; border-left: 0; background: var(--info); padding: 0; border-radius: 3px; }
+    .mev.task { background: var(--accent); }
     /* Groceries */
     .groc { display: flex; flex-direction: column-reverse; gap: 12px; height: auto; }
     .groc-side { flex-direction: row; flex-wrap: wrap; align-items: center; }
@@ -495,7 +556,8 @@
     .letter-rail span { font-size: 12px; }
     .letter-bubble { width: 84px; height: 84px; font-size: 48px; border-radius: 22px; }
     .lhead { top: -14px; }
-    .lgrid { grid-template-columns: 1fr; gap: 8px; }
+    .lgrid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .cgrid { grid-template-columns: 1fr 1fr; gap: 6px; }
     .gchip { min-height: 56px; padding: 10px 12px; }
     .gtabs { gap: 8px; }
     .gtab { flex: 1; justify-content: center; padding: 10px 8px; font-size: 15px; }
@@ -586,7 +648,13 @@
 
     <!-- CALENDAR -->
     <section class="screen" id="screen-calendar">
-      <h1>📅 This Week <small id="cal-sub"></small></h1>
+      <h1><span id="cal-title">📅 This Week</span> <small id="cal-sub"></small>
+        <span class="cal-bar" id="cal-bar">
+          <button data-cal="prev" aria-label="Previous">‹</button><button data-cal="today">Today</button><button data-cal="next" aria-label="Next">›</button>
+          <span class="sep"></span>
+          <button data-calview="week">Week</button><button data-calview="month">Month</button>
+        </span></h1>
+      <div class="cal-cals" id="cal-cals"></div>
       <div class="cal-week" id="cal-week"></div>
     </section>
 
@@ -1180,7 +1248,10 @@ function renderHome() {
   }
   $('#leader').innerHTML = lh;
   renderWeather();
+  if (App.state) renderCalendar();
 }
+const wxFor = (d) => { const w = App.weather; if (!w || !w.days) return null; const k = dayKey(d); return w.days.find(x => x.t === k) || null; };
+const wxHtml = (d) => { const x = wxFor(d); return x ? `<span>${wmo(x.code)[1]}</span> ${x.hi}°/${x.lo}°` : ''; };
 
 /* ---------- Weather (Open-Meteo, no API key) ---------- */
 const WMO = [[0, '☀️', 'Clear'], [1, '🌤️', 'Mostly clear'], [2, '⛅', 'Partly cloudy'], [3, '☁️', 'Overcast'], [45, '🌫️', 'Fog'], [48, '🌫️', 'Fog'],
@@ -1193,7 +1264,7 @@ const wmo = (c) => (WMO.find(w => w[0] === c) || [0, '🌡️', '']);
 async function loadWeather() {
   const lat = cfg('lat', '34.05'), lon = cfg('lon', '-118.24');
   const unit = String(cfg('weather_units', 'F')).toUpperCase() === 'C' ? 'celsius' : 'fahrenheit';
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=${unit}&timezone=auto&forecast_days=4`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=${unit}&timezone=auto&forecast_days=16`;
   try {
     const r = await fetch(url); const j = await r.json();
     App.weather = { temp: Math.round(j.current.temperature_2m), feels: Math.round(j.current.apparent_temperature), code: j.current.weather_code,
@@ -1209,31 +1280,113 @@ function renderWeather() {
   const d0 = w.days[0] || {};
   el.innerHTML = `<div class="now"><span>${icon}</span><span>${w.temp}°</span></div><div class="desc">${desc} · feels ${w.feels}°</div>
     <div class="hilo">H ${d0.hi}° · L ${d0.lo}°</div>
-    <div class="days">${w.days.slice(1).map(d => { const dt = new Date(d.t + 'T12:00:00'); return `<div><div>${DAYS[dt.getDay()]}</div><div class="i">${wmo(d.code)[1]}</div><div>${d.hi}°/${d.lo}°</div></div>`; }).join('')}</div>`;
+    <div class="days">${w.days.slice(1, 4).map(d => { const dt = new Date(d.t + 'T12:00:00'); return `<div><div>${DAYS[dt.getDay()]}</div><div class="i">${wmo(d.code)[1]}</div><div>${d.hi}°/${d.lo}°</div></div>`; }).join('')}</div>`;
 }
 
 /* ---------- Calendar ---------- */
+// Week view = 7 days from the chosen start (today by default). Month view = a
+// 6-week grid. Tap a day for its agenda, tap an event for details. Calendars can
+// be hidden with the chips under the title. View + hidden calendars persist.
+const Cal = {
+  view: (() => { try { return localStorage.getItem('fqb_calview') || 'week'; } catch (e) { return 'week'; } })(),
+  offset: 0,
+  hidden: (() => { try { return JSON.parse(localStorage.getItem('fqb_calhide') || '[]'); } catch (e) { return []; } })(),
+  save() { try { localStorage.setItem('fqb_calview', this.view); localStorage.setItem('fqb_calhide', JSON.stringify(this.hidden)); } catch (e) {} },
+};
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const calEvents = (d) => eventsOn(d).filter(ev => !Cal.hidden.includes(ev.calendar || ''));
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const evTime = (ev) => ev.allDay ? 'All day' : `${fmtTime(toDate(ev.start))}–${fmtTime(toDate(ev.end))}`;
+App.calIndex = [];
+const evRef = (ev) => { App.calIndex.push(ev); return App.calIndex.length - 1; };
+
 function renderCalendar() {
-  const now = new Date(); const wrap = $('#cal-week'); let html = '';
+  if (!App.state) return;
+  App.calIndex = [];
+  const now = new Date(), today = startOfDay(now), todayK = dayKey(now);
+  const wrap = $('#cal-week');
+  $$('#cal-bar [data-calview]').forEach(b => b.classList.toggle('on', b.dataset.calview === Cal.view));
+
+  // Calendar filter chips (only when there's more than one calendar)
+  const cals = {}; (App.state.events || []).forEach(ev => { const n = ev.calendar || ''; if (n && !cals[n]) cals[n] = ev.color || '#60a5fa'; });
+  const names = Object.keys(cals).sort();
+  $('#cal-cals').innerHTML = names.length > 1 ? names.map(n => `<button class="${Cal.hidden.includes(n) ? 'off' : ''}" data-calname="${esc(n)}"><i style="background:${esc(cals[n])}"></i>${esc(n)}</button>`).join('') : '';
+  $('#cal-cals').style.display = names.length > 1 ? '' : 'none';
+
+  if (Cal.view === 'month') {
+    const m = new Date(now.getFullYear(), now.getMonth() + Cal.offset, 1);
+    const monday = isTrue(cfg('week_starts_monday', 'FALSE'));
+    const lead = (m.getDay() - (monday ? 1 : 0) + 7) % 7;
+    const first = addDays(m, -lead);
+    const hdr = Array.from({ length: 7 }, (_, i) => DAYS[(i + (monday ? 1 : 0)) % 7]);
+    let html = hdr.map(h => `<div class="mhd">${h}</div>`).join('');
+    for (let i = 0; i < 42; i++) {
+      const d = addDays(first, i), k = dayKey(d);
+      const evs = calEvents(d), tds = todosOn(d), din = dinnerFor(d);
+      const items = evs.map(ev => `<div class="mev ${ev.allDay ? 'all' : ''}" style="border-color:${esc(ev.color || '#60a5fa')};${ev.allDay ? '' : ''}">${ev.allDay ? '' : `<b>${esc(fmtTime(toDate(ev.start)).replace(':00', '').replace(/\s?([AP])M/i, (x, a) => a.toLowerCase()))}</b> `}${esc(ev.title)}</div>`)
+        .concat(tds.map(t => `<div class="mev task">📝 ${esc(t.task)}</div>`));
+      const max = 3;
+      html += `<button class="mcell ${d.getMonth() !== m.getMonth() ? 'other' : ''} ${k === todayK ? 'today' : ''} ${k < todayK ? 'past' : ''}" data-day="${k}">
+        <div class="mtop"><span class="mnum">${d.getDate()}</span><span class="mw">${wxHtml(d)}</span></div>
+        ${items.slice(0, max).join('')}${items.length > max ? `<div class="mmore">+${items.length - max} more</div>` : ''}
+        ${din ? `<div class="mdin">🍽️ ${esc(din.meal)}</div>` : ''}</button>`;
+    }
+    wrap.className = 'cal-month'; wrap.innerHTML = html;
+    $('#cal-title').textContent = `📅 ${MONTHS[m.getMonth()]} ${m.getFullYear()}`;
+    const loaded = +cfg('calendar_days', '14');
+    const lastDay = new Date(m.getFullYear(), m.getMonth() + 1, 0);
+    $('#cal-sub').textContent = App.backend.mode === 'demo' ? 'sample events' : (addDays(today, loaded) < lastDay ? `events load ${loaded} days ahead — raise calendar_days in the Sheet to see more` : '');
+    return;
+  }
+
+  // Week view
+  const startD = addDays(today, Cal.offset * 7);
+  let html = '';
   for (let i = 0; i < 7; i++) {
-    const d = new Date(now); d.setDate(d.getDate() + i); d.setHours(0, 0, 0, 0);
-    const evs = eventsOn(d); const dinner = dinnerFor(d);
-    html += `<div class="cal-day ${i === 0 ? 'today' : ''}"><div class="dh"><div class="dn">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAYS[d.getDay()]}</div><div class="dd">${d.getDate()}</div></div><div class="evs">`;
-    if (!evs.length && !todosOn(d).length) html += `<div class="muted" style="text-align:center;font-size:15px;padding:10px 0">—</div>`;
+    const d = addDays(startD, i), k = dayKey(d);
+    const evs = calEvents(d); const dinner = dinnerFor(d);
+    const rel = k === todayK ? 'Today' : k === dayKey(addDays(today, 1)) ? 'Tomorrow' : DAYS[d.getDay()];
+    html += `<div class="cal-day ${k === todayK ? 'today' : ''} ${k < todayK ? 'past' : ''}" data-day="${k}"><div class="dh"><div class="dn">${rel}</div><div class="dd">${d.getDate()}</div><div class="dw">${wxHtml(d) || '&nbsp;'}</div></div><div class="evs">`;
+    const tds = todosOn(d);
+    if (!evs.length && !tds.length) html += `<div class="muted" style="text-align:center;font-size:15px;padding:10px 0">—</div>`;
     for (const ev of evs) {
       const past = !ev.allDay && toDate(ev.end) < now;
-      html += `<div class="ev ${ev.allDay ? 'allday' : ''} ${past ? 'past' : ''}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${ev.allDay ? 'All day' : esc(fmtTime(toDate(ev.start)))}</div><div class="en">${esc(ev.title)}</div></div>`;
+      html += `<div class="ev ${ev.allDay ? 'allday' : ''} ${past ? 'past' : ''}" data-ev="${evRef(ev)}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${ev.allDay ? 'All day' : esc(fmtTime(toDate(ev.start)))}</div><div class="en">${esc(ev.title)}</div>${ev.location ? `<div class="el">📍 ${esc(ev.location)}</div>` : ''}</div>`;
     }
-    const tds = todosOn(d); const todayK = dayKey(now);
     for (const t of tds) {
-      const late = i === 0 && t.due < todayK;
+      const late = k === todayK && t.due < todayK;
       html += `<div class="ev task ${late ? 'late' : ''}" data-todo="${esc(t.id)}"><div class="et">${late ? '⚠ Overdue' : '📝 Task'}${t.repeat ? ' ↻' : ''}${t.assigned_to ? ' · ' + esc(t.assigned_to) : ''}</div><div class="en">${esc(t.task)}</div></div>`;
     }
     html += `</div>${dinner ? `<div class="dinner">🍽️ <b>${esc(dinner.meal)}</b></div>` : ''}</div>`;
   }
-  wrap.innerHTML = html;
+  wrap.className = 'cal-week'; wrap.innerHTML = html;
+  const endD = addDays(startD, 6);
+  $('#cal-title').textContent = Cal.offset === 0 ? '📅 This Week' : Cal.offset === 1 ? '📅 Next Week' : `📅 ${MONTHS[startD.getMonth()].slice(0, 3)} ${startD.getDate()} – ${startD.getMonth() !== endD.getMonth() ? MONTHS[endD.getMonth()].slice(0, 3) + ' ' : ''}${endD.getDate()}`;
   const n = (App.state.events || []).length;
   $('#cal-sub').textContent = App.backend.mode === 'demo' ? 'sample events — connect your Google Calendar to see yours' : `${n} event${n === 1 ? '' : 's'} in the next ${cfg('calendar_days', '14')} days`;
+}
+
+// Tap a day -> its agenda. Tap an event -> its details.
+function showDay(k) {
+  const d = new Date(k + 'T12:00:00');
+  const evs = calEvents(d), tds = todosOn(d), din = dinnerFor(d), wx = wxFor(d);
+  const body = `<div class="agenda">
+    ${wx ? `<div class="aw">${wmo(wx.code)[1]} ${esc(wmo(wx.code)[2])} · high ${wx.hi}° · low ${wx.lo}°</div>` : ''}
+    ${evs.map(ev => `<div class="ev ${ev.allDay ? 'allday' : ''}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${esc(evTime(ev))}${ev.calendar ? ' · ' + esc(ev.calendar) : ''}</div><div class="en">${esc(ev.title)}</div>${ev.location ? `<div class="el">📍 ${esc(ev.location)}</div>` : ''}</div>`).join('')}
+    ${tds.map(t => `<div class="ev task"><div class="et">📝 Task${t.assigned_to ? ' · ' + esc(t.assigned_to) : ''}</div><div class="en">${esc(t.task)}</div></div>`).join('')}
+    ${!evs.length && !tds.length ? '<div class="muted">Nothing scheduled.</div>' : ''}
+    ${din ? `<div class="ad">🍽️ Dinner: <b style="color:var(--text)">${esc(din.meal)}</b></div>` : ''}
+  </div>`;
+  Modal.confirm({ icon: '📅', title: d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }), body, ok: 'Close', noCancel: true, wide: true });
+}
+function showEvent(ev) {
+  const s = toDate(ev.start);
+  const body = `<div class="agenda"><div class="ev ${ev.allDay ? 'allday' : ''}" style="border-color:${esc(ev.color || '#60a5fa')}">
+    <div class="et">${esc(s.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))} · ${esc(evTime(ev))}</div>
+    ${ev.location ? `<div style="margin-top:6px">📍 ${esc(ev.location)}</div>` : ''}
+    ${ev.calendar ? `<div class="el" style="margin-top:6px">Calendar: ${esc(ev.calendar)}</div>` : ''}</div></div>`;
+  Modal.confirm({ icon: '🗓️', title: ev.title, body, ok: 'Close', noCancel: true, wide: true });
 }
 
 /* ---------- Groceries (pantry-style master list) ---------- */
@@ -1285,7 +1438,7 @@ function renderGroceries() {
     const row = (g) => { const k = App.gKeep.includes(g.id); return `<button class="gitem ${k ? 'keep' : ''} ${isNice(g) ? 'nice' : ''}" data-id="${esc(g.id)}"><span class="box">${k ? '📌' : ''}</span><span><div class="name">${esc(g.item)}</div>${g.note ? `<div class="note">${esc(g.note)}</div>` : ''}${metaHtml(g)}</span>${k ? '<span class="keeplbl">KEEPING</span>' : ''}</button>`; };
     const groups = groupByStore(needed);
     const multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
-    list.innerHTML = toBuy ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + grp.items.map(row).join('')).join('')
+    list.innerHTML = toBuy ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + `<div class="cgrid">${grp.items.map(row).join('')}</div>`).join('')
       : `<div class="empty">${App.gStore || App.gEssOnly ? 'Nothing needed with this filter' : "Nothing on the list — everything's stocked 🎉"}<br><span style="font-size:16px">Tap <b>All items</b> and mark what you're out of.</span></div>`;
     return;
   }
@@ -1941,6 +2094,8 @@ const Modal = {
     return new Promise((resolve) => {
       this.resolve = resolve;
       $('#m-icon').textContent = o.icon || '❓'; $('#m-title').textContent = o.title || ''; $('#m-body').innerHTML = o.body || '';
+      $('#m-cancel').style.display = o.noCancel ? 'none' : ''; this.info = !!o.noCancel;
+      $('.modal-box').style.width = o.wide ? 'min(760px, 94vw)' : '';
       $('#m-ok').textContent = o.ok || 'Yes'; $('#m-ok').className = 'btn ' + (o.okClass || 'primary'); $('#m-cancel').textContent = o.cancel || 'Cancel';
       const alt = $('#m-alt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '';
       $('#modal').classList.add('open');
@@ -1964,7 +2119,10 @@ function bumpIdle() {
   clearTimeout(idleTimer);
   if (isPhone()) return;
   const secs = Math.max(20, parseInt(cfg('idle_timeout_sec', '90'), 10) || 90);
-  idleTimer = setTimeout(() => { if (!KB.resolve && !Modal.resolve && !TE.state && !GE.state && !DE.state && !TD.id) { App.unlocked = false; showScreen(CFG.HOME_SCREEN || 'home'); renderParent(); renderTodos(); Photos.next(); } }, secs * 1000);
+  idleTimer = setTimeout(() => {
+    if (Modal.resolve && Modal.info) Modal.close(true);   // a calendar details popup left open
+    if (!KB.resolve && !Modal.resolve && !TE.state && !GE.state && !DE.state && !TD.id) { App.unlocked = false; Cal.offset = 0; renderCalendar(); showScreen(CFG.HOME_SCREEN || 'home'); renderParent(); renderTodos(); Photos.next(); }
+  }, secs * 1000);
 }
 
 const MODES = [['photos', '🖼 Photos + board'], ['clock', '🕐 Dim clock only'], ['off', '⏻ Screen off']];
@@ -2226,7 +2384,24 @@ function bind() {
   rail.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') railMove(e); });
   ['pointerup', 'pointercancel'].forEach(ev => rail.addEventListener(ev, () => { $('#letter-bubble').classList.remove('on'); }));
 
-  $('#cal-week').addEventListener('click', e => { const b = e.target.closest('[data-todo]'); if (!b) return; const t = (App.state.todos || []).find(x => x.id === b.dataset.todo); if (t) { showScreen('todo'); TD.open(t); } });
+  $('#cal-week').addEventListener('click', e => {
+    const b = e.target.closest('[data-todo]');
+    if (b) { const t = (App.state.todos || []).find(x => x.id === b.dataset.todo); if (t) { showScreen('todo'); TD.open(t); } return; }
+    const ev = e.target.closest('[data-ev]'); if (ev) { const x = App.calIndex[+ev.dataset.ev]; if (x) showEvent(x); return; }
+    const day = e.target.closest('[data-day]'); if (day) showDay(day.dataset.day);
+  });
+  $('#cal-bar').addEventListener('click', e => {
+    const v = e.target.closest('[data-calview]'); if (v) { if (Cal.view !== v.dataset.calview) { Cal.view = v.dataset.calview; Cal.offset = 0; Cal.save(); } renderCalendar(); return; }
+    const n = e.target.closest('[data-cal]'); if (!n) return;
+    Cal.offset = n.dataset.cal === 'today' ? 0 : Cal.offset + (n.dataset.cal === 'next' ? 1 : -1);
+    renderCalendar();
+  });
+  $('#cal-cals').addEventListener('click', e => {
+    const c = e.target.closest('[data-calname]'); if (!c) return;
+    const n = c.dataset.calname, i = Cal.hidden.indexOf(n);
+    if (i >= 0) Cal.hidden.splice(i, 1); else Cal.hidden.push(n);
+    Cal.save(); renderCalendar();
+  });
 
   // Quests
   $('#kid-tabs').addEventListener('click', e => { const b = e.target.closest('.kid-tab'); if (b) { App.kid = b.dataset.kid; renderQuests(); } });
@@ -2417,7 +2592,9 @@ async function boot() {
   App.backend = url ? new SheetsBackend(url) : new DemoBackend();
   bind();
   tickClock(); setInterval(tickClock, 1000);
-  showScreen(CFG.HOME_SCREEN || 'home');
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('calview')) Cal.view = qs.get('calview');
+  showScreen(qs.get('screen') || CFG.HOME_SCREEN || 'home');
   $('#smart').innerHTML = `<div class="kicker">Loading</div><div class="big"><span class="spin"></span> ${url ? 'Reading your Google Sheet…' : 'Starting demo…'}</div>`;
   await refresh(true);
   if (!App.state) {
