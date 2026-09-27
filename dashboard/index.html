@@ -114,7 +114,7 @@
   }
   .home-grid {
     position: absolute; inset: 0; padding: 30px 36px; display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: 1fr auto; gap: 20px;
+    grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px;
   }
   .home-bottom > * { max-height: 40vh; overflow-y: auto; scrollbar-width: none; }
   .home-bottom > *::-webkit-scrollbar { display: none; }
@@ -123,14 +123,18 @@
   .clock .time small { font-size: 34px; font-weight: 600; margin-left: 8px; opacity: .8; }
   .clock .date { font-size: 28px; font-weight: 600; opacity: .9; margin-top: 6px; }
   .clock .family { font-size: 18px; color: rgba(255,255,255,.7); margin-top: 6px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-  .weather { grid-column: 2; text-align: right; text-shadow: 0 2px 18px rgba(0,0,0,.6); }
+  .weather { grid-column: 2; justify-self: end; text-align: right; text-shadow: 0 2px 18px rgba(0,0,0,.6); }
   .weather .now { font-size: 64px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
   .weather .desc { font-size: 20px; opacity: .9; margin-top: 4px; }
   .weather .hilo { font-size: 18px; opacity: .8; margin-top: 2px; }
   .weather .days { display: flex; gap: 14px; justify-content: flex-end; margin-top: 12px; }
   .weather .days div { text-align: center; font-size: 14px; opacity: .9; }
   .weather .days .i { font-size: 24px; }
-  .home-bottom { grid-row: 3; grid-column: 1 / -1; display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: end; }
+  .home-bottom { display: contents; }
+  /* agenda: bottom-left, may grow up into the empty photo area; points: bottom-right, only as tall as it needs,
+     so the notes column above it runs all the way down to it */
+  .home-bottom > .smart { grid-row: 2 / 4; grid-column: 1; align-self: end; }
+  .home-bottom > .leader { grid-row: 3; grid-column: 2; align-self: end; }
   .smart { background: rgba(14, 17, 26, 0.55); backdrop-filter: blur(10px); border-radius: var(--radius); padding: 16px 22px; min-height: 0; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
   .smart .kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 4px; }
   .smart .big { font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
@@ -147,11 +151,13 @@
   .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 14px; background: rgba(255,255,255,.08); font-size: 16px; font-weight: 600; }
   .leader { background: rgba(14, 17, 26, 0.55); backdrop-filter: blur(10px); border-radius: var(--radius); padding: 14px 20px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
   .leader .kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 6px; }
-  .leader .lrow { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 17px; }
-  .leader .lrow:first-of-type { border-top: 0; }
-  .leader .av { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; }
-  .leader .pts { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .leader .pend { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .leader .lkids { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+  .leader .lkid { background: rgba(255,255,255,.05); border-radius: 12px; padding: 6px 10px; min-width: 0; }
+  .leader .lrow { display: flex; align-items: center; gap: 10px; font-size: 17px; }
+  .leader .lrow .ln { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .leader .av { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center; font-size: 24px; }
+  .leader .pts { margin-left: auto; font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
+  .leader .pend { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
 
   /* ---------- Calendar ---------- */
   .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; height: calc(100% - 70px); }
@@ -407,17 +413,17 @@
   .coupons { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
   .coupon { font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 10px; background: rgba(52,211,153,.15); color: var(--good); border: 1px dashed var(--good); }
   /* Home: countdowns + sticky notes */
-  #homeside { grid-row: 2; grid-column: 2; justify-self: end; align-self: stretch; min-height: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; max-width: 360px; }
-  #homeside .notes { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; padding: 4px 6px 10px; margin: 0 -6px; overscroll-behavior: contain; }
+  #homeside { grid-row: 2; grid-column: 2; justify-self: end; align-self: stretch; min-height: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; max-width: 360px; }
+  #homeside .notes { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; padding: 4px 6px 10px; margin: 0 -6px; overscroll-behavior: contain; }
   #homeside .notes::-webkit-scrollbar { display: none; }
   #homeside .notes > * { flex: none; }
   #homeside .notes.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); }
   #homeside .notes-more { flex: none; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.8); background: rgba(14,17,26,.55); border-radius: 10px; padding: 4px 10px; display: none; }
   #homeside .notes-more.on { display: block; }
-  .cdown { display: flex; align-items: baseline; gap: 8px; background: rgba(14,17,26,.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 8px 14px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
-  .cdown .ce { font-size: 20px; } .cdown .cn { font-size: 20px; font-weight: 800; color: var(--accent-2); } .cdown .ct { font-size: 16px; font-weight: 600; }
-  .note-card { color: #1f2937; font-size: 18px; font-weight: 700; line-height: 1.3; padding: 12px 16px; border-radius: 6px; max-width: 320px; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.35); overflow-wrap: anywhere; white-space: pre-wrap; }
-  .note-card small { display: block; font-size: 13px; font-weight: 600; opacity: .7; margin-top: 4px; }
+  .cdown { display: flex; align-items: baseline; gap: 7px; background: rgba(14,17,26,.55); backdrop-filter: blur(8px); border-radius: 12px; padding: 5px 12px; text-shadow: 0 1px 3px rgba(0,0,0,.5); flex: none; }
+  .cdown .ce { font-size: 16px; } .cdown .cn { font-size: 16px; font-weight: 800; color: var(--accent-2); } .cdown .ct { font-size: 14px; font-weight: 600; }
+  .note-card { color: #1f2937; font-size: 15px; font-weight: 700; line-height: 1.3; padding: 8px 12px; border-radius: 6px; max-width: 300px; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.35); overflow-wrap: anywhere; white-space: pre-wrap; }
+  .note-card small { display: block; font-size: 12px; font-weight: 600; opacity: .7; margin-top: 4px; }
   .note-add { font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 10px; background: rgba(14,17,26,.45); color: rgba(255,255,255,.75); }
   .weather .wtip { margin-top: 10px; font-size: 17px; font-weight: 700; background: rgba(14,17,26,.55); border-radius: 12px; padding: 6px 12px; display: inline-block; }
   .claim { color: var(--good) !important; font-weight: 700; }
@@ -618,7 +624,8 @@
     :root { --nav-w: 92px; }
     .cal-week { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; }
     .groc, .quest-wrap { grid-template-columns: 1fr; }
-    .home-bottom { grid-template-columns: 1fr; }
+    .home-bottom { display: grid; grid-row: 3; grid-column: 1 / -1; grid-template-columns: 1fr; gap: 20px; }
+    .home-bottom > .smart, .home-bottom > .leader { grid-row: auto; grid-column: auto; }
     .clock .time { font-size: 72px; }
   }
 
@@ -667,7 +674,8 @@
     #homeside { grid-row: auto; grid-column: 1; justify-self: start; align-items: flex-start; }
     #homeside .notes { align-items: flex-start; overflow: visible; }
     .home-bottom > * { max-height: none; overflow: visible; }
-    .home-bottom { grid-row: 3; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+    .home-bottom { display: grid; grid-row: 3; grid-column: 1; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+    .home-bottom > .smart, .home-bottom > .leader { grid-row: auto; grid-column: auto; }
     .smart { min-height: 0; padding: 16px 18px; }
     .smart .big { font-size: 28px; }
     .smart .big.huge { font-size: 44px; }
@@ -1711,8 +1719,9 @@ function renderHome() {
   let lh = `<div class="kicker">🏆 Quest points</div>`;
   if (!kids.length) lh += `<div class="muted">Add kids on the Members tab</div>`;
   for (const k of kids.map(k => ({ k, b: balance(k.name) })).sort((a, b) => b.b.approved - a.b.approved)) {
-    lh += `<div class="lrow"><span class="av" style="background:${esc(k.k.color || '#334')}">${esc(k.k.emoji || '⭐')}</span><span>${esc(k.k.name)}</span><span class="pts">${k.b.approved}${k.b.pending ? ` <span class="pend">+${k.b.pending} pending</span>` : ''}</span></div>${goalBar(goalFor(k.k.name))}`;
+    lh += `<div class="lkid"><div class="lrow"><span class="av" style="background:${esc(k.k.color || '#334')}">${esc(k.k.emoji || '⭐')}</span><span class="ln">${esc(k.k.name)}</span><span class="pts">${k.b.approved}${k.b.pending ? `<span class="pend">+${k.b.pending} pending</span>` : ''}</span></div>${goalBar(goalFor(k.k.name))}</div>`;
   }
+  if (kids.length) lh = lh.replace('</div><div class="lkid">', '</div><div class="lkids"><div class="lkid">') + '</div>';
   $('#leader').innerHTML = lh;
   renderHomeSide();
   renderWeather();
