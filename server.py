@@ -475,8 +475,14 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # Public even from outside: the install manifest and icons carry nothing
+    # private, and browsers fetch the manifest without cookies.
+    PUBLIC_PATHS = {"/manifest.json", "/sw.js", "/icon-192.png", "/icon-512.png", "/favicon.ico"}
+
     def _gate(self):
         """Returns True when the request may proceed."""
+        if urlparse(self.path).path in self.PUBLIC_PATHS:
+            return True
         if not self._remote():
             return True
         if not access_enabled():
