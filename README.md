@@ -373,7 +373,8 @@ from SSH: `pkill chromium`. It comes back on the next login/reboot.
 
 ## Alerts to your phone (push or text)
 
-Set on the **Config** tab of the Sheet; no code needed.
+Set under **Parents → Settings → Alerts to your phone** (or on the Config tab
+of the Sheet). Toggle which events alert, and use **Send a test**.
 
 - **Push (recommended):** install the free **ntfy** app (iOS/Android), tap
   *Subscribe to topic*, invent a private name like `gannon-board-8f2k`, and

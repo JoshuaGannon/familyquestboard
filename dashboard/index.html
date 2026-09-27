@@ -1082,6 +1082,7 @@ class DemoBackend {
       case 'saveDisplay': { d.display = d.display || []; const row = find(d.display, b.id); if (row) { row.start = b.start; row.mode = b.mode; row.days = b.days; } else d.display.push({ id: uid(), start: b.start, mode: b.mode, days: b.days, note: '' }); break; }
       case 'deleteDisplay': d.display = (d.display || []).filter(x => x.id !== b.id); break;
       case 'setConfig': d.config[b.key] = String(b.value); break;
+      case 'testNotify': if (!d.config.notify_ntfy_topic && !d.config.notify_sms) throw new Error('Add a push topic or a text number first'); break;
       case 'withdrawQuest': d.queue = d.queue.filter(k => !(k.id === b.id && k.status === 'pending')); break;
       case 'askHelp': { const q = find(d.quests, b.questId); d.queue.push({ id: uid(), type: 'help', ref_id: q.id, title: q.title, member: b.member, points: '0', submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
       case 'clearPurchased': d.groceries.forEach(g => { if (gStatus(g) === 'cart') { g.status = ''; if (gRepeat(g)) g.next_add = stepDue(dayKey(new Date()), gRepeat(g)); } }); break;
@@ -2266,6 +2267,8 @@ const DE = {
   },
 };
 
+const notifyList = () => String(cfg('notify_events', 'quest,help,reward')).split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+const notifyOn = (k) => notifyList().includes(k);
 function pinPadHtml(title) {
   return `<div class="pinpad"><h1 style="justify-content:center">🔒 ${esc(title || 'Parent PIN')}</h1><div class="dots pin-dots"><span></span><span></span><span></span><span></span></div>
     <div class="keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}">${k}</button>`).join('')}</div><div class="msg pin-msg"></div>
@@ -2377,6 +2380,12 @@ function renderParent() {
       <div class="row"><button class="btn primary" id="set-save">Save & connect</button><button class="btn ghost" id="set-refresh">Refresh now</button>${App.backend.mode === 'demo' ? '<button class="btn ghost" id="set-reset">Reset demo data</button>' : ''}</div>
       <label>Use it from your phone</label>
       <div class="note">${App.server && App.server.lan_ip ? `On the same Wi-Fi, open <b style="font-size:20px">http://${esc(App.server.lan_ip)}:${esc(App.server.port)}</b>${App.server.hostname ? ` or <b style="font-size:20px">http://${esc(App.server.hostname)}:${esc(App.server.port)}</b>` : ''} in any browser. Add it to your phone's home screen for an app-like icon. (You can also edit the Google Sheet directly from the Sheets app.)` : 'Start the app with run-windows.bat (or the Pi service) and this shows the address to open on your phone.'}</div>
+      <label>Alerts to your phone</label>
+      <div class="note">Sent by the Google script the moment something happens — works anywhere, no home Wi-Fi needed. Push uses the free <b>ntfy</b> app: install it, subscribe to a private topic name you invent, enter that name here.</div>
+      <div class="row"><button class="btn sm" data-ncfg="notify_ntfy_topic">📲 Push topic: <b style="margin-left:8px">${esc(cfg('notify_ntfy_topic', '')) || 'not set'}</b></button>
+      <button class="btn sm" data-ncfg="notify_sms">💬 Text numbers: <b style="margin-left:8px">${esc(cfg('notify_sms', '')) || 'not set'}</b></button></div>
+      <div class="seg" style="margin-top:8px">${[['quest', '✅ Quest finished'], ['help', '🙋 Needs help'], ['reward', '🎁 Reward requested']].map(([k, l]) => `<button data-nev="${k}" class="${notifyOn(k) ? 'modeon' : ''}">${l}</button>`).join('')}<button class="btn sm ghost" id="notify-test" style="margin-left:auto">Send a test</button></div>
+      <div class="note" style="font-size:14px">Texts: your number as an email — Verizon <code>5551234567@vtext.com</code>, AT&amp;T <code>@txt.att.net</code>, T-Mobile <code>@tmomail.net</code>. Several, comma-separated.</div>
       <label>Internet access</label>
       <div class="note">${!App.server ? 'Needs the Pi / local server.' : App.server.remote ? 'You’re connected from outside the house right now. The password can only be changed from home Wi-Fi.' : App.server.public_host ? `Reachable at <b style="font-size:20px">https://${esc(App.server.public_host)}</b> from anywhere.` : 'Run <code>bash pi/setup-internet.sh</code> on the Pi and forward port 443 on the router — see README.'} Family password: <b>${App.server && App.server.access ? 'set ✓' : 'not set (blocked from outside)'}</b></div>
       ${App.server && !App.server.remote ? `<div class="row"><button class="btn primary" id="set-access">${App.server.access ? 'Change password' : 'Set password'}</button>${App.server.access ? '<button class="btn ghost" id="set-access-off">Turn off internet access</button>' : ''}</div>` : ''}
@@ -3185,6 +3194,24 @@ function bind() {
       if (!u) { toast('URL cleared — back to demo mode'); } location.reload(); return;
     }
     if (e.target.closest('#set-refresh')) { toast('Refreshing…'); refresh(true); return; }
+    const ncfg = e.target.closest('[data-ncfg]');
+    if (ncfg) {
+      const key = ncfg.dataset.ncfg;
+      const v = await KB.open({ title: key === 'notify_sms' ? 'Text numbers (as email, comma-separated)' : 'ntfy topic name', initial: cfg(key, ''), placeholder: key === 'notify_sms' ? '5551234567@vtext.com' : 'e.g. ourfamily-board-x7k2q' });
+      if (v === null) return;
+      App.state.config[key] = v.trim(); renderParent();
+      act('setConfig', { key, value: v.trim(), pin: App.pinValue }, { toast: 'Saved' });
+      return;
+    }
+    const nev = e.target.closest('[data-nev]');
+    if (nev) {
+      const k = nev.dataset.nev; const cur = notifyList(); const i = cur.indexOf(k);
+      if (i >= 0) cur.splice(i, 1); else cur.push(k);
+      App.state.config.notify_events = cur.join(','); renderParent();
+      act('setConfig', { key: 'notify_events', value: cur.join(','), pin: App.pinValue }, { toast: cur.includes(k) ? 'Alert on' : 'Alert off' });
+      return;
+    }
+    if (e.target.closest('#notify-test')) { toast('Sending…'); await act('testNotify', { pin: App.pinValue }, { toast: 'Test sent — check your phone', fail: 'Test failed' }); return; }
     if (e.target.closest('#set-access')) {
       const v = await KB.open({ title: 'Family password for internet access', placeholder: 'at least 6 characters', initial: '' });
       if (v === null) return;

@@ -268,6 +268,7 @@ function doPost(e) {
       case 'withdrawQuest':  out = withdrawQuest(body); break;
       case 'askHelp':        out = askHelp(body); break;
       case 'clearPurchased': out = clearPurchased(body); break;
+      case 'testNotify':     out = testNotify(body); break;
       case 'redeemReward':   out = redeemReward(body); break;
       case 'reviewQueue':    out = reviewQueue(body); break;
       case 'setDinner':      out = setDinner(body); break;
@@ -592,11 +593,20 @@ function askHelp(b) {
 // ---------------------------------------------------------------------------
 // Alerts: ntfy push (free app) and/or SMS via carrier email gateways
 // ---------------------------------------------------------------------------
+function testNotify(b) {
+  requirePin(b.pin);
+  var cfg = getConfig();
+  if (!String(cfg.notify_ntfy_topic || '').trim() && !String(cfg.notify_sms || '').trim()) throw new Error('Add a push topic or a text number first');
+  var r = notify('test', '🏰 Family Quest Board', 'Alerts are working! Sent ' + new Date().toLocaleTimeString());
+  if (r && r.error) throw new Error(r.error);
+  return { ok: true };
+}
+
 function notify(kind, title, message) {
   try {
     var cfg = getConfig();
     var kinds = String(cfg.notify_events || 'quest,help,reward').split(',').map(function (s) { return s.trim().toLowerCase(); });
-    if (kinds.indexOf(kind) < 0) return;
+    if (kind !== 'test' && kinds.indexOf(kind) < 0) return;
     var topic = String(cfg.notify_ntfy_topic || '').trim();
     if (topic) {
       UrlFetchApp.fetch('https://ntfy.sh/' + encodeURIComponent(topic), {
@@ -606,7 +616,8 @@ function notify(kind, title, message) {
     }
     var sms = String(cfg.notify_sms || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     if (sms.length) MailApp.sendEmail({ to: sms.join(','), subject: title, body: message || title });
-  } catch (e) { /* never let an alert failure break the action */ }
+    return { ok: true };
+  } catch (e) { return { error: String(e.message || e) }; /* never let an alert failure break the action */ }
 }
 
 function redeemReward(b) {
