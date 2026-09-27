@@ -20,7 +20,10 @@ No third-party packages are required. Standard library only, Pillow optional.
 """
 import argparse
 import hashlib
+import hmac
+import ipaddress
 import json
+import secrets
 import mimetypes
 import os
 import socket
@@ -29,7 +32,7 @@ import sys
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DASHBOARD = os.path.join(HERE, "dashboard")
@@ -43,6 +46,97 @@ def write_local_config(url):
             'window.FQB_CONFIG = Object.assign(window.FQB_CONFIG || {}, { APPS_SCRIPT_URL: %s });\n' % json.dumps(url))
     with open(LOCAL_CONFIG, "w", encoding="utf-8") as f:
         f.write(body)
+# ---------------------------------------------------------------------------
+# Internet access gate
+# ---------------------------------------------------------------------------
+# When the board is reachable from outside the house (Caddy on the Pi reverse-
+# proxies https://<you>.duckdns.org to this server), every request that comes
+# through the proxy must carry a signed cookie obtained from the /login page.
+# Requests from the home network / the kiosk itself never see the gate.
+# The password is set from Parents -> Settings (LAN only) and stored hashed in
+# data/access.json, which git ignores.
+ACCESS_FILE = os.path.join(HERE, "data", "access.json")
+_access = {"hash": "", "salt": "", "secret": ""}
+_login_fails = {}  # ip -> [timestamps]
+COOKIE = "fqb_auth"
+COOKIE_DAYS = 30
+
+
+def _access_load():
+    global _access
+    try:
+        with open(ACCESS_FILE, encoding="utf-8") as f:
+            _access.update(json.load(f))
+    except Exception:
+        pass
+    if not _access.get("secret"):
+        _access["secret"] = secrets.token_hex(32)
+        _access_save()
+
+
+def _access_save():
+    os.makedirs(os.path.dirname(ACCESS_FILE), exist_ok=True)
+    with open(ACCESS_FILE, "w", encoding="utf-8") as f:
+        json.dump(_access, f)
+
+
+def _pw_hash(pw, salt):
+    return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
+
+
+def access_set_password(pw):
+    pw = (pw or "").strip()
+    if not pw:
+        _access.update({"hash": "", "salt": ""})
+    else:
+        salt = secrets.token_hex(16)
+        _access.update({"hash": _pw_hash(pw, salt), "salt": salt})
+    _access["secret"] = secrets.token_hex(32)  # signs everyone out
+    _access_save()
+
+
+def access_enabled():
+    return bool(_access.get("hash"))
+
+
+def access_check(pw):
+    return access_enabled() and hmac.compare_digest(_pw_hash(pw or "", _access["salt"]), _access["hash"])
+
+
+def make_token():
+    exp = str(int(time.time()) + COOKIE_DAYS * 86400)
+    sig = hmac.new(_access["secret"].encode(), exp.encode(), "sha256").hexdigest()
+    return exp + "." + sig
+
+
+def token_ok(tok):
+    try:
+        exp, sig = tok.split(".", 1)
+        good = hmac.new(_access["secret"].encode(), exp.encode(), "sha256").hexdigest()
+        return hmac.compare_digest(sig, good) and int(exp) > time.time()
+    except Exception:
+        return False
+
+
+def is_private_ip(ip):
+    try:
+        return ipaddress.ip_address(ip.split("%")[0]).is_private or ip.startswith("127.")
+    except Exception:
+        return False
+
+
+LOGIN_HTML = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Family Quest Board</title><style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0e14;color:#e8ecf3;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+form{background:#161a24;padding:34px 30px;border-radius:22px;width:min(360px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+h1{margin:0 0 6px;font-size:26px}p{margin:0 0 20px;color:#98a2b8}
+input{width:100%;box-sizing:border-box;font-size:20px;padding:14px 16px;border-radius:14px;border:2px solid #2a3040;background:#0f1320;color:#fff;outline:none}
+input:focus{border-color:#fbbf24}button{margin-top:14px;width:100%;font-size:19px;font-weight:700;padding:14px;border:0;border-radius:14px;background:#fbbf24;color:#1a1200}
+.err{color:#f87171;margin:10px 0 0;font-weight:600}</style></head><body>
+<form method="post" action="/login"><h1>🏰 Family Quest Board</h1><p>Enter the family password to continue.</p>
+<input type="password" name="password" placeholder="Password" autofocus autocomplete="current-password">
+<button>Open the board</button>%ERR%</form></body></html>"""
+
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".heic", ".heif"}
 MAX_EDGE = 1920  # resize longest edge to this when Pillow is available
 
@@ -357,8 +451,81 @@ class Handler(SimpleHTTPRequestHandler):
         except Exception:
             return {}
 
+    # --- internet gate -----------------------------------------------------
+    def _remote(self):
+        """True when this request came in through the public reverse proxy."""
+        if self.headers.get("X-Forwarded-For"):
+            return True
+        ip = self.client_address[0]
+        return not is_private_ip(ip)
+
+    def _authed(self):
+        c = self.headers.get("Cookie") or ""
+        for part in c.split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == COOKIE and token_ok(v):
+                return True
+        return False
+
+    def _login_page(self, err="", code=200):
+        body = LOGIN_HTML.replace("%ERR%", f'<p class="err">{err}</p>' if err else "").encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _gate(self):
+        """Returns True when the request may proceed."""
+        if not self._remote():
+            return True
+        if not access_enabled():
+            self._login_page("Internet access is not set up yet — set a password under Parents → Settings on the board.", 403)
+            return False
+        if self._authed():
+            return True
+        self._login_page()
+        return False
+
+    def _do_login(self):
+        ip = self.client_address[0]
+        now = time.time()
+        fails = [t for t in _login_fails.get(ip, []) if now - t < 600]
+        if len(fails) >= 8:
+            self._login_page("Too many tries — wait 10 minutes.", 429)
+            return
+        n = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(n).decode("utf-8", "replace") if n else ""
+        pw = (parse_qs(raw).get("password") or [""])[0]
+        if access_check(pw):
+            _login_fails.pop(ip, None)
+            secure = "; Secure" if (self.headers.get("X-Forwarded-Proto", "").lower() == "https") else ""
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.send_header("Set-Cookie", f"{COOKIE}={make_token()}; Path=/; Max-Age={COOKIE_DAYS * 86400}; HttpOnly; SameSite=Lax{secure}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        fails.append(now); _login_fails[ip] = fails
+        time.sleep(0.8)
+        self._login_page("Wrong password.", 401)
+
     def do_POST(self):
         path = urlparse(self.path).path
+        if path == "/login":
+            self._do_login()
+            return
+        if path == "/api/access":
+            # LAN only: set / clear the internet password
+            if self._remote():
+                self._send_json({"ok": False, "error": "Only from the home network"}, 403)
+                return
+            body = self._read_json()
+            access_set_password(str(body.get("password", "")))
+            self._send_json({"ok": True, "enabled": access_enabled()})
+            return
+        if not self._gate():
+            return
         if path == "/api/display":
             body = self._read_json()
             want_on = str(body.get("state", "on")).lower() not in ("off", "0", "false")
@@ -414,8 +581,24 @@ class Handler(SimpleHTTPRequestHandler):
             return
         self.send_error(404)
 
+    def do_HEAD(self):
+        if self._gate():
+            super().do_HEAD()
+
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/login":
+            self._login_page()
+            return
+        if path == "/logout":
+            self.send_response(303)
+            self.send_header("Location", "/login")
+            self.send_header("Set-Cookie", f"{COOKIE}=; Path=/; Max-Age=0")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if not self._gate():
+            return
         if path == "/config.js" and os.path.exists(LOCAL_CONFIG):
             # config.js first (defaults), then the local override appended
             try:
@@ -464,6 +647,7 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/api/health":
             body = json.dumps({"ok": True, "photos_dir": self.photos_dir, "pillow": HAVE_PIL,
                                "lan_ip": lan_ip(), "port": PORT, "hostname": friendly_host(),
+                               "access": access_enabled(), "remote": self._remote(), "public_host": os.environ.get("FQB_PUBLIC_HOST", ""),
                                "display": bool(screen_probe()), "display_method": screen_probe()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -503,6 +687,7 @@ def main():
 
     global PORT
     PORT = args.port
+    _access_load()
     Handler.photos_dir = os.path.abspath(args.photos)
     os.makedirs(Handler.photos_dir, exist_ok=True)
 

@@ -9,3 +9,5 @@ pi/.watchdog/
 pi/watchdog.log
 .claude-ssh/
 data/
+pi/internet.env
+pi/duckdns.sh

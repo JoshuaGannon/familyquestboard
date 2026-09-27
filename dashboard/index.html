@@ -2300,6 +2300,9 @@ function renderParent() {
       <div class="row"><button class="btn primary" id="set-save">Save & connect</button><button class="btn ghost" id="set-refresh">Refresh now</button>${App.backend.mode === 'demo' ? '<button class="btn ghost" id="set-reset">Reset demo data</button>' : ''}</div>
       <label>Use it from your phone</label>
       <div class="note">${App.server && App.server.lan_ip ? `On the same Wi-Fi, open <b style="font-size:20px">http://${esc(App.server.lan_ip)}:${esc(App.server.port)}</b>${App.server.hostname ? ` or <b style="font-size:20px">http://${esc(App.server.hostname)}:${esc(App.server.port)}</b>` : ''} in any browser. Add it to your phone's home screen for an app-like icon. (You can also edit the Google Sheet directly from the Sheets app.)` : 'Start the app with run-windows.bat (or the Pi service) and this shows the address to open on your phone.'}</div>
+      <label>Internet access</label>
+      <div class="note">${!App.server ? 'Needs the Pi / local server.' : App.server.remote ? 'You’re connected from outside the house right now. The password can only be changed from home Wi-Fi.' : App.server.public_host ? `Reachable at <b style="font-size:20px">https://${esc(App.server.public_host)}</b> from anywhere.` : 'Run <code>bash pi/setup-internet.sh</code> on the Pi and forward port 443 on the router — see README.'} Family password: <b>${App.server && App.server.access ? 'set ✓' : 'not set (blocked from outside)'}</b></div>
+      ${App.server && !App.server.remote ? `<div class="row"><button class="btn primary" id="set-access">${App.server.access ? 'Change password' : 'Set password'}</button>${App.server.access ? '<button class="btn ghost" id="set-access-off">Turn off internet access</button>' : ''}</div>` : ''}
       <label>Display</label>
       <div class="note">Photos: <b>${esc(Photos.sourceLabel())}</b> (${Photos.list.length} loaded) <button class="btn sm" id="set-photos" style="margin-left:8px">↻ Rescan photos</button> · Weather ${esc(cfg('lat', ''))}, ${esc(cfg('lon', ''))}<br>Screen schedule, sleep times and timeouts are on the <b>Display</b> tab above.</div>
       <div class="row"><button class="btn ghost" id="set-reload">Reload app</button><button class="btn ghost" id="set-fs">Toggle fullscreen</button></div>
@@ -3083,6 +3086,18 @@ function bind() {
       if (!u) { toast('URL cleared — back to demo mode'); } location.reload(); return;
     }
     if (e.target.closest('#set-refresh')) { toast('Refreshing…'); refresh(true); return; }
+    if (e.target.closest('#set-access')) {
+      const v = await KB.open({ title: 'Family password for internet access', placeholder: 'at least 6 characters', initial: '' });
+      if (v === null) return;
+      if (v.trim().length < 6) { toast('Use at least 6 characters', true); return; }
+      try { const r = await (await fetch('/api/access', { method: 'POST', body: JSON.stringify({ password: v.trim() }) })).json(); if (r.ok) { toast('Password saved — everyone outside will need to sign in again'); const h = await (await fetch('/api/health', { cache: 'no-store' })).json(); App.server = h; renderParent(); } else toast(r.error || 'Could not save', true); } catch (_) { toast('Local server not reachable', true); }
+      return;
+    }
+    if (e.target.closest('#set-access-off')) {
+      if (!await Modal.confirm({ icon: '🌐', title: 'Turn off internet access?', body: 'Anyone outside the house gets a “not set up” page until you set a password again. Home Wi-Fi keeps working.', ok: 'Turn off', okClass: 'bad' })) return;
+      try { await fetch('/api/access', { method: 'POST', body: JSON.stringify({ password: '' }) }); const h = await (await fetch('/api/health', { cache: 'no-store' })).json(); App.server = h; renderParent(); toast('Internet access off'); } catch (_) {}
+      return;
+    }
     if (e.target.closest('#set-photos')) { toast('Scanning photos…'); await Photos.rescan(); renderParent(); toast(Photos.list.length ? `${Photos.list.length} photos ready` : (Photos.note || 'No photos found'), !Photos.list.length); return; }
     if (e.target.closest('#set-reset')) { App.backend.reset(); refresh(true); toast('Demo data reset'); return; }
     if (e.target.closest('#set-reload')) { location.reload(); return; }

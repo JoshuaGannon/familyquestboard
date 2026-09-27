@@ -371,6 +371,33 @@ from SSH: `pkill chromium`. It comes back on the next login/reboot.
 
 ---
 
+## Reach the board from anywhere (internet access)
+
+No VPN, no apps: the Pi serves the board over HTTPS at a free DuckDNS name,
+and anyone outside the house has to enter a family password first.
+
+1. **DuckDNS name** — sign in at https://www.duckdns.org, add a subdomain
+   (e.g. `familyquestboard`). Note the **token** shown at the top of the page.
+2. **On the Pi**:
+   ```
+   cd ~/FamilyQuestBoard && bash pi/setup-internet.sh familyquestboard.duckdns.org YOUR-TOKEN
+   ```
+   Installs Caddy (automatic HTTPS certificate), points it at the board, and
+   adds a 5-minute cron that keeps DuckDNS updated with your home IP.
+3. **On the router** — forward **TCP 443** to the Pi's LAN IP, port 443.
+   (Port Forwarding / Virtual Server / NAT in the router admin page.)
+4. **On the board** — Parents → Settings → Internet access → **Set password**.
+
+Then open `https://familyquestboard.duckdns.org` on your phone (turn off Wi-Fi
+to test). Sign in once per device; it stays signed in for 30 days.
+Changing the password signs every outside device out. Home Wi-Fi and the wall
+itself never see the login page. Wrong guesses are limited to 8 per 10 minutes.
+Turn it off any time from the same Settings section.
+
+If it never connects, your ISP may use carrier-grade NAT (the "current ip" on
+DuckDNS starts with `100.`): port forwarding can't work there, and a
+Cloudflare Tunnel is the free alternative — ask.
+
 ## Troubleshooting
 
 | Symptom | Fix |
