@@ -225,9 +225,12 @@ def extras_op(body):
                 return d, False
             awarded.append(key)
             d["awarded"] = awarded[-2000:]
-            coupons = d.get("coupons") if isinstance(d.get("coupons"), list) else []
-            coupons.append(body.get("value"))
-            d["coupons"] = coupons[-500:]
+            val = body.get("value") or {}
+            kind = val.get("kind") if isinstance(val, dict) else None
+            target = "prizes" if kind == "prize" else "pointlog" if kind == "points" else "coupons"
+            lst = d.get(target) if isinstance(d.get(target), list) else []
+            lst.append(val)
+            d[target] = lst[-500:]
         else:
             raise ValueError("unknown op")
         _extras_save(d)

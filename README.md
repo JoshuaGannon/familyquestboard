@@ -398,6 +398,22 @@ address) in the phone browser → Android/Chrome: menu ⋮ → *Add to Home scre
 / *Install app*; iPhone/Safari: Share → *Add to Home Screen*. It opens full
 screen with no browser bars.
 
+## Streak prizes (per quest)
+
+Parents → Quests & rewards → tap a repeating quest → **Streak prizes**:
+
+- **Family default** — uses the coupon milestones set in Family extras.
+- **🎯 Custom for this quest** — add as many as you like: *🔥N in a row →*
+  **bonus points** (added instantly), **🎟️ a coupon** off any reward, or a
+  **🏆 real-life prize** you type (or pick one of your rewards). Each can pay
+  **once per streak** or **every N** (7, 14, 21…).
+- **No prizes** — the streak still counts and shows, it just doesn't pay out.
+
+Kids see "🔥 2 more → 🏆 Pick the movie" on the quest card. Earned real-life
+prizes show at the top of **Approvals** with a **Given ✓** button (and on the
+kid's Quests screen until then), and can send an alert (🔥 toggle in
+Settings → Alerts). Stored on the Pi, so it needs the Pi server.
+
 ## Quests: taking it back, asking for help
 
 A checked quest that hasn't been approved yet can be tapped again → **Take it

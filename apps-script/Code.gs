@@ -71,7 +71,7 @@ var TABS = {
       ['todos_require_pin', 'FALSE', 'TRUE = the To-do screen asks for the parent PIN'],
       ['notify_ntfy_topic', '', 'Push notifications: install the free ntfy app, subscribe to a private topic name, put that name here'],
       ['notify_sms', '', 'Text alerts: phone-as-email, comma-separated, e.g. 5551234567@vtext.com (Verizon), @txt.att.net, @tmomail.net'],
-      ['notify_events', 'quest,help,reward', 'Which things send alerts: quest, help, reward (any combination)'],
+      ['notify_events', 'quest,help,reward,streak', 'Which things send alerts: quest, help, reward, streak (any combination)'],
     ],
   },
   Members: {
@@ -269,6 +269,7 @@ function doPost(e) {
       case 'askHelp':        out = askHelp(body); break;
       case 'clearPurchased': out = clearPurchased(body); break;
       case 'testNotify':     out = testNotify(body); break;
+      case 'notifyStreak':   out = notify('streak', '🔥 ' + (body.member || 'Someone') + ' hit a streak!', String(body.label || '') + ' → ' + String(body.prize || '')) || { ok: true }; break;
       case 'redeemReward':   out = redeemReward(body); break;
       case 'reviewQueue':    out = reviewQueue(body); break;
       case 'setDinner':      out = setDinner(body); break;
@@ -605,7 +606,7 @@ function testNotify(b) {
 function notify(kind, title, message) {
   try {
     var cfg = getConfig();
-    var kinds = String(cfg.notify_events || 'quest,help,reward').split(',').map(function (s) { return s.trim().toLowerCase(); });
+    var kinds = String(cfg.notify_events || 'quest,help,reward,streak').split(',').map(function (s) { return s.trim().toLowerCase(); });
     if (kind !== 'test' && kinds.indexOf(kind) < 0) return;
     var topic = String(cfg.notify_ntfy_topic || '').trim();
     if (topic) {

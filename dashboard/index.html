@@ -339,6 +339,12 @@
   .reward.slock { border: 2px dashed var(--line); }
   .reward.sopen { border: 2px solid var(--good); }
   .quest .flame { position: absolute; top: 12px; right: 14px; font-size: 16px; font-weight: 800; color: #fb923c; }
+  .quest .snext { font-size: 12px; font-weight: 700; color: #fdba74; margin-top: 4px; line-height: 1.25; }
+  .prize-chip { font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 10px; background: rgba(251,191,36,.15); color: var(--accent); border: 1px dashed var(--accent); }
+  .srow { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--card); margin: 6px 0; font-size: 17px; }
+  .srow .grow { flex: 1; }
+  .sdraft { border: 2px dashed var(--line); border-radius: 14px; padding: 10px 12px; margin-top: 8px; }
+  .prizebox { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.35); border-radius: 16px; padding: 10px 14px; margin-bottom: 14px; }
   .quest .auto { font-size: 12px; color: var(--good); font-weight: 700; }
   .goal { margin-top: 10px; }
   .goal .gl { font-size: 14px; font-weight: 700; display: flex; gap: 6px; align-items: baseline; }
@@ -873,6 +879,7 @@
     <label>How often</label><div class="seg" id="qe-repeat"></div>
     <div class="note" id="qe-hint"></div>
     <label>Approval</label><div class="seg" id="qe-approve"></div>
+    <div id="qe-streakwrap"><label>Streak prizes</label><div id="qe-streak"></div></div>
   </div>
   <div id="qe-rewardonly">
     <label>Unlock with streaks</label><div class="seg" id="qe-lock"></div>
@@ -1082,6 +1089,7 @@ class DemoBackend {
       case 'saveDisplay': { d.display = d.display || []; const row = find(d.display, b.id); if (row) { row.start = b.start; row.mode = b.mode; row.days = b.days; } else d.display.push({ id: uid(), start: b.start, mode: b.mode, days: b.days, note: '' }); break; }
       case 'deleteDisplay': d.display = (d.display || []).filter(x => x.id !== b.id); break;
       case 'setConfig': d.config[b.key] = String(b.value); break;
+      case 'notifyStreak': break;
       case 'testNotify': if (!d.config.notify_ntfy_topic && !d.config.notify_sms) throw new Error('Add a push topic or a text number first'); break;
       case 'withdrawQuest': d.queue = d.queue.filter(k => !(k.id === b.id && k.status === 'pending')); break;
       case 'askHelp': { const q = find(d.quests, b.questId); d.queue.push({ id: uid(), type: 'help', ref_id: q.id, title: q.title, member: b.member, points: '0', submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
@@ -1194,6 +1202,7 @@ function questStatus(quest, memberName) {
 async function refresh(showErrors) {
   try {
     const s = await App.backend.getState();
+    Outbox.overlay(s);
     App.state = s; App.lastOk = new Date(); App.error = null;
     render();
   } catch (e) {
@@ -1210,39 +1219,59 @@ function scheduleRefresh() {
 }
 
 // Offline outbox: grocery taps in the store are applied to the screen at once and
-// sent when there's signal. Kept in localStorage so a closed tab doesn't lose them.
+// sent in order when there's signal. Kept in localStorage so a closed tab doesn't
+// lose them. Every refresh re-applies taps that haven't reached the Sheet yet (and
+// ones sent in the last 20 s, in case the refresh read the Sheet before they landed),
+// so items never flip back and forth.
 const Outbox = {
-  key: 'fqb_outbox', busy: false,
+  key: 'fqb_outbox', busy: false, recent: [],
   load() { try { return JSON.parse(localStorage.getItem(this.key) || '[]'); } catch (_) { return []; } },
   save(q) { try { localStorage.setItem(this.key, JSON.stringify(q)); } catch (_) {} this.banner(); },
-  banner() { const n = this.load().length; const el = $('#offline-bar'); if (!el) return; el.classList.toggle('on', n > 0); el.textContent = n ? `📶 ${n} change${n === 1 ? '' : 's'} waiting for signal — they’ll send on their own` : ''; },
-  async send(action, body) {
-    const q = this.load(); q.push({ action, body, t: Date.now() }); this.save(q);
-    await this.flush();
+  banner() {
+    const n = this.load().length; const el = $('#offline-bar'); if (!el) return;
+    // Only mention it when something has actually been waiting a while
+    const stale = n && this.load().some(it => Date.now() - it.t > 4000);
+    el.classList.toggle('on', !!stale);
+    el.textContent = stale ? `📶 ${n} change${n === 1 ? '' : 's'} waiting for signal — they’ll send on their own` : '';
+  },
+  send(action, body) {
+    const q = this.load(); q.push({ id: Math.random().toString(36).slice(2), action, body, t: Date.now() }); this.save(q);
+    this.flush();
+  },
+  // Replay pending + recently-sent grocery changes onto a fresh state from the server
+  overlay(state) {
+    if (!state || !state.groceries) return;
+    this.recent = this.recent.filter(it => Date.now() - it.done < 20000);
+    const ops = this.recent.concat(this.load()).sort((a, b) => a.t - b.t);
+    for (const it of ops) {
+      if (it.action === 'setGroceryStatus') { const g = state.groceries.find(x => x.id === it.body.id); if (g) g.status = it.body.status; }
+      else if (it.action === 'clearPurchased') state.groceries.forEach(g => { if (String(g.status).toLowerCase() === 'cart') g.status = ''; });
+    }
   },
   async flush() {
-    if (this.busy || !navigator.onLine) return;
+    if (this.busy) return;
     this.busy = true;
     try {
-      let q = this.load();
-      while (q.length) {
-        const item = q[0];
-        try { await App.backend.post(item.action, item.body); }
+      for (let guard = 0; guard < 200; guard++) {
+        const item = this.load()[0]; if (!item) break;       // always re-read: taps may arrive mid-send
+        let drop = false;
+        try { await App.backend.post(item.action, item.body); drop = true; }
         catch (e) {
           const msg = String(e && e.message || e);
-          // Server rejected it outright (bad id etc.): drop it. Network trouble: keep it and stop.
-          if (/failed to fetch|network|load failed|timeout|abort/i.test(msg)) break;
-          toast('Couldn’t save one change: ' + msg, true);
+          if (/failed to fetch|network|load failed|timeout|abort|offline/i.test(msg)) break;   // no signal: keep it, try later
+          toast('Couldn’t save one change: ' + msg, true); drop = true;                          // server said no: don't retry forever
         }
-        q.shift(); this.save(q);
+        if (drop) { this.recent.push(Object.assign({ done: Date.now() }, item)); this.save(this.load().filter(x => x.id !== item.id)); }
       }
-      if (!this.load().length) refresh(false);
     } finally { this.busy = false; this.banner(); }
   },
   init() {
+    // old-format entries (before ids) get ids so they can be removed safely
+    this.save(this.load().map(it => it.id ? it : Object.assign({ id: Math.random().toString(36).slice(2) }, it)));
     window.addEventListener('online', () => this.flush());
-    setInterval(() => this.flush(), 30000);
-    this.banner(); this.flush();
+    setInterval(() => this.flush(), 5000);
+    setInterval(() => this.banner(), 1000);
+    this.flush();
   },
 };
 
@@ -1517,27 +1546,68 @@ function kidQuests(member) {
 const bestKey = (m, q) => m + '|' + q;
 const bestStreak = (m, q) => +(X.get('bests', {})[bestKey(m, q)] || 0);
 
-// Award milestone coupons + record bests. The server de-duplicates awards, so
+// ---- Per-quest streak prizes ------------------------------------------------
+// questOpts[questId].streak = { mode: 'default' | 'custom' | 'off', milestones: [
+//   { n: 7, type: 'points' | 'coupon' | 'prize', value: 10, text: 'Pick the movie', every: false } ] }
+// 'default' uses the family-wide coupon milestones from Family extras.
+const questStreakOpt = (q) => ((X.get('questOpts', {})[q.id] || {}).streak) || { mode: 'default', milestones: [] };
+function milestonesFor(q) {
+  const o = questStreakOpt(q);
+  if (o.mode === 'off') return [];
+  if (o.mode === 'custom') return (o.milestones || []).filter(m => m && +m.n > 0);
+  return (streakCfg().milestones || []).map(m => ({ n: +m.n, type: 'coupon', value: +m.off, legacy: true }));
+}
+const prizeText = (m) => m.type === 'points' ? `+${m.value} bonus pts` : m.type === 'coupon' ? `🎟️ −${m.value} pts coupon` : `🏆 ${m.text || 'a prize'}`;
+const prizeShort = (m) => m.type === 'points' ? `+${m.value} pts` : m.type === 'coupon' ? `🎟️ −${m.value}` : `🏆 ${m.text || 'prize'}`;
+// Next milestone a kid is working toward on this quest (for the card hint)
+function nextPrize(q, cur) {
+  let best = null;
+  for (const m of milestonesFor(q)) {
+    const n = +m.n; const target = m.every ? (Math.floor(cur / n) + 1) * n : n;
+    if (target <= cur) continue;
+    if (!best || target < best.target) best = { target, m };
+  }
+  return best;
+}
+const prizesFor = (member) => X.get('prizes', []).filter(p => p && (!member || p.member === member) && !p.given);
+
+// Award milestone prizes + record bests. The server de-duplicates awards, so
 // the wall and phones can all run this safely.
 let awarding = false;
 async function checkStreaks() {
   if (!App.state || !X.ok || awarding) return;
   awarding = true;
   try {
-    const cfgS = streakCfg(), awarded = new Set(X.get('awarded', [])), bests = X.get('bests', {}), newBests = {};
+    const awarded = new Set(X.get('awarded', [])), bests = X.get('bests', {}), newBests = {}; let gotPoints = false;
     for (const kid of members('kid')) {
       for (const q of kidQuests(kid.name)) {
         const s = questStreak(q, kid.name); if (!s.cur) continue;
         if (s.cur > (+bests[bestKey(kid.name, q.id)] || 0)) newBests[bestKey(kid.name, q.id)] = s.cur;
-        for (const m of cfgS.milestones || []) {
-          const key = `${kid.name}|${q.id}|${m.n}|${s.start}`;
-          if (s.cur < m.n || awarded.has(key)) continue;
-          const changed = await X.op({ op: 'award', key, value: { id: xuid(), member: kid.name, off: +m.off, label: `🔥${m.n} × ${q.title}`, at: new Date().toISOString() } });
-          if (changed) toast(`🎟️ ${kid.name} earned a coupon: −${m.off} pts (🔥${m.n} ${q.title})`);
+        for (const m of milestonesFor(q)) {
+          const n = +m.n; if (s.cur < n) continue;
+          const tier = m.every ? Math.floor(s.cur / n) : 1;
+          // legacy key keeps coupons already handed out under the old family-wide rules from re-awarding
+          const key = m.legacy ? `${kid.name}|${q.id}|${n}|${s.start}` : `${kid.name}|${q.id}|${n}|${m.type}|${m.value || m.text || ''}|${tier}|${s.start}`;
+          if (awarded.has(key)) continue;
+          const label = `🔥${m.every ? n * tier : n} × ${q.title}`, at = new Date().toISOString();
+          const value = m.type === 'points' ? { id: xuid(), kind: 'points', member: kid.name, pts: +m.value, label, at }
+            : m.type === 'prize' ? { id: xuid(), kind: 'prize', member: kid.name, text: m.text || 'a prize', label, at }
+            : { id: xuid(), member: kid.name, off: +m.value, label, at };
+          const changed = await X.op({ op: 'award', key, value });
+          if (!changed) continue;
+          awarded.add(key);
+          if (m.type === 'points') {
+            try { await App.backend.post('adjustPoints', { member: kid.name, points: +m.value, reason: `Streak bonus ${label}`, pin: cfg('pin', '') }); gotPoints = true; } catch (e) { console.warn('streak points failed', e); }
+            toast(`🔥 ${kid.name}: ${label} — +${m.value} bonus points!`);
+          } else if (m.type === 'prize') {
+            toast(`🏆 ${kid.name} earned: ${m.text} (${label})`);
+          } else toast(`🎟️ ${kid.name} earned a coupon: −${m.value} pts (${label})`);
+          try { await App.backend.post('notifyStreak', { member: kid.name, label, prize: prizeText(m) }); } catch (_) { /* older script: no alert */ }
         }
       }
     }
     if (Object.keys(newBests).length) await X.op({ op: 'merge', key: 'bests', value: newBests });
+    if (gotPoints) await refresh(false);   // show streak bonus points right away
   } catch (e) { console.warn('streak check failed', e); }
   awarding = false;
 }
@@ -1917,14 +1987,14 @@ function renderQuests() {
   const rep = { daily: 'today', weekdays: 'today', weekly: 'this week', biweekly: 'every 2 weeks', monthly: 'this month', once: 'one time' };
   const repTxt = (r) => { const n = everyDays(r); return n ? (n === 1 ? 'today' : `every ${n} days`) : (rep[(r || 'daily').toLowerCase()] || esc(r)); };
   const qopts = X.get('questOpts', {});
-  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur; return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s === 'done' ? 'disabled' : ''}>${helpAsked(q, kid.name) ? '<span class="helpflag">🙋</span>' : ''}${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${(qopts[q.id] || {}).auto ? '<div class="auto">✓ no approval needed</div>' : ''}<div class="qm"><span>${repTxt(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
+  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur; return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s === 'done' ? 'disabled' : ''}>${helpAsked(q, kid.name) ? '<span class="helpflag">🙋</span>' : ''}${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${(qopts[q.id] || {}).auto ? '<div class="auto">✓ no approval needed</div>' : ''}${(() => { const nx = X.ok && nextPrize(q, st); if (!nx) return ''; const left = nx.target - st; return `<div class="snext">🔥 ${left} more → ${esc(prizeShort(nx.m))}</div>`; })()}<div class="qm"><span>${repTxt(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
     : `<div class="empty">No quests for ${esc(kid.name)} yet. Add some on the Quests tab.</div>`;
 
   const b = balance(kid.name);
   const rewards = (App.state.rewards || []).filter(r => r.title && (r.active === '' || r.active === undefined || isTrue(r.active)));
   const cps = couponsFor(kid.name), bestOff = cps.length ? Math.max(...cps.map(c => +c.off || 0)) : 0;
   $('#rewards').innerHTML = `<div class="bal"><div class="l">${esc(kid.name)}'s points</div><div class="n">${b.approved}</div>${b.pending ? `<div class="p">+${b.pending} waiting for approval</div>` : ''}${goalBar(goalFor(kid.name))}</div>
-    ${cps.length ? `<div class="coupons">${cps.map(c => `<span class="coupon" title="${esc(c.label || '')}">🎟️ −${esc(c.off)} pts</span>`).join('')}</div>` : ''}
+    ${cps.length || prizesFor(kid.name).length ? `<div class="coupons">${cps.map(c => `<span class="coupon" title="${esc(c.label || '')}">🎟️ −${esc(c.off)} pts</span>`).join('')}${prizesFor(kid.name).map(p => `<span class="prize-chip" title="${esc(p.label || '')}">🏆 ${esc(p.text)}</span>`).join('')}</div>` : ''}
     <div class="sect">Rewards</div>` + (rewards.length ? rewards.map(r => {
       const cost = parseInt(r.cost || 0, 10), eff = Math.max(0, cost - Math.min(bestOff, cost)), ls = lockStatus(r, kid.name), afford = b.approved >= eff;
       const cls = ls.locked ? 'locked slock' : (X.get('locks', {})[r.id] ? 'sopen' : '') + (afford ? '' : ' cant');
@@ -2180,12 +2250,45 @@ const QE = {
     $('#qe-rewardonly').style.display = kind === 'reward' && X.ok ? '' : 'none';
     const id = item && item.id;
     this.state.auto = !!(id && (X.get('questOpts', {})[id] || {}).auto);
+    const so = id && (X.get('questOpts', {})[id] || {}).streak;
+    this.state.streak = so ? JSON.parse(JSON.stringify(so)) : { mode: 'default', milestones: [] };
+    this.state.sdraft = null;
     this.state.lock = id && X.get('locks', {})[id] ? Object.assign({}, X.get('locks', {})[id]) : null;
     this.orig = JSON.stringify(this.sheetPart());
     $('#qe-ptslabel').textContent = kind === 'quest' ? 'Points earned' : 'Points it costs';
     this.draw(); $('#quest-ed').classList.add('open');
   },
   close() { $('#quest-ed').classList.remove('open'); this.state = null; },
+  drawStreak() {
+    const s = this.state, wrap = $('#qe-streakwrap');
+    const once = s.repeat === 'once';
+    wrap.style.display = X.ok && !once ? '' : 'none';
+    if (!X.ok || once) return;
+    const ST = s.streak, D = s.sdraft;
+    let h = `<div class="seg">${[['default', 'Family default'], ['custom', '🎯 Custom for this quest'], ['off', 'No prizes']].map(([k, l]) => `<button data-smode="${k}" class="${ST.mode === k ? 'modeon' : ''}">${l}</button>`).join('')}</div>`;
+    if (ST.mode === 'default') {
+      const g = streakCfg().milestones || [];
+      h += `<div class="note">${g.length ? g.map(m => `🔥${m.n} in a row → 🎟️ −${m.off} pts coupon`).join(' · ') : 'The family default has no prizes right now'} <span class="muted">(change it in Family extras)</span></div>`;
+    } else if (ST.mode === 'off') {
+      h += `<div class="note">The 🔥 streak still counts and shows on the card — it just doesn’t pay out.</div>`;
+    } else {
+      h += (ST.milestones || []).map((m, i) => `<div class="srow"><span style="font-weight:800;color:#fb923c">🔥${m.n}${m.every ? ' ↻' : ''}</span><span class="grow">${esc(prizeText(m))}${m.every ? ` <span class="muted">· every ${m.n} in a row</span>` : ''}</span><button class="btn sm ghost" data-sdel="${i}">✕</button></div>`).join('') || '<div class="note">No prizes yet — add one below.</div>';
+      if (!D) h += `<button class="btn sm primary" data-sadd style="margin-top:8px">＋ Add a streak prize</button>`;
+      else {
+        const ns = [3, 5, 7, 10, 14, 21, 30], vs = [5, 10, 15, 25, 50];
+        const rewardTitles = (App.state.rewards || []).filter(r => r.title).map(r => r.title);
+        h += `<div class="sdraft">
+          <label>After how many in a row</label><div class="seg">${ns.map(n => `<button data-sdn="${n}" class="${D.n === n ? 'modeon' : ''}">🔥${n}</button>`).join('')}<button data-sdn="custom" class="${ns.includes(D.n) ? '' : 'modeon'}">${ns.includes(D.n) ? 'Other…' : '🔥' + D.n + ' ✎'}</button></div>
+          <label>Prize</label><div class="seg"><button data-sdt="points" class="${D.type === 'points' ? 'modeon' : ''}">⭐ Bonus points</button><button data-sdt="coupon" class="${D.type === 'coupon' ? 'modeon' : ''}">🎟️ Coupon off a reward</button><button data-sdt="prize" class="${D.type === 'prize' ? 'modeon' : ''}">🏆 Real-life prize</button></div>
+          ${D.type === 'prize'
+            ? `<label>What do they get</label><button class="field ${D.text ? '' : 'ph'}" data-sdtext>${esc(D.text) || 'e.g. Pick the movie, ice cream trip…'}</button>${rewardTitles.length ? `<div class="seg" style="margin-top:6px">${rewardTitles.slice(0, 8).map(t => `<button data-sdpick="${esc(t)}" class="${D.text === t ? 'modeon' : ''}">${esc(t)}</button>`).join('')}</div>` : ''}`
+            : `<label>${D.type === 'points' ? 'Bonus points' : 'Points off'}</label><div class="seg">${vs.map(v => `<button data-sdv="${v}" class="${D.value === v ? 'modeon' : ''}">${v}</button>`).join('')}<button data-sdv="custom" class="${vs.includes(D.value) ? '' : 'modeon'}">${vs.includes(D.value) ? 'Other…' : D.value + ' ✎'}</button></div>`}
+          <label>How often</label><div class="seg"><button data-sde="0" class="${D.every ? '' : 'modeon'}">Once per streak</button><button data-sde="1" class="${D.every ? 'modeon' : ''}">↻ Every ${D.n} in a row (${D.n}, ${D.n * 2}, ${D.n * 3}…)</button></div>
+          <div class="row" style="margin-top:10px"><button class="btn sm ghost" data-scancel>Cancel</button><button class="btn sm primary" data-sok>Add prize</button></div></div>`;
+      }
+    }
+    $('#qe-streak').innerHTML = h;
+  },
   sheetPart() { const s = this.state; return [s.title, s.icon, s.points, s.who, s.repeat, s.active, s.notes]; },
   draw() {
     const s = this.state; if (!s) return;
@@ -2198,6 +2301,7 @@ const QE = {
       $('#qe-who').innerHTML = [['Anyone', '👧👦 Anyone']].concat(kids.map(k => [k.name, `${k.emoji || '⭐'} ${k.name}`])).map(w => `<button data-qwho="${esc(w[0])}" class="${s.who.toLowerCase() === w[0].toLowerCase() ? 'modeon' : ''}">${esc(w[1])}</button>`).join('');
       $('#qe-repeat').innerHTML = QREPEATS.map(r => `<button data-qrep="${r[0]}" class="${s.repeat === r[0] ? 'modeon' : ''}">${r[1]}</button>`).join('');
       $('#qe-hint').textContent = QHINTS[s.repeat] || '';
+      this.drawStreak();
       $('#qe-approve').innerHTML = X.ok ? `<button data-qauto="0" class="${s.auto ? '' : 'modeon'}">👀 Parent approves</button><button data-qauto="1" class="${s.auto ? 'modeon' : ''}">✓ Auto-approve</button>` : '<span class="muted">Needs the Pi server</span>';
     } else if (X.ok) {
       const L = s.lock;
@@ -2219,11 +2323,21 @@ const QE = {
   async save() {
     const s = this.state; if (!s.title.trim()) { toast('Give it a name first', true); return; }
     const sheetChanged = !s.id || JSON.stringify(this.sheetPart()) !== this.orig;
-    const kind = this.kind, extra = { auto: s.auto, lock: s.lock };
+    const kind = this.kind, extra = { auto: s.auto, lock: s.lock, streak: s.streak };
+    if (s.sdraft && s.streak && s.streak.mode === 'custom') { toast('Finish or cancel the streak prize first', true); return; }
     this.close();
+    // New quest + Pi options: create it first so we have its id
+    if (!s.id && kind === 'quest' && X.ok) {
+      try {
+        const res = await App.backend.post('saveQuest', { id: '', title: s.title.trim(), icon: s.icon, points: s.points, assigned_to: s.who, repeat: s.repeat, active: s.active, notes: s.notes, pin: App.pinValue });
+        if (res && res.id) await X.merge('questOpts', { [res.id]: { auto: !!extra.auto, streak: extra.streak } });
+        toast('Quest saved'); await refresh(true);
+      } catch (e) { toast('That didn’t save: ' + (e.message || e), true); }
+      return;
+    }
     // Pi-side options first (they don't depend on the Google script)
     if (s.id && X.ok) {
-      if (kind === 'quest') await X.merge('questOpts', { [s.id]: { auto: !!extra.auto } });
+      if (kind === 'quest') await X.merge('questOpts', { [s.id]: { auto: !!extra.auto, streak: extra.streak } });
       else await X.merge('locks', { [s.id]: extra.lock && (extra.lock.type === 'quest' ? extra.lock.quest && extra.lock.n : extra.lock.count && extra.lock.n) ? extra.lock : null });
       if (!sheetChanged) { toast('Saved'); render(); return; }
     }
@@ -2267,7 +2381,7 @@ const DE = {
   },
 };
 
-const notifyList = () => String(cfg('notify_events', 'quest,help,reward')).split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+const notifyList = () => String(cfg('notify_events', 'quest,help,reward,streak')).split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
 const notifyOn = (k) => notifyList().includes(k);
 function pinPadHtml(title) {
   return `<div class="pinpad"><h1 style="justify-content:center">🔒 ${esc(title || 'Parent PIN')}</h1><div class="dots pin-dots"><span></span><span></span><span></span><span></span></div>
@@ -2292,7 +2406,9 @@ function renderParent() {
     const recent = (App.state.queue || []).filter(k => k.status !== 'pending').sort((a, b) => (b.reviewed_at || b.submitted_at) < (a.reviewed_at || a.submitted_at) ? -1 : 1).slice(0, 8);
     const mem = (n) => members().find(m => m.name === n) || {};
     const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'help' ? '🙋 Needs help' : k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'}${k.type === 'help' ? '' : ` · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts`} · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status) + (X.get('auto', {})[k.id] ? ' (auto)' : '')}</div></span>${acts ? (k.type === 'help' ? `<span class="acts"><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">👍 Got it</button></span>` : `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>`) : ''}</div>`;
-    body.innerHTML = (q.length ? q.map(k => row(k, true)).join('') : `<div class="empty">Nothing waiting for approval 🎉</div>`) + (recent.length ? `<div class="sect">Recent</div>` + recent.map(k => row(k, false)).join('') : '');
+    const pz = X.ok ? prizesFor() : [];
+    const pzHtml = pz.length ? `<div class="prizebox"><div class="sect" style="margin-top:0">🏆 Streak prizes to hand out</div>${pz.map(p => `<div class="qrow"><span class="qi">${esc(mem(p.member).emoji || '⭐')}</span><span><div class="qt">${esc(p.member)} · ${esc(p.text)}</div><div class="qs">${esc(p.label || '')} · ${esc(when(p.at))}</div></span><span class="acts"><button class="btn sm good" data-prizegiven="${esc(p.id)}">Given ✓</button></span></div>`).join('')}</div>` : '';
+    body.innerHTML = pzHtml + (q.length ? q.map(k => row(k, true)).join('') : `<div class="empty">Nothing waiting for approval 🎉</div>`) + (recent.length ? `<div class="sect">Recent</div>` + recent.map(k => row(k, false)).join('') : '');
   } else if (App.ptab === 'dinner') {
     let html = '';
     for (let i = 0; i < 7; i++) {
@@ -2384,7 +2500,7 @@ function renderParent() {
       <div class="note">Sent by the Google script the moment something happens — works anywhere, no home Wi-Fi needed. Push uses the free <b>ntfy</b> app: install it, subscribe to a private topic name you invent, enter that name here.</div>
       <div class="row"><button class="btn sm" data-ncfg="notify_ntfy_topic">📲 Push topic: <b style="margin-left:8px">${esc(cfg('notify_ntfy_topic', '')) || 'not set'}</b></button>
       <button class="btn sm" data-ncfg="notify_sms">💬 Text numbers: <b style="margin-left:8px">${esc(cfg('notify_sms', '')) || 'not set'}</b></button></div>
-      <div class="seg" style="margin-top:8px">${[['quest', '✅ Quest finished'], ['help', '🙋 Needs help'], ['reward', '🎁 Reward requested']].map(([k, l]) => `<button data-nev="${k}" class="${notifyOn(k) ? 'modeon' : ''}">${l}</button>`).join('')}<button class="btn sm ghost" id="notify-test" style="margin-left:auto">Send a test</button></div>
+      <div class="seg" style="margin-top:8px">${[['quest', '✅ Quest finished'], ['help', '🙋 Needs help'], ['reward', '🎁 Reward requested'], ['streak', '🔥 Streak prize earned']].map(([k, l]) => `<button data-nev="${k}" class="${notifyOn(k) ? 'modeon' : ''}">${l}</button>`).join('')}<button class="btn sm ghost" id="notify-test" style="margin-left:auto">Send a test</button></div>
       <div class="note" style="font-size:14px">Texts: your number as an email — Verizon <code>5551234567@vtext.com</code>, AT&amp;T <code>@txt.att.net</code>, T-Mobile <code>@tmomail.net</code>. Several, comma-separated.</div>
       <label>Internet access</label>
       <div class="note">${!App.server ? 'Needs the Pi / local server.' : App.server.remote ? 'You’re connected from outside the house right now. The password can only be changed from home Wi-Fi.' : App.server.public_host ? `Reachable at <b style="font-size:20px">https://${esc(App.server.public_host)}</b> from anywhere.` : 'Run <code>bash pi/setup-internet.sh</code> on the Pi and forward port 443 on the router — see README.'} Family password: <b>${App.server && App.server.access ? 'set ✓' : 'not set (blocked from outside)'}</b></div>
@@ -3117,6 +3233,27 @@ function bind() {
     const qr = e.target.closest('[data-qrep]'); if (qr) { QE.state.repeat = qr.dataset.qrep; QE.draw(); return; }
     const qa = e.target.closest('[data-qact]'); if (qa) { QE.state.active = qa.dataset.qact === '1'; QE.draw(); return; }
     const qx = e.target.closest('[data-qauto]'); if (qx) { QE.state.auto = qx.dataset.qauto === '1'; QE.draw(); return; }
+    { // streak prizes
+      const S = QE.state && QE.state.streak;
+      const sm = e.target.closest('[data-smode]'); if (sm) { S.mode = sm.dataset.smode; if (S.mode !== 'custom') QE.state.sdraft = null; QE.drawStreak(); return; }
+      if (e.target.closest('[data-sadd]')) { QE.state.sdraft = { n: 7, type: 'points', value: 10, text: '', every: false }; QE.drawStreak(); return; }
+      if (e.target.closest('[data-scancel]')) { QE.state.sdraft = null; QE.drawStreak(); return; }
+      const sd = e.target.closest('[data-sdel]'); if (sd) { S.milestones.splice(+sd.dataset.sdel, 1); QE.drawStreak(); return; }
+      const D = QE.state && QE.state.sdraft;
+      if (D) {
+        const dn = e.target.closest('[data-sdn]'); if (dn) { if (dn.dataset.sdn === 'custom') { const v = parseInt(await KB.open({ title: 'How many in a row?', placeholder: 'e.g. 12', initial: '' }), 10); if (v > 0) D.n = v; } else D.n = +dn.dataset.sdn; QE.drawStreak(); return; }
+        const dt = e.target.closest('[data-sdt]'); if (dt) { D.type = dt.dataset.sdt; QE.drawStreak(); return; }
+        const dv = e.target.closest('[data-sdv]'); if (dv) { if (dv.dataset.sdv === 'custom') { const v = parseInt(await KB.open({ title: 'How many points?', placeholder: 'e.g. 20', initial: '' }), 10); if (v > 0) D.value = v; } else D.value = +dv.dataset.sdv; QE.drawStreak(); return; }
+        if (e.target.closest('[data-sdtext]')) { const v = await KB.open({ title: 'The prize', initial: D.text, placeholder: 'e.g. Pick the movie' }); if (v !== null) D.text = v.trim(); QE.drawStreak(); return; }
+        const dp = e.target.closest('[data-sdpick]'); if (dp) { D.text = dp.dataset.sdpick; QE.drawStreak(); return; }
+        const de = e.target.closest('[data-sde]'); if (de) { D.every = de.dataset.sde === '1'; QE.drawStreak(); return; }
+        if (e.target.closest('[data-sok]')) {
+          if (D.type === 'prize' && !D.text) { toast('Type what the prize is', true); return; }
+          S.milestones = (S.milestones || []).concat([{ n: D.n, type: D.type, value: D.type === 'prize' ? 0 : D.value, text: D.type === 'prize' ? D.text : '', every: !!D.every }]).sort((a, b) => a.n - b.n);
+          QE.state.sdraft = null; QE.drawStreak(); return;
+        }
+      }
+    }
     const lk = e.target.closest('[data-lk]'); if (lk) { const t = lk.dataset.lk; QE.state.lock = !t ? null : t === 'quest' ? { type: 'quest', quest: '', n: 7 } : { type: 'variety', count: 3, n: 7, min: 0 }; QE.draw(); return; }
     const lq = e.target.closest('[data-lkq]'); if (lq) { QE.state.lock.quest = lq.dataset.lkq; QE.draw(); return; }
     const ln = e.target.closest('[data-lkn]'); if (ln) { QE.state.lock.n = +ln.dataset.lkn; QE.draw(); return; }
@@ -3139,6 +3276,11 @@ function bind() {
     if (e.target.closest('.pinpad')) return;
     if (e.target.closest('#parent-lockbtn')) { App.unlocked = false; renderParent(); renderTodos(); return; }
     const pt = e.target.closest('.ptab'); if (pt) { App.ptab = pt.dataset.ptab; renderParent(); return; }
+    const pg = e.target.closest('[data-prizegiven]');
+    if (pg) {
+      const list = X.get('prizes', []).map(p => p && p.id === pg.dataset.prizegiven ? Object.assign({}, p, { given: new Date().toISOString() }) : p);
+      await X.op({ op: 'set', key: 'prizes', value: list }); renderParent(); renderQuests(); toast('Marked as given 🏆'); return;
+    }
     const rv = e.target.closest('[data-review]'); if (rv) {
       rv.closest('.qrow').style.opacity = .4;
       const id = rv.dataset.id, rejecting = rv.dataset.review === 'rejected';
@@ -3289,7 +3431,7 @@ async function boot() {
   const qs = new URLSearchParams(location.search);
   if (qs.get('calview')) Cal.view = qs.get('calview');
   showScreen(qs.get('screen') || CFG.HOME_SCREEN || 'home');
-  $('#smart').innerHTML = `<div class="kicker">Loading</div><div class="big"><span class="spin"></span> ${url ? 'Reading your Google Sheet…' : 'Starting demo…'}</div>`;
+  $('#smart').innerHTML = `<div class="big"><span class="spin"></span> Loading…</div>`;
   await X.load();
   await refresh(true);
   if (!App.state) {
@@ -3329,7 +3471,7 @@ function keepAlive() {
 
 window.addEventListener('DOMContentLoaded', boot);
 window.FQB = App;
-App.Display = Display; App.periodAt = periodAt; App.displayPeriods = displayPeriods; App.Photos = Photos;
+App.Display = Display; App.periodAt = periodAt; App.displayPeriods = displayPeriods; App.Photos = Photos; App.X = X; App.refreshNow = async () => { await refresh(true); await checkStreaks(); };
 })();
 </script>
 </body>
