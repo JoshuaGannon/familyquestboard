@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content, viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0b0e14">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -365,6 +365,7 @@
   .thread-head { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
   .thread-head .tn { font-weight: 800; font-size: 19px; }
   .thread-head .ts { font-size: 13px; color: var(--muted); }
+  .thread-head .del { margin-left: auto; background: var(--card); border-radius: 12px; padding: 8px 14px; font-weight: 700; font-size: 15px; color: var(--muted); }
   .thread-head .back { display: none; background: var(--card); border-radius: 12px; padding: 8px 12px; font-weight: 700; }
   .thread { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
   .msg-day { align-self: center; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 8px 0 2px; }
@@ -613,25 +614,35 @@
     .clock .time { font-size: 72px; }
   }
 
+  @media (max-width: 370px) {
+    #nav .navbtn[data-screen="calendar"] .lbl { font-size: 0 !important; }
+    #nav .navbtn[data-screen="calendar"] .lbl::after { content: 'Cal'; font-size: 10px; }
+  }
   /* ---------- Phone / remote mode (narrow screens) ---------- */
   @media (max-width: 900px) {
     .phone-only { display: inline-flex; }
-    .chat { grid-template-columns: 1fr; height: calc(100dvh - 150px); }
+    .chat { grid-template-columns: 1fr; height: calc(var(--app-h, 100dvh) - 150px - env(safe-area-inset-bottom)); }
     .chat.open .chat-list { display: none; }
     .chat:not(.open) .chat-pane { display: none; }
     .thread-head .back { display: inline-block; }
     .bub { max-width: 88%; }
     .composer .as { display: none; }
     :root { font-size: 16px; --radius: 16px; }
-    body { overflow: auto; }
-    #app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100dvh; }
+    html, body { overflow: hidden; overscroll-behavior: none; }
+    body { position: fixed; inset: 0; }
+    #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: 100dvh; height: var(--app-h, 100dvh); }
     #nav { grid-row: 2; flex-direction: row; justify-content: space-around; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); gap: 2px; border-right: 0; border-top: 1px solid var(--line); }
     #nav .spacer { display: none; }
-    #nav .navbtn { width: auto; flex: 1; height: 58px; border-radius: 14px; }
+    #nav { min-width: 0; overflow: hidden; }
+    #nav .navbtn { width: auto; flex: 1 1 0; min-width: 0; height: 58px; border-radius: 14px; padding-left: 0; padding-right: 0; }
     #nav .navbtn .ico { font-size: 22px; }
-    #nav .navbtn .lbl { font-size: 11px; }
+    #nav .navbtn .badge { top: 2px; right: 50%; margin-right: -26px; min-width: 20px; height: 20px; font-size: 11px; padding: 0 5px; }
+    #nav .navbtn[data-screen="groceries"] .lbl, #nav .navbtn[data-screen="messages"] .lbl { font-size: 0 !important; }
+    #nav .navbtn[data-screen="groceries"] .lbl::after { content: 'Shop'; font-size: 10px; }
+    #nav .navbtn[data-screen="messages"] .lbl::after { content: 'Chat'; font-size: 10px; }
+    #nav .navbtn .lbl { font-size: 10px; letter-spacing: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #nav .pill { position: fixed; top: 8px; right: 8px; z-index: 6; }
-    main { overflow: auto; }
+    main { overflow: auto; overscroll-behavior: contain; min-height: 0; }
     .screen { position: static; padding: 14px 14px 24px; overflow: visible; height: auto; min-height: 100%; }
     .screen h1 { font-size: 24px; margin-bottom: 12px; flex-wrap: wrap; }
     .screen h1 small { font-size: 13px; }
@@ -983,6 +994,12 @@ const isPhone = () => App.forcePhone || new URLSearchParams(location.search).has
 // Safety net: a browser in "Desktop site" mode ignores the viewport tag and
 // renders the 1920px wall layout shrunk down. Detect a small touch screen with
 // a wide layout viewport and force the phone layout anyway.
+function fitPhoneHeight() {
+  const set = () => { if (App.forcePhone) return; document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); if (window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0); };
+  set(); window.addEventListener('resize', set); window.addEventListener('orientationchange', () => setTimeout(set, 300));
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { if (!document.activeElement || !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) set(); });
+  document.addEventListener('focusout', () => setTimeout(set, 150));
+}
 function forcePhoneLayoutIfNeeded() {
   const small = screen.width && screen.width <= 900, wide = window.innerWidth > 900, touch = window.matchMedia('(pointer: coarse)').matches;
   if (!(small && wide && touch)) return;
@@ -1400,6 +1417,31 @@ const Msg = {
     for (const n of who) { const t = this.topicFor(n); if (!t) continue; if (seen[t]) { seen[t].as = 'Parent'; continue; } seen[t] = { topic: t, as: n }; out.push(seen[t]); }
     return out;
   },
+  // Wall only: parents can remove one message or a whole conversation
+  async parentOk(what) {
+    if (App.unlocked) return true;
+    const v = await KB.open({ title: `Parent PIN to delete ${what}`, placeholder: 'PIN', initial: '' });
+    if (v === null) return false;
+    if (String(v).trim() === String(cfg('pin', '1234'))) return true;
+    toast('Wrong PIN', true); return false;
+  },
+  async remove(ids) {
+    await X.op({ op: 'remove', key: 'messages', ids });
+    await X.load(); this.knownIds = new Set(this.all().map(m => m.id)); this.badge(); renderMessages();
+  },
+  async deleteConvo(cid) {
+    const msgs = this.thread(cid); if (!msgs.length) { toast('Nothing to delete'); return; }
+    if (!await this.parentOk('this conversation')) return;
+    if (!await Modal.confirm({ icon: '🗑️', title: `Delete the conversation ${cid === FAMILY ? 'in Family' : 'between ' + cid.split('|').join(' & ')}?`, body: `All ${msgs.length} message${msgs.length === 1 ? '' : 's'} are removed from the wall and every phone. This can’t be undone.`, ok: 'Delete', okClass: 'bad' })) return;
+    if (cid !== FAMILY) this.cur = null;
+    await this.remove(msgs.map(m => m.id)); toast('Conversation deleted');
+  },
+  async deleteOne(id) {
+    const m = this.all().find(x => x.id === id); if (!m) return;
+    if (!await this.parentOk('this message')) return;
+    if (!await Modal.confirm({ icon: '🗑️', title: 'Delete this message?', body: `<b>${esc(m.from)}:</b> ${esc(m.text)}`, ok: 'Delete', okClass: 'bad' })) return;
+    await this.remove([id]); toast('Message deleted');
+  },
   open(cid) { this.cur = cid; renderMessages(); this.markSeen(cid); $('#chat').classList.add('open'); },
   back() { this.cur = null; $('#chat').classList.remove('open'); renderMessages(); },
   async send(text) {
@@ -1469,12 +1511,12 @@ function renderMessages() {
     const mem = members().find(x => x.name === m.from) || {}; const t = new Date(m.at); const dk = dayKey(t);
     const day = dk !== lastDay ? `<div class="msg-day">${dk === dayKey(new Date()) ? 'Today' : t.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</div>` : ''; lastDay = dk;
     const mine = me ? m.from === me : (!Msg.isKid(m.from) && cid !== FAMILY && false);
-    return day + `<div class="bub ${mine ? 'me' : ''} ${m.at > seen && m.from !== me ? 'new' : ''}"><span class="av" style="${mem.color ? `background:${esc(mem.color)}` : ''}">${esc(mem.emoji || '👤')}</span><div class="bx">${!mine ? `<div class="who">${esc(m.from)}</div>` : ''}<div class="tx">${esc(m.text)}</div><div class="tm">${esc(fmtTime(t))}</div></div></div>`;
+    return day + `<div class="bub ${mine ? 'me' : ''} ${m.at > seen && m.from !== me ? 'new' : ''}" data-mid="${esc(m.id || '')}"><span class="av" style="${mem.color ? `background:${esc(mem.color)}` : ''}">${esc(mem.emoji || '👤')}</span><div class="bx">${!mine ? `<div class="who">${esc(m.from)}</div>` : ''}<div class="tx">${esc(m.text)}</div><div class="tm">${esc(fmtTime(t))}</div></div></div>`;
   }).join('');
   const senders = Msg.senders(cid);
   const quick = Msg.isKid(from) ? KID_QUICK : PARENT_QUICK;
   const buzz = Msg.targets(cid, from);
-  pane.innerHTML = `<div class="thread-head"><button class="back" data-back>‹ Back</button>${Msg.avatars(cid)}<div><div class="tn">${esc(Msg.title(cid))}</div><div class="ts">${cid === FAMILY ? 'everyone sees this' : buzz.length ? `${esc(buzz.map(b => b.as).join(' & '))} gets a buzz on their phone` : Msg.people(cid).filter(n => n !== from).some(n => Msg.isParent(n)) ? 'no phone set for them yet (Parents → Settings → Messages)' : 'shows on the wall'}</div></div></div>
+  pane.innerHTML = `<div class="thread-head"><button class="back" data-back>‹ Back</button>${Msg.avatars(cid)}<div><div class="tn">${esc(Msg.title(cid))}</div><div class="ts">${cid === FAMILY ? 'everyone sees this' : buzz.length ? `${esc(buzz.map(b => b.as).join(' & '))} gets a buzz on their phone` : Msg.people(cid).filter(n => n !== from).some(n => Msg.isParent(n)) ? 'no phone set for them yet (Parents → Settings → Messages)' : 'shows on the wall'}${!isPhone() && msgs.length ? ' · hold a message to delete it' : ''}</div></div>${!isPhone() && msgs.length ? '<button class="del" data-delconvo>🗑 Delete</button>' : ''}</div>
     <div class="thread" id="thread">${bubbles || `<div class="chat-empty">Say hi 👋</div>`}</div>
     <div class="composer">
       ${senders.length > 1 ? `<div class="as">Sending as ${senders.map(n => `<button data-as="${esc(n)}" class="${n === from ? 'on' : ''}">${esc((members().find(x => x.name === n) || {}).emoji || '')} ${esc(n)}</button>`).join('')}</div>` : ''}
@@ -3151,6 +3193,12 @@ function bind() {
   $('.gtabs').addEventListener('click', e => { const b = e.target.closest('.gtab'); if (b) { App.gtab = b.dataset.gtab; renderGroceries(); } });
   let pressTimer = null, pressFired = false;
   const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+  // Wall: hold a chat bubble to delete that message
+  { let t = null, x0 = 0, y0 = 0; const stop = () => { clearTimeout(t); t = null; };
+    $('#chat-pane').addEventListener('pointerdown', e => { if (isPhone()) return; const b = e.target.closest('.bub[data-mid]'); if (!b || !b.dataset.mid) return; x0 = e.clientX; y0 = e.clientY; stop(); t = setTimeout(() => { t = null; Msg.deleteOne(b.dataset.mid); }, 650); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('#chat-pane').addEventListener(ev, stop));
+    $('#chat-pane').addEventListener('pointermove', e => { if (t && Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 10) stop(); });
+    $('#chat-pane').addEventListener('contextmenu', e => { if (e.target.closest('.bub')) e.preventDefault(); }); }
   $('#groc-list').addEventListener('pointerdown', e => {
     const b = e.target.closest('.gchip, .gitem'); if (!b) return;
     pressFired = false;
@@ -3268,6 +3316,7 @@ function bind() {
     const day = e.target.closest('[data-day]'); if (day) showDay(day.dataset.day);
   });
   $('#screen-messages').addEventListener('click', async e => {
+    if (e.target.closest('[data-delconvo]') && Msg.cur && !isPhone()) { Msg.deleteConvo(Msg.cur); return; }
     const sm = e.target.closest('[data-setme]'); if (sm) { Msg.setMe(sm.dataset.setme); if (Msg.cur && !Msg.mine(Msg.cur)) Msg.cur = null; if (Msg.cur) Msg.open(Msg.cur); else renderMessages(); return; }
     if (e.target.closest('[data-changeme]')) { e.preventDefault(); Msg.setMe(''); Msg.cur = null; renderMessages(); return; }
     const c = e.target.closest('[data-convo]'); if (c) { Msg.open(c.dataset.convo); return; }
@@ -3706,6 +3755,7 @@ function bind() {
    ------------------------------------------------------------------------ */
 async function boot() {
   forcePhoneLayoutIfNeeded();
+  if (isPhone()) fitPhoneHeight();
   const url = scriptUrl();
   App.backend = url ? new SheetsBackend(url) : new DemoBackend();
   bind();

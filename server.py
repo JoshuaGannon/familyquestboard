@@ -301,7 +301,7 @@ def _extras_save(d):
 def extras_op(body):
     """ops: set {key, value} | merge {key, value: {..}} (dict merge, None deletes)
             push {key, value} (append to list, keeps last 300)
-            remove {key, id} (drop list item by id)
+            remove {key, id} or {key, ids: [..]} (drop list items by id)
             award {key: coupon-dedupe-key, value: coupon} (once per key)"""
     op = body.get("op")
     key = str(body.get("key", ""))
@@ -323,7 +323,9 @@ def extras_op(body):
             d[key] = lst[-300:]
         elif op == "remove":
             lst = d.get(key) if isinstance(d.get(key), list) else []
-            d[key] = [x for x in lst if not (isinstance(x, dict) and x.get("id") == body.get("id"))]
+            ids = body.get("ids") if isinstance(body.get("ids"), list) else [body.get("id")]
+            ids = {i for i in ids if i}
+            d[key] = [x for x in lst if not (isinstance(x, dict) and x.get("id") in ids)]
         elif op == "award":
             awarded = d.get("awarded") if isinstance(d.get("awarded"), list) else []
             if key in awarded:
