@@ -42,18 +42,18 @@
   button:active { transform: scale(0.97); }
   input { font: inherit; }
 
-  #app { display: grid; grid-template-columns: var(--nav-w) 1fr; height: 100%; }
+  #app { display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100%; overflow: hidden; }
 
   /* ---------- Nav rail ---------- */
   #nav {
     background: var(--panel-solid); border-right: 1px solid var(--line);
-    display: flex; flex-direction: column; align-items: center; padding: 18px 0; gap: 10px; z-index: 5;
+    display: flex; flex-direction: column; align-items: center; padding: min(18px, 1.8vh) 0; gap: min(10px, 1vh); z-index: 5; min-height: 0; overflow: hidden;
   }
   #nav .navbtn {
-    width: 84px; height: 84px; border-radius: 20px; display: flex; flex-direction: column;
+    width: 84px; height: min(84px, 10.4vh); flex: none; border-radius: 20px; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 4px; color: var(--muted); position: relative;
   }
-  #nav .navbtn .ico { font-size: 30px; line-height: 1; }
+  #nav .navbtn .ico { font-size: min(30px, 3.6vh); line-height: 1; }
   #nav .navbtn .lbl { font-size: 12px; font-weight: 600; letter-spacing: .02em; }
   #nav .navbtn.active { background: var(--card-hi); color: var(--text); }
   #nav .navbtn .badge {
@@ -114,8 +114,10 @@
   }
   .home-grid {
     position: absolute; inset: 0; padding: 30px 36px; display: grid;
-    grid-template-rows: auto 1fr auto; grid-template-columns: 1fr auto; gap: 20px;
+    grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: 1fr auto; gap: 20px;
   }
+  .home-bottom > * { max-height: 40vh; overflow-y: auto; scrollbar-width: none; }
+  .home-bottom > *::-webkit-scrollbar { display: none; }
   .clock { grid-column: 1; text-shadow: 0 2px 18px rgba(0,0,0,.6); }
   .clock .time { font-size: 92px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
   .clock .time small { font-size: 34px; font-weight: 600; margin-left: 8px; opacity: .8; }
@@ -405,7 +407,13 @@
   .coupons { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
   .coupon { font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 10px; background: rgba(52,211,153,.15); color: var(--good); border: 1px dashed var(--good); }
   /* Home: countdowns + sticky notes */
-  #homeside { grid-row: 2; grid-column: 2; justify-self: end; align-self: start; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; max-width: 360px; }
+  #homeside { grid-row: 2; grid-column: 2; justify-self: end; align-self: stretch; min-height: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; max-width: 360px; }
+  #homeside .notes { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; padding: 4px 6px 10px; margin: 0 -6px; overscroll-behavior: contain; }
+  #homeside .notes::-webkit-scrollbar { display: none; }
+  #homeside .notes > * { flex: none; }
+  #homeside .notes.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 44px), transparent); }
+  #homeside .notes-more { flex: none; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.8); background: rgba(14,17,26,.55); border-radius: 10px; padding: 4px 10px; display: none; }
+  #homeside .notes-more.on { display: block; }
   .cdown { display: flex; align-items: baseline; gap: 8px; background: rgba(14,17,26,.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 8px 14px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
   .cdown .ce { font-size: 20px; } .cdown .cn { font-size: 20px; font-weight: 800; color: var(--accent-2); } .cdown .ct { font-size: 16px; font-weight: 600; }
   .note-card { color: #1f2937; font-size: 18px; font-weight: 700; line-height: 1.3; padding: 12px 16px; border-radius: 6px; max-width: 320px; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.35); overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -657,6 +665,8 @@
     .weather .now { justify-content: flex-start; font-size: 44px; }
     .weather .days { justify-content: flex-start; }
     #homeside { grid-row: auto; grid-column: 1; justify-self: start; align-items: flex-start; }
+    #homeside .notes { align-items: flex-start; overflow: visible; }
+    .home-bottom > * { max-height: none; overflow: visible; }
     .home-bottom { grid-row: 3; grid-template-columns: 1fr; gap: 14px; align-items: start; }
     .smart { min-height: 0; padding: 16px 18px; }
     .smart .big { font-size: 28px; }
@@ -692,9 +702,28 @@
     .cgrid { grid-template-columns: 1fr 1fr; gap: 6px; }
     .gchip { min-height: 56px; padding: 10px 12px; }
     .gtabs { gap: 8px; }
-    .gtab { flex: 1; justify-content: center; padding: 10px 8px; font-size: 15px; }
+    .gtab { flex: 1; justify-content: center; padding: 8px 6px; font-size: 14px; gap: 6px; border-radius: 12px; white-space: nowrap; min-width: 0; }
+    .gtab .cnt { font-size: 12px; padding: 1px 7px; }
+    .groc.store-mode .groc-main { grid-template-columns: 1fr; }
+    #groc-all-cnt { display: none; }
     .gitem { min-height: 60px; padding: 10px 14px; }
     .gitem .name { font-size: 18px; }
+    /* In store: a plain checklist */
+    .groc.store-mode .groc-side { flex-wrap: nowrap; gap: 8px; }
+    .groc.store-mode .groc-side .card { background: none; box-shadow: none; padding: 0 4px; flex: 1; min-width: 0; }
+    .groc.store-mode .groc-side .count { font-size: 22px; font-weight: 800; white-space: nowrap; }
+    .groc.store-mode .groc-side .count small { font-size: 14px; margin-left: 5px; }
+    .groc.store-mode .groc-side .btn { flex: none; min-height: 40px; height: 40px; padding: 0 14px; font-size: 15px; border-radius: 10px; }
+    .slhead { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 16px 4px 6px; }
+    .slhead:first-child { margin-top: 2px; }
+    .slist { background: var(--card); border-radius: 12px; overflow: hidden; }
+    .sitem { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 11px 14px; min-height: 48px; border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 500; color: var(--text); }
+    .sitem:last-child { border-bottom: 0; }
+    .sitem .ck { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--muted); flex: none; display: grid; place-items: center; font-size: 14px; font-weight: 900; }
+    .sitem .nm { flex: 1; min-width: 0; }
+    .sitem .sub { display: block; font-size: 13px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+    .sitem.cart .ck { background: var(--good); border-color: var(--good); color: #032b1c; }
+    .sitem.cart .nm { color: var(--muted); text-decoration: line-through; }
     /* Quests */
     .kid-tabs { gap: 8px; margin-bottom: 12px; }
     .kid-tab { padding: 8px 14px 8px 8px; font-size: 16px; }
@@ -1921,10 +1950,15 @@ const NOTE_COLORS = ['#fde68a', '#bbf7d0', '#bfdbfe', '#fbcfe8'];
 function renderHomeSide() {
   const el = $('#homeside'); if (!el) return;
   const cds = countdowns().slice(0, 3);
-  const notes = X.get('notes', []).filter(Boolean).slice(-4).reverse();
+  const notes = X.get('notes', []).filter(Boolean).slice().reverse();   // newest first, all of them
+  const prev = el.querySelector('.notes'), keep = prev ? prev.scrollTop : 0;
   el.innerHTML = cds.map(c => `<div class="cdown"><span class="ce">${esc(c.emoji)}</span><span class="cn">${c.days === 0 ? 'Today!' : c.days === 1 ? '1 sleep' : c.days + ' days'}</span><span class="ct">${esc(c.title)}</span></div>`).join('')
-    + notes.map((n, i) => `<button class="note-card" data-note="${esc(n.id)}" style="background:${esc(n.color || NOTE_COLORS[i % 4])};transform:rotate(${i % 2 ? 1.2 : -1.4}deg)">${esc(n.text)}${n.by ? `<small>— ${esc(n.by)}</small>` : ''}</button>`).join('')
-    + (X.ok ? `<button class="note-add" id="note-add">＋ Note</button>` : '');
+    + (X.ok ? `<button class="note-add" id="note-add">＋ Note${notes.length ? ` <span style="opacity:.7">· ${notes.length}</span>` : ''}</button>` : '')
+    + `<div class="notes">${notes.map((n, i) => `<button class="note-card" data-note="${esc(n.id)}" style="background:${esc(n.color || NOTE_COLORS[i % 4])};transform:rotate(${i % 2 ? 1.2 : -1.4}deg)">${esc(n.text)}${n.by ? `<small>— ${esc(n.by)}</small>` : ''}</button>`).join('')}</div>`
+    + `<div class="notes-more">↓ more notes — swipe</div>`;
+  const box = el.querySelector('.notes'); box.scrollTop = keep;
+  const upd = () => { const more = box.scrollHeight - box.clientHeight - box.scrollTop > 8; box.classList.toggle('more', more); el.querySelector('.notes-more').classList.toggle('on', more); };
+  box.addEventListener('scroll', upd, { passive: true }); requestAnimationFrame(upd);
 }
 async function addNote() {
   const v = await KB.open({ title: 'Leave a note on the board', placeholder: 'e.g. Soccer cleats are in the car ❤️', multi: true });
@@ -2105,6 +2139,8 @@ function renderGroceries() {
   $('#groc-need-cnt').textContent = allNeeded; $('#groc-all-cnt').textContent = everything.length;
   $('#groc-store-cnt').textContent = everything.filter(g => gStatus(g) === 'needed').length;
   if (App.gtab === 'store' && !isPhone()) App.gtab = 'need';
+  $('.groc').classList.toggle('store-mode', App.gtab === 'store');
+  $('#groc-add').textContent = App.gtab === 'store' ? '＋ Add' : '＋ Add item';
   const cntFor = (k) => everything.filter(g => (App.gtab === 'need' ? gStatus(g) !== '' : true) && storesOf(g).some(x => x.toLowerCase() === k)).length;
   const storeKeys = Object.keys(storeNames).sort((a, b) => a.localeCompare(b));
   $('#gfilters').innerHTML = storeKeys.length || App.gEssOnly ? `<button class="tag ${App.gStore ? '' : 'active'}" data-store="">All stores</button>` +
@@ -2131,15 +2167,15 @@ function renderGroceries() {
   if (App.gtab === 'store') {
     rail.classList.add('hidden');
     const bought = needed.filter(g => gStatus(g) === 'cart').length;
-    $('#groc-count').innerHTML = `${needed.length - bought}<small>left to find${bought ? ` · ${bought} in the cart` : ''}</small>`;
+    $('#groc-count').innerHTML = `${needed.length - bought}<small>left${bought ? ` · ${bought} in cart` : ''}</small>`;
     $('#groc-clear').style.display = bought ? '' : 'none';
-    $('#groc-clear').textContent = `✅ Clear purchased (${bought})`;
+    $('#groc-clear').textContent = `Clear ${bought} bought`;
     $('#groc-send').style.display = 'none';
-    $('#groc-hint').textContent = 'tap what you put in the cart · works without signal, syncs when it’s back';
-    const row = (g) => { const c = gStatus(g) === 'cart'; return `<button class="gitem store ${c ? 'cart' : ''} ${isNice(g) ? 'nice' : ''}" data-id="${esc(g.id)}"><span class="box">${c ? '✓' : ''}</span><span><div class="name">${esc(g.item)}</div>${g.note ? `<div class="note">${esc(g.note)}</div>` : ''}${metaHtml(g)}</span></button>`; };
-    const groups = groupByStore(needed.slice().sort((a, b) => (gStatus(a) === 'cart') - (gStatus(b) === 'cart') || byName(a, b)));
+    $('#groc-hint').textContent = 'tap what’s in the cart · works offline';
+    const row = (g) => { const c = gStatus(g) === 'cart'; const sub = [g.note, isNice(g) ? 'if they have it' : ''].filter(Boolean).join(' · '); return `<button class="sitem ${c ? 'cart' : ''}" data-id="${esc(g.id)}"><span class="ck">${c ? '✓' : ''}</span><span class="nm">${esc(g.item)}${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</span></button>`; };
+    const groups = groupByStore(needed); groups.forEach(grp => grp.items.sort((a, b) => (gStatus(a) === 'cart') - (gStatus(b) === 'cart')));   // stable: checked sink to the bottom
     const multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
-    list.innerHTML = needed.length ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + `<div class="cgrid">${grp.items.map(row).join('')}</div>`).join('')
+    list.innerHTML = needed.length ? groups.map(grp => (multi ? `<div class="slhead">${esc(grp.store)} · ${grp.items.filter(g => gStatus(g) !== 'cart').length} left</div>` : '') + `<div class="slist">${grp.items.map(row).join('')}</div>`).join('')
       : `<div class="empty">Nothing on the list 🎉</div>`;
     return;
   }
@@ -3200,7 +3236,7 @@ function bind() {
     $('#chat-pane').addEventListener('pointermove', e => { if (t && Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 10) stop(); });
     $('#chat-pane').addEventListener('contextmenu', e => { if (e.target.closest('.bub')) e.preventDefault(); }); }
   $('#groc-list').addEventListener('pointerdown', e => {
-    const b = e.target.closest('.gchip, .gitem'); if (!b) return;
+    const b = e.target.closest('.gchip, .gitem, .sitem'); if (!b) return;
     pressFired = false;
     pressTimer = setTimeout(async () => {
       pressFired = true;
@@ -3212,7 +3248,7 @@ function bind() {
   $('#groc-list').addEventListener('pointermove', e => { if (pressTimer && (Math.abs(e.movementX) + Math.abs(e.movementY)) > 6) cancelPress(); });
   $('#groc-list').addEventListener('click', e => {
     if (pressFired) { pressFired = false; return; }
-    const b = e.target.closest('.gchip, .gitem'); if (!b) return;
+    const b = e.target.closest('.gchip, .gitem, .sitem'); if (!b) return;
     const g = App.state.groceries.find(x => x.id === b.dataset.id); if (!g) return;
     if (App.gtab === 'store') {
       const next = gStatus(g) === 'cart' ? 'needed' : 'cart';
