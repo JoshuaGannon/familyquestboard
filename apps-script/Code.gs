@@ -69,6 +69,9 @@ var TABS = {
       ['week_starts_monday', 'TRUE', 'For weekly quests: TRUE = Mon-Sun weeks, FALSE = Sun-Sat'],
       ['shopping_email', '', 'Where "Send list" emails the shopping list. Comma-separated. Blank = the Google account that owns this Sheet'],
       ['todos_require_pin', 'FALSE', 'TRUE = the To-do screen asks for the parent PIN'],
+      ['notify_ntfy_topic', '', 'Push notifications: install the free ntfy app, subscribe to a private topic name, put that name here'],
+      ['notify_sms', '', 'Text alerts: phone-as-email, comma-separated, e.g. 5551234567@vtext.com (Verizon), @txt.att.net, @tmomail.net'],
+      ['notify_events', 'quest,help,reward', 'Which things send alerts: quest, help, reward (any combination)'],
     ],
   },
   Members: {
@@ -262,6 +265,9 @@ function doPost(e) {
       case 'deleteDisplay':    out = deleteDisplay(body); break;
       case 'setConfig':        out = setConfig(body); break;
       case 'submitQuest':    out = submitQuest(body); break;
+      case 'withdrawQuest':  out = withdrawQuest(body); break;
+      case 'askHelp':        out = askHelp(body); break;
+      case 'clearPurchased': out = clearPurchased(body); break;
       case 'redeemReward':   out = redeemReward(body); break;
       case 'reviewQueue':    out = reviewQueue(body); break;
       case 'setDinner':      out = setDinner(body); break;
@@ -510,6 +516,26 @@ function clearList(b) {
   return { ok: true, cleared: n };
 }
 
+// In-store list: everything ticked ("cart") is now bought and stocked; the
+// unticked items stay on the list. Repeating items get their return date.
+function clearPurchased(b) {
+  var sheet = sheetByName('Groceries');
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0].map(String);
+  var si = headers.indexOf('status'), ui = headers.indexOf('updated_at'), ri = headers.indexOf('repeat'), ni = headers.indexOf('next_add');
+  var today = fmtDate(new Date());
+  var n = 0;
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][si]).toLowerCase() === 'cart') {
+      sheet.getRange(r + 1, si + 1).setValue('');
+      if (ui >= 0) sheet.getRange(r + 1, ui + 1).setValue(nowIso());
+      if (ri >= 0 && ni >= 0 && String(data[r][ri] || '').trim()) sheet.getRange(r + 1, ni + 1).setValue(stepDate(today, data[r][ri]));
+      n++;
+    }
+  }
+  return { ok: true, cleared: n };
+}
+
 // Legacy: everything in the cart is now stocked.
 function doneShopping() {
   var sheet = sheetByName('Groceries');
@@ -537,7 +563,50 @@ function submitQuest(b) {
     id: id, type: 'quest', ref_id: quest.id, title: quest.title, member: String(b.member || ''),
     points: String(quest.points || 0), submitted_at: nowIso(), status: 'pending', reviewed_at: '',
   });
+  notify('quest', (b.member || 'Someone') + ' finished: ' + quest.title, '+' + (quest.points || 0) + ' pts waiting for approval');
   return { ok: true, id: id };
+}
+
+// Kid changes their mind before a parent has looked at it
+function withdrawQuest(b) {
+  var row = findRow('Queue', b.id);
+  if (!row) return { ok: true };
+  if (String(row.status) !== 'pending') throw new Error('Already reviewed');
+  deleteRowById('Queue', b.id);
+  return { ok: true };
+}
+
+// "I need help with this" — lands in the parents' queue with 0 points
+function askHelp(b) {
+  var quest = findRow('Quests', b.questId);
+  if (!quest) throw new Error('Quest not found');
+  var id = uid();
+  appendRow('Queue', {
+    id: id, type: 'help', ref_id: quest.id, title: quest.title, member: String(b.member || ''),
+    points: '0', submitted_at: nowIso(), status: 'pending', reviewed_at: '',
+  });
+  notify('help', '🙋 ' + (b.member || 'Someone') + ' needs help', quest.title);
+  return { ok: true, id: id };
+}
+
+// ---------------------------------------------------------------------------
+// Alerts: ntfy push (free app) and/or SMS via carrier email gateways
+// ---------------------------------------------------------------------------
+function notify(kind, title, message) {
+  try {
+    var cfg = getConfig();
+    var kinds = String(cfg.notify_events || 'quest,help,reward').split(',').map(function (s) { return s.trim().toLowerCase(); });
+    if (kinds.indexOf(kind) < 0) return;
+    var topic = String(cfg.notify_ntfy_topic || '').trim();
+    if (topic) {
+      UrlFetchApp.fetch('https://ntfy.sh/' + encodeURIComponent(topic), {
+        method: 'post', payload: message || title, muteHttpExceptions: true,
+        headers: { Title: title, Priority: kind === 'help' ? 'high' : 'default', Tags: kind === 'help' ? 'raising_hand' : kind === 'reward' ? 'gift' : 'white_check_mark' },
+      });
+    }
+    var sms = String(cfg.notify_sms || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (sms.length) MailApp.sendEmail({ to: sms.join(','), subject: title, body: message || title });
+  } catch (e) { /* never let an alert failure break the action */ }
 }
 
 function redeemReward(b) {
@@ -548,6 +617,7 @@ function redeemReward(b) {
     id: id, type: 'reward', ref_id: reward.id, title: reward.title, member: String(b.member || ''),
     points: String(-Math.abs(parseInt(reward.cost || 0, 10))), submitted_at: nowIso(), status: 'pending', reviewed_at: '',
   });
+  notify('reward', '🎁 ' + (b.member || 'Someone') + ' wants: ' + reward.title, reward.cost + ' pts — approve on the board');
   return { ok: true, id: id };
 }
 

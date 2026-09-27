@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0e14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Quest Board">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Family Quest Board</title>
 <style>
   :root {
@@ -260,6 +266,11 @@
   /* Shopping-list rows */
   .gitem { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 18px; padding: 14px 18px; min-height: 76px; width: 100%; text-align: left; margin-bottom: 10px; border: 3px solid transparent; }
   .gitem .box { display: none; }
+  .gitem.store .box { display: grid; width: 40px; height: 40px; border-radius: 12px; place-items: center; flex: none; font-size: 22px; border: 3px solid var(--line); }
+  .gitem.store.cart .box { border-color: var(--good); }
+  .phone-only { display: none; }
+  .offline-bar { display: none; margin: 0 0 10px; padding: 8px 14px; border-radius: 12px; background: rgba(251,191,36,.15); color: var(--accent); font-weight: 700; font-size: 14px; }
+  .offline-bar.on { display: block; }
   .gitem.keep .box { display: grid; width: 40px; height: 40px; border-radius: 12px; place-items: center; flex: none; font-size: 22px; }
   .gitem .rpill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: rgba(52,211,153,.15); color: var(--good); }
   .gchip .rpill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: rgba(52,211,153,.15); color: var(--good); }
@@ -304,6 +315,7 @@
   .quest .qm { display: flex; align-items: center; gap: 8px; margin-top: auto; font-size: 15px; color: var(--muted); font-weight: 600; }
   .quest .qp { margin-left: auto; background: rgba(245,158,11,.18); color: var(--accent-2); padding: 4px 10px; border-radius: 10px; font-weight: 800; }
   .quest.pending { border-color: var(--accent); }
+  .quest .helpflag { position: absolute; top: 8px; left: 10px; font-size: 22px; }
   .quest.pending::after, .quest.done::after {
     content: attr(data-state); position: absolute; top: 12px; right: 12px; font-size: 13px; font-weight: 800; padding: 5px 10px; border-radius: 10px;
     background: var(--accent); color: #1a1200; letter-spacing: .04em;
@@ -549,6 +561,7 @@
 
   /* ---------- Phone / remote mode (narrow screens) ---------- */
   @media (max-width: 900px) {
+    .phone-only { display: inline-flex; }
     :root { font-size: 16px; --radius: 16px; }
     body { overflow: auto; }
     #app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100dvh; }
@@ -715,7 +728,9 @@
       <div class="gtabs">
         <button class="gtab" data-gtab="need">🛒 To get <span class="cnt" id="groc-need-cnt">0</span></button>
         <button class="gtab" data-gtab="all">➕ Add items <span class="cnt" id="groc-all-cnt">0</span></button>
+        <button class="gtab phone-only" data-gtab="store">🏪 In store <span class="cnt" id="groc-store-cnt">0</span></button>
       </div>
+      <div class="offline-bar" id="offline-bar"></div>
       <div class="tfilters" id="gfilters"></div>
       <div class="groc">
         <div class="groc-main">
@@ -1067,6 +1082,9 @@ class DemoBackend {
       case 'saveDisplay': { d.display = d.display || []; const row = find(d.display, b.id); if (row) { row.start = b.start; row.mode = b.mode; row.days = b.days; } else d.display.push({ id: uid(), start: b.start, mode: b.mode, days: b.days, note: '' }); break; }
       case 'deleteDisplay': d.display = (d.display || []).filter(x => x.id !== b.id); break;
       case 'setConfig': d.config[b.key] = String(b.value); break;
+      case 'withdrawQuest': d.queue = d.queue.filter(k => !(k.id === b.id && k.status === 'pending')); break;
+      case 'askHelp': { const q = find(d.quests, b.questId); d.queue.push({ id: uid(), type: 'help', ref_id: q.id, title: q.title, member: b.member, points: '0', submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
+      case 'clearPurchased': d.groceries.forEach(g => { if (gStatus(g) === 'cart') { g.status = ''; if (gRepeat(g)) g.next_add = stepDue(dayKey(new Date()), gRepeat(g)); } }); break;
       case 'submitQuest': { const q = find(d.quests, b.questId); d.queue.push({ id: uid(), type: 'quest', ref_id: q.id, title: q.title, member: b.member, points: q.points, submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
       case 'redeemReward': { const r = find(d.rewards, b.rewardId); d.queue.push({ id: uid(), type: 'reward', ref_id: r.id, title: r.title, member: b.member, points: String(-Math.abs(+r.cost)), submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
       case 'reviewQueue': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const k = find(d.queue, b.id); if (k) { k.status = b.status; k.reviewed_at = new Date().toISOString(); } break; }
@@ -1146,6 +1164,8 @@ function balance(name) {
 // A quest repeat of "3" or "every:3" means every 3 days
 function everyDays(r) { const m = /^(?:every[:\s]*)?(\d+)(?:\s*days?)?$/i.exec(String(r || '').trim()); return m ? Math.max(1, +m[1]) : 0; }
 
+const pendingEntry = (quest, memberName) => (App.state.queue || []).find(k => k.type === 'quest' && k.ref_id === quest.id && k.member === memberName && k.status === 'pending');
+const helpAsked = (quest, memberName) => (App.state.queue || []).some(k => k.type === 'help' && k.ref_id === quest.id && k.member === memberName && k.status === 'pending');
 function questStatus(quest, memberName) {
   const monday = isTrue(cfg('week_starts_monday', 'TRUE'));
   const now = new Date();
@@ -1187,6 +1207,43 @@ function scheduleRefresh() {
   clearInterval(App.refreshTimer);
   App.refreshTimer = setInterval(() => refresh(false), Math.max(15, +CFG.REFRESH_SEC || 60) * 1000);
 }
+
+// Offline outbox: grocery taps in the store are applied to the screen at once and
+// sent when there's signal. Kept in localStorage so a closed tab doesn't lose them.
+const Outbox = {
+  key: 'fqb_outbox', busy: false,
+  load() { try { return JSON.parse(localStorage.getItem(this.key) || '[]'); } catch (_) { return []; } },
+  save(q) { try { localStorage.setItem(this.key, JSON.stringify(q)); } catch (_) {} this.banner(); },
+  banner() { const n = this.load().length; const el = $('#offline-bar'); if (!el) return; el.classList.toggle('on', n > 0); el.textContent = n ? `📶 ${n} change${n === 1 ? '' : 's'} waiting for signal — they’ll send on their own` : ''; },
+  async send(action, body) {
+    const q = this.load(); q.push({ action, body, t: Date.now() }); this.save(q);
+    await this.flush();
+  },
+  async flush() {
+    if (this.busy || !navigator.onLine) return;
+    this.busy = true;
+    try {
+      let q = this.load();
+      while (q.length) {
+        const item = q[0];
+        try { await App.backend.post(item.action, item.body); }
+        catch (e) {
+          const msg = String(e && e.message || e);
+          // Server rejected it outright (bad id etc.): drop it. Network trouble: keep it and stop.
+          if (/failed to fetch|network|load failed|timeout|abort/i.test(msg)) break;
+          toast('Couldn’t save one change: ' + msg, true);
+        }
+        q.shift(); this.save(q);
+      }
+      if (!this.load().length) refresh(false);
+    } finally { this.busy = false; this.banner(); }
+  },
+  init() {
+    window.addEventListener('online', () => this.flush());
+    setInterval(() => this.flush(), 30000);
+    this.banner(); this.flush();
+  },
+};
 
 async function act(action, body, opts) {
   opts = opts || {};
@@ -1322,13 +1379,15 @@ function renderHome() {
     if (tm.count) html += `<div class="subk">Tomorrow · ${esc(DAYS[tomorrow.getDay()])}</div><div class="rows">${tm.html}</div>`;
     const nb = (App.state.groceries || []).filter(g => gStatus(g) === 'needed').length;
     const nt = (App.state.todos || []).filter(t => !isTrue(t.done) && t.due && t.due <= dayKey(now)).length;
-    html += `<div class="chips">${dinner ? `<span class="chip">🍽️ Dinner: ${esc(dinner.meal)}</span>` : '<span class="chip muted">🍽️ No dinner planned yet</span>'}${nb ? `<span class="chip">🛒 ${nb} to buy</span>` : ''}${nt ? `<span class="chip">📝 ${nt} to-do${nt === 1 ? '' : 's'} due</span>` : ''}</div>`;
+    html += `<div class="chips">${dinner && mins < 18 * 60 + 30 ? `<span class="chip">🍽️ Dinner: ${esc(dinner.meal)}</span>` : ''}${nb ? `<span class="chip">🛒 ${nb} to buy</span>` : ''}${nt ? `<span class="chip">📝 ${nt} to-do${nt === 1 ? '' : 's'} due</span>` : ''}</div>`;
   } else {
     html += `<div class="kicker">🌙 Tonight</div>`;
-    html += dinner ? `<div class="big">🍽️ ${esc(dinner.meal)}</div>${dinner.note ? `<div class="sub">${esc(dinner.note)}</div>` : ''}` : `<div class="big">No dinner plan yet</div><div class="sub">Parents → Dinner plan to set one</div>`;
+    const showDinner = dinner && mins < 18 * 60 + 30;   // after 6:30 pm dinner is done — don't mention it
     const left = agendaRows(now, upcoming, 3);
-    if (left.count) html += `<div class="subk">Still today</div><div class="rows">${left.html}</div>`;
     const tm = agendaRows(tomorrow, tmrEvents, 4);
+    if (showDinner) html += `<div class="big">🍽️ ${esc(dinner.meal)}</div>${dinner.note ? `<div class="sub">${esc(dinner.note)}</div>` : ''}`;
+    else if (!left.count && !tm.count) html += `<div class="big">All clear</div><div class="sub">Nothing left today, nothing yet tomorrow</div>`;
+    if (left.count) html += `<div class="subk">Still today</div><div class="rows">${left.html}</div>`;
     if (tm.count) html += `<div class="subk">Tomorrow · ${esc(DAYS[tomorrow.getDay()])}</div><div class="rows">${tm.html}</div>`;
   }
   $('#smart').innerHTML = html;
@@ -1716,6 +1775,8 @@ function renderGroceries() {
   if (!App.gtab) App.gtab = allNeeded ? 'need' : 'all';
   $$('.gtab').forEach(b => b.classList.toggle('active', b.dataset.gtab === App.gtab));
   $('#groc-need-cnt').textContent = allNeeded; $('#groc-all-cnt').textContent = everything.length;
+  $('#groc-store-cnt').textContent = everything.filter(g => gStatus(g) === 'needed').length;
+  if (App.gtab === 'store' && !isPhone()) App.gtab = 'need';
   const cntFor = (k) => everything.filter(g => (App.gtab === 'need' ? gStatus(g) !== '' : true) && storesOf(g).some(x => x.toLowerCase() === k)).length;
   const storeKeys = Object.keys(storeNames).sort((a, b) => a.localeCompare(b));
   $('#gfilters').innerHTML = storeKeys.length || App.gEssOnly ? `<button class="tag ${App.gStore ? '' : 'active'}" data-store="">All stores</button>` +
@@ -1736,6 +1797,22 @@ function renderGroceries() {
     const multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
     list.innerHTML = toBuy ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + `<div class="cgrid">${grp.items.map(row).join('')}</div>`).join('')
       : `<div class="empty">${App.gStore || App.gEssOnly ? 'Nothing needed with this filter' : "Nothing on the list — everything's stocked 🎉"}<br><span style="font-size:16px">Tap <b>All items</b> and mark what you're out of.</span></div>`;
+    return;
+  }
+
+  if (App.gtab === 'store') {
+    rail.classList.add('hidden');
+    const bought = needed.filter(g => gStatus(g) === 'cart').length;
+    $('#groc-count').innerHTML = `${needed.length - bought}<small>left to find${bought ? ` · ${bought} in the cart` : ''}</small>`;
+    $('#groc-clear').style.display = bought ? '' : 'none';
+    $('#groc-clear').textContent = `✅ Clear purchased (${bought})`;
+    $('#groc-send').style.display = 'none';
+    $('#groc-hint').textContent = 'tap what you put in the cart · works without signal, syncs when it’s back';
+    const row = (g) => { const c = gStatus(g) === 'cart'; return `<button class="gitem store ${c ? 'cart' : ''} ${isNice(g) ? 'nice' : ''}" data-id="${esc(g.id)}"><span class="box">${c ? '✓' : ''}</span><span><div class="name">${esc(g.item)}</div>${g.note ? `<div class="note">${esc(g.note)}</div>` : ''}${metaHtml(g)}</span></button>`; };
+    const groups = groupByStore(needed.slice().sort((a, b) => (gStatus(a) === 'cart') - (gStatus(b) === 'cart') || byName(a, b)));
+    const multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
+    list.innerHTML = needed.length ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + `<div class="cgrid">${grp.items.map(row).join('')}</div>`).join('')
+      : `<div class="empty">Nothing on the list 🎉</div>`;
     return;
   }
 
@@ -1839,7 +1916,7 @@ function renderQuests() {
   const rep = { daily: 'today', weekdays: 'today', weekly: 'this week', biweekly: 'every 2 weeks', monthly: 'this month', once: 'one time' };
   const repTxt = (r) => { const n = everyDays(r); return n ? (n === 1 ? 'today' : `every ${n} days`) : (rep[(r || 'daily').toLowerCase()] || esc(r)); };
   const qopts = X.get('questOpts', {});
-  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur; return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s !== 'available' ? 'disabled' : ''}>${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${(qopts[q.id] || {}).auto ? '<div class="auto">✓ no approval needed</div>' : ''}<div class="qm"><span>${repTxt(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
+  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur; return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s === 'done' ? 'disabled' : ''}>${helpAsked(q, kid.name) ? '<span class="helpflag">🙋</span>' : ''}${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${(qopts[q.id] || {}).auto ? '<div class="auto">✓ no approval needed</div>' : ''}<div class="qm"><span>${repTxt(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
     : `<div class="empty">No quests for ${esc(kid.name)} yet. Add some on the Quests tab.</div>`;
 
   const b = balance(kid.name);
@@ -2211,7 +2288,7 @@ function renderParent() {
     const q = (App.state.queue || []).filter(k => k.status === 'pending').sort((a, b) => a.submitted_at < b.submitted_at ? 1 : -1);
     const recent = (App.state.queue || []).filter(k => k.status !== 'pending').sort((a, b) => (b.reviewed_at || b.submitted_at) < (a.reviewed_at || a.submitted_at) ? -1 : 1).slice(0, 8);
     const mem = (n) => members().find(m => m.name === n) || {};
-    const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'} · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status) + (X.get('auto', {})[k.id] ? ' (auto)' : '')}</div></span>${acts ? `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>` : ''}</div>`;
+    const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'help' ? '🙋 Needs help' : k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'}${k.type === 'help' ? '' : ` · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts`} · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status) + (X.get('auto', {})[k.id] ? ' (auto)' : '')}</div></span>${acts ? (k.type === 'help' ? `<span class="acts"><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">👍 Got it</button></span>` : `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>`) : ''}</div>`;
     body.innerHTML = (q.length ? q.map(k => row(k, true)).join('') : `<div class="empty">Nothing waiting for approval 🎉</div>`) + (recent.length ? `<div class="sect">Recent</div>` + recent.map(k => row(k, false)).join('') : '');
   } else if (App.ptab === 'dinner') {
     let html = '';
@@ -2733,6 +2810,12 @@ function bind() {
     if (pressFired) { pressFired = false; return; }
     const b = e.target.closest('.gchip, .gitem'); if (!b) return;
     const g = App.state.groceries.find(x => x.id === b.dataset.id); if (!g) return;
+    if (App.gtab === 'store') {
+      const next = gStatus(g) === 'cart' ? 'needed' : 'cart';
+      g.status = next; renderGroceries();
+      Outbox.send('setGroceryStatus', { id: g.id, status: next });
+      return;
+    }
     if (App.gtab === 'need') {
       // Shopping list: tap marks an item to KEEP when you clear the rest.
       const i = App.gKeep.indexOf(g.id);
@@ -2793,6 +2876,13 @@ function bind() {
     }
   });
   $('#groc-clear').addEventListener('click', async () => {
+    if (App.gtab === 'store') {
+      const n = (App.state.groceries || []).filter(g => gStatus(g) === 'cart').length;
+      if (!await Modal.confirm({ icon: '✅', title: `Done shopping?`, body: `${n} bought item${n === 1 ? '' : 's'} come off the list. Anything you didn’t find stays on it.`, ok: 'Clear purchased' })) return;
+      (App.state.groceries || []).forEach(g => { if (gStatus(g) === 'cart') g.status = ''; }); renderGroceries();
+      Outbox.send('clearPurchased', {});
+      return;
+    }
     const onList = (App.state.groceries || []).filter(g => gStatus(g) !== '');
     const keep = App.gKeep.filter(id => onList.some(g => g.id === id));
     const clearing = onList.length - keep.length;
@@ -2889,7 +2979,16 @@ function bind() {
     const b = e.target.closest('.quest'); if (!b || b.disabled) return;
     const q = App.state.quests.find(x => x.id === b.dataset.q); if (!q) return;
     const auto = !!(X.get('questOpts', {})[q.id] || {}).auto;
-    if (await Modal.confirm({ icon: q.icon || '⭐', title: `${q.title} — done?`, body: auto ? `${esc(App.kid)} gets <b>+${esc(q.points)} points</b> right away.` : `${esc(App.kid)} will get <b>+${esc(q.points)} points</b> once a parent approves it.`, ok: 'Yes, done!' })) {
+    const pend = pendingEntry(q, App.kid);
+    if (pend) {
+      // Already checked, parent hasn't looked yet: let the kid take it back
+      const v = await Modal.confirm({ icon: '⏳', title: q.title, body: `Waiting for a parent to approve.<br>Not actually done yet? Take it back and the check disappears.`, ok: '↩ Take it back', okClass: 'bad', cancel: 'Leave it' });
+      if (v === true) await act('withdrawQuest', { id: pend.id }, { toast: 'Unchecked' });
+      return;
+    }
+    const v = await Modal.confirm({ icon: q.icon || '⭐', title: `${q.title} — done?`, body: auto ? `${esc(App.kid)} gets <b>+${esc(q.points)} points</b> right away.` : `${esc(App.kid)} will get <b>+${esc(q.points)} points</b> once a parent approves it.`, ok: 'Yes, done!', alt: helpAsked(q, App.kid) ? '' : '🙋 I need help' });
+    if (v === 'alt') { await act('askHelp', { questId: q.id, member: App.kid }, { toast: `Asked for help with “${q.title}” 🙋` }); return; }
+    if (v === true) {
       const kid = App.kid;
       try {
         const res = await App.backend.post('submitQuest', { questId: q.id, member: kid });
@@ -3181,6 +3280,8 @@ async function boot() {
   setInterval(() => { if (App.state) { renderHome(); Display.tick(); } }, 30000);
   Display.init();
   Photos.init();
+  Outbox.init();
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
   keepAlive();
 }
 

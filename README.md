@@ -371,6 +371,39 @@ from SSH: `pkill chromium`. It comes back on the next login/reboot.
 
 ---
 
+## Alerts to your phone (push or text)
+
+Set on the **Config** tab of the Sheet; no code needed.
+
+- **Push (recommended):** install the free **ntfy** app (iOS/Android), tap
+  *Subscribe to topic*, invent a private name like `gannon-board-8f2k`, and
+  put that name in `notify_ntfy_topic`. Done — your phone buzzes when a kid
+  finishes a quest, asks for help, or redeems a reward.
+- **Text message:** put your phone's email gateway in `notify_sms`, e.g.
+  `5551234567@vtext.com` (Verizon), `@txt.att.net` (AT&T),
+  `@tmomail.net` (T-Mobile). Several, comma-separated. Free; comes from your
+  Gmail.
+- `notify_events` picks which of `quest, help, reward` send alerts.
+
+## Shopping in the store (phone)
+
+On a phone the Groceries screen has a third tab, **🏪 In store**: tap items as
+they go in the cart, then **Clear purchased** at the checkout. Anything you
+didn't find stays on the list. Taps work with no signal — they're queued and
+sent when the phone is back online (a yellow bar shows how many are waiting).
+
+**Install it like an app:** open `https://<your>.duckdns.org` (or the home
+address) in the phone browser → Android/Chrome: menu ⋮ → *Add to Home screen*
+/ *Install app*; iPhone/Safari: Share → *Add to Home Screen*. It opens full
+screen with no browser bars.
+
+## Quests: taking it back, asking for help
+
+A checked quest that hasn't been approved yet can be tapped again → **Take it
+back**. Tapping any open quest also offers **🙋 I need help**, which shows a
+flag on the card and lands in Parents → Approvals as "Needs help" with a
+**Got it** button (and sends an alert if you set one up).
+
 ## Reach the board from anywhere (internet access)
 
 No VPN, no apps: the Pi serves the board over HTTPS at a free DuckDNS name,
