@@ -118,6 +118,13 @@ var TABS = {
     headers: ['date', 'meal', 'note'],
     seed: [],
   },
+  // Events and reminders added on the board itself (separate from Google
+  // Calendar). time blank = all day. repeat: '', daily, weekly, biweekly,
+  // monthly, yearly. kind: event | reminder.
+  Events: {
+    headers: ['id', 'title', 'date', 'time', 'kind', 'who', 'repeat', 'note', 'added_by', 'created_at'],
+    seed: [],
+  },
   Display: {
     // When the wall shows what. mode: photos | clock | off
     //   photos = full board with the photo slideshow
@@ -157,7 +164,7 @@ var HEADER_FG = '#ffffff';
 
 function setup() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var order = ['Config', 'Members', 'Quests', 'Rewards', 'Queue', 'Groceries', 'Dinner', 'Todos', 'Display'];
+  var order = ['Config', 'Members', 'Quests', 'Rewards', 'Queue', 'Groceries', 'Dinner', 'Todos', 'Events', 'Display'];
   order.forEach(function (name) {
     var def = TABS[name];
     var sheet = ss.getSheetByName(name);
@@ -259,6 +266,8 @@ function doPost(e) {
       case 'reviewQueue':    out = reviewQueue(body); break;
       case 'setDinner':      out = setDinner(body); break;
       case 'adjustPoints':   out = adjustPoints(body); break;
+      case 'saveEvent':      out = saveEvent(body); break;
+      case 'deleteEvent':    out = deleteEvent(body); break;
       case 'saveQuest':      out = saveQuest(body); break;
       case 'deleteQuest':    out = deleteQuest(body); break;
       case 'saveReward':     out = saveReward(body); break;
@@ -295,6 +304,7 @@ function getState() {
     queue: readTab('Queue'),
     dinner: readTab('Dinner'),
     todos: safeReadTab('Todos'),
+    local_events: safeReadTab('Events'),
     display: safeReadTab('Display'),
     events: getEvents(config),
   };
@@ -648,6 +658,40 @@ function deleteTodo(b) {
   deleteRowById('Todos', b.id);
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// Board events / reminders (no PIN — anyone at the wall can add one)
+// ---------------------------------------------------------------------------
+
+function ensureTab(name) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss.getSheetByName(name)) return;
+  var def = TABS[name];
+  var sheet = ss.insertSheet(name);
+  sheet.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);
+  sheet.getRange(1, 1, 500, def.headers.length).setNumberFormat('@');
+  sheet.getRange(1, 1, 1, def.headers.length).setBackground(HEADER_BG).setFontColor(HEADER_FG).setFontWeight('bold');
+  sheet.setFrozenRows(1);
+}
+
+function saveEvent(b) {
+  ensureTab('Events');
+  var title = String(b.title || '').trim();
+  if (!title) throw new Error('Event needs a title');
+  var date = String(b.date || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Date must be yyyy-mm-dd');
+  var time = String(b.time || '').trim();
+  if (time && !/^\d{1,2}:\d{2}$/.test(time)) throw new Error('Time must look like 15:30');
+  if (time.length === 4) time = '0' + time;
+  var row = { title: title, date: date, time: time, kind: String(b.kind || 'event'), who: String(b.who || ''),
+    repeat: String(b.repeat || '').toLowerCase(), note: String(b.note || '') };
+  if (b.id && findRow('Events', b.id)) { updateRow('Events', b.id, row); return { ok: true, id: b.id }; }
+  row.id = uid(); row.added_by = String(b.by || 'Wall'); row.created_at = nowIso();
+  appendRow('Events', row);
+  return { ok: true, id: row.id };
+}
+
+function deleteEvent(b) { deleteRowById('Events', b.id); return { ok: true }; }
 
 // ---------------------------------------------------------------------------
 // Quests + rewards (parent-PIN protected). Repeat: once, daily, weekdays,

@@ -240,6 +240,15 @@ Sheet). Each task can have **tags**, a **due date**, and an owner.
 
 ---
 
+## Events and reminders on the board
+
+Calendar → **＋ Add**. Pick Event or Reminder, a day, a time (or all day),
+who it's for, and whether it repeats (daily → yearly). These live on the
+**Events** tab of your Sheet, separate from Google Calendar, and show up on the
+week and month views (yellow = event, purple = reminder) and the Home agenda
+alongside Google events. Tap one to edit or delete it. The Events tab is
+created the first time you save one.
+
 ## How the quest board works
 
 1. Kid taps their name, taps a quest, confirms → the quest shows **WAITING ⏳**

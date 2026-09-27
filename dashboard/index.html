@@ -172,6 +172,7 @@
   .cal-bar { margin-left: auto; display: flex; gap: 8px; align-items: center; font-size: 16px; }
   .cal-bar button { background: var(--card); border-radius: 12px; padding: 8px 14px; font-weight: 700; color: var(--muted); min-height: 44px; }
   .cal-bar button.on { background: var(--info); color: #06213f; }
+  .cal-bar button.add { background: var(--accent); color: #1a1200; }
   .cal-bar .sep { width: 10px; }
   .cal-cals { display: flex; gap: 8px; flex-wrap: wrap; margin: -8px 0 12px; }
   .cal-cals button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 10px; background: var(--card); font-size: 14px; font-weight: 700; }
@@ -190,6 +191,7 @@
   .mcell .mw { margin-left: auto; white-space: nowrap; }
   .mev { font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--info); padding-left: 5px; border-radius: 2px; }
   .mev.all { background: rgba(255,255,255,.08); }
+  .mev.local { border-color: #fbbf24; }
   .mev.task { border-color: var(--accent); color: var(--muted); }
   .mmore { font-size: 12px; color: var(--muted); font-weight: 700; }
   .mdin { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: auto; }
@@ -411,6 +413,12 @@
   .td-foot { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 6px; }
   .td-meta { font-size: 13px; color: var(--muted); }
   /* Calendar task pills */
+  .ev.local { background: rgba(251,191,36,.10); }
+  .ev.local .et { color: var(--accent); }
+  .ev.local.reminder { background: rgba(167,139,250,.12); }
+  .ev.local.reminder .et { color: #c4b5fd; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .cal-head h1 { margin-bottom: 0; }
   .ev.task { border-left-style: dashed; background: rgba(96,165,250,.08); }
   .ev.task .et { color: var(--info); }
   .ev.task.late { border-color: var(--bad) !important; }
@@ -431,7 +439,7 @@
   .seg button.tagon { background: var(--info); color: #06213f; }
   .seg button.dueon { background: var(--accent); color: #1a1200; }
   .seg button.whoon { background: var(--good); color: #032b1c; }
-  input[type=date].hidden-date { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  input[type=date].hidden-date, input[type=time].hidden-date { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 
   /* ---------- Parent ---------- */
   .pinpad { max-width: 420px; margin: 40px auto; text-align: center; }
@@ -482,6 +490,11 @@
   .kb-row { display: flex; gap: 8px; justify-content: center; }
   .kb-row button { flex: 1; max-width: 96px; height: 66px; border-radius: 14px; background: var(--card-hi); font-size: 24px; font-weight: 600; }
   .kb-row button.wide { max-width: 170px; font-size: 17px; font-weight: 700; }
+  .kb-row button.mode { max-width: 110px; font-size: 18px; font-weight: 700; background: var(--card); }
+  .kb-row button.emo { font-size: 30px; }
+  .kb-cats { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; }
+  .kb-cats button { height: 40px; padding: 0 14px; border-radius: 10px; background: var(--card); font-size: 20px; }
+  .kb-cats button.on { background: var(--accent); }
   .kb-row button.space { max-width: 520px; }
   .kb-row button.done { background: var(--accent); color: #1a1200; }
   .kb-row button.cancel { background: transparent; border: 2px solid var(--line); color: var(--muted); }
@@ -689,6 +702,8 @@
           <button data-cal="prev" aria-label="Previous">‹</button><button data-cal="today">Today</button><button data-cal="next" aria-label="Next">›</button>
           <span class="sep"></span>
           <button data-calview="week">Week</button><button data-calview="month">Month</button>
+          <span class="sep"></span>
+          <button id="cal-add" class="add">＋ Add</button>
         </span></h1>
       <div class="cal-cals" id="cal-cals"></div>
       <div class="cal-week" id="cal-week"></div>
@@ -807,6 +822,20 @@
   <label>Repeat</label><div class="seg" id="te-repeat"></div><div class="note" id="te-repeat-note" style="font-size:14px"></div>
   <input type="date" class="hidden-date" id="te-date">
   <div class="actions"><button class="btn ghost" id="te-cancel">Cancel</button><button class="btn primary" id="te-save">Save</button></div>
+</div></div>
+
+<!-- Board event / reminder editor -->
+<div id="ev-ed" class="sheet" style="z-index:46"><div class="sheet-panel">
+  <h2 id="ee-title">New event</h2>
+  <label>What</label><button class="field" id="ee-name"></button>
+  <label>Type</label><div class="seg" id="ee-kind"></div>
+  <label>Day</label><div class="seg" id="ee-date"></div>
+  <label>Time</label><div class="seg" id="ee-time"></div>
+  <label>Who</label><div class="seg" id="ee-who"></div>
+  <label>Repeat</label><div class="seg" id="ee-repeat"></div>
+  <label>Note <span style="opacity:.6;text-transform:none;letter-spacing:0">(optional)</span></label><button class="field" id="ee-note"></button>
+  <input type="date" class="hidden-date" id="ee-dateinput"><input type="time" class="hidden-date" id="ee-timeinput">
+  <div class="actions"><button class="btn bad" id="ee-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="ee-cancel">Cancel</button><button class="btn primary" id="ee-save">Save</button></div>
 </div></div>
 
 <!-- Confirm modal -->
@@ -975,6 +1004,11 @@ function demoSeed() {
       { id: 'p2', start: '21:30', mode: 'clock', days: 'all', note: '' },
       { id: 'p3', start: '23:00', mode: 'off', days: 'all', note: '' },
     ],
+    local_events: [
+      { id: 'e1', title: 'Take Max to the vet', date: dayKey(new Date(now.getTime() + 86400000 * 2)), time: '09:30', kind: 'event', who: 'Dad', repeat: '', note: '', added_by: 'Wall', created_at: now.toISOString() },
+      { id: 'e2', title: 'Library books due', date: dayKey(new Date(now.getTime() + 86400000 * 3)), time: '', kind: 'reminder', who: '', repeat: '', note: '', added_by: 'Wall', created_at: now.toISOString() },
+      { id: 'e3', title: 'Trash night', date: dayKey(now), time: '19:00', kind: 'reminder', who: '', repeat: 'weekly', note: 'Bins to the curb', added_by: 'Wall', created_at: now.toISOString() },
+    ],
     todos: [
       { id: 't1', task: 'Call the dentist to reschedule', tags: 'calls, kids', assigned_to: 'Mom', due: dayKey(now), done: 'FALSE', added_by: 'Mom', created_at: new Date(now - 86400000 * 2).toISOString(), done_at: '' },
       { id: 't2', task: 'Fix the gate latch', tags: 'house', assigned_to: 'Dad', due: dayKey(new Date(now - 86400000)), done: 'FALSE', notes: 'Latch bolt is bent — probably needs the whole assembly. Home Depot had the Schlage one.', subtasks: '[{"t":"Measure the old latch","d":true},{"t":"Buy replacement","d":false},{"t":"Install","d":false}]', added_by: 'Dad', created_at: new Date(now - 86400000 * 5).toISOString(), done_at: '' },
@@ -1024,6 +1058,8 @@ class DemoBackend {
       case 'doneShopping': d.groceries.forEach(g => { if (g.status === 'cart') g.status = ''; }); break;
       case 'clearList': { const keep = new Set((b.keep || []).map(String)); const today = dayKey(new Date()); d.groceries.forEach(g => { const st = String(g.status || '').toLowerCase(); if ((st === 'needed' || st === 'cart') && !keep.has(String(g.id))) { g.status = ''; if (String(g.repeat || '').trim()) g.next_add = stepDue(today, g.repeat); } }); break; }
       case 'emailList': return { ok: true, to: 'demo', count: d.groceries.filter(g => g.status === 'needed').length };
+      case 'saveEvent': { d.local_events = d.local_events || []; const row = { title: b.title, date: b.date, time: b.time || '', kind: b.kind || 'event', who: b.who || '', repeat: b.repeat || '', note: b.note || '' }; const ev = b.id && find(d.local_events, b.id); if (ev) Object.assign(ev, row); else d.local_events.push(Object.assign({ id: uid(), added_by: 'Wall', created_at: new Date().toISOString() }, row)); break; }
+      case 'deleteEvent': d.local_events = (d.local_events || []).filter(x => x.id !== b.id); break;
       case 'addTodo': d.todos = d.todos || []; d.todos.push({ id: uid(), task: b.task.trim(), tags: b.tags || '', assigned_to: b.assigned_to || '', due: b.due || '', repeat: b.repeat || '', done: 'FALSE', notes: b.notes || '', subtasks: b.subtasks || '', added_by: b.by || 'Wall', created_at: new Date().toISOString(), done_at: '' }); break;
       case 'updateTodo': { const t = find(d.todos, b.id); if (t) ['task', 'tags', 'assigned_to', 'due', 'repeat', 'notes', 'subtasks'].forEach(k => { if (b[k] !== undefined) t[k] = b[k]; }); break; }
       case 'setTodoDone': { const t = find(d.todos, b.id); if (t) { if (b.done && t.repeat) { t.due = nextDue(t.due, t.repeat); t.done = 'FALSE'; t.done_at = new Date().toISOString(); } else { t.done = b.done ? 'TRUE' : 'FALSE'; t.done_at = b.done ? new Date().toISOString() : ''; } } break; }
@@ -1208,13 +1244,28 @@ function tickClock() {
 }
 
 /* ---------- Home ---------- */
+// Events/reminders added on the board (Events tab), shaped like calendar events
+function localEventsOn(date) {
+  const k = dayKey(date); const out = [];
+  for (const ev of (App.state.local_events || [])) {
+    if (!ev.title || !/^\d{4}-\d{2}-\d{2}$/.test(String(ev.date || ''))) continue;
+    let hit = ev.date === k;
+    if (!hit && ev.repeat && ev.date < k) { let d = ev.date, g = 0; while (d < k && g++ < 400) d = stepDue(d, ev.repeat); hit = d === k; }
+    if (!hit) continue;
+    const allDay = !ev.time; const t = allDay ? '00:00' : ev.time;
+    const start = new Date(k + 'T' + t + ':00'); const end = new Date(start.getTime() + (allDay ? 86400000 : 3600000));
+    const rem = String(ev.kind || '').toLowerCase() === 'reminder';
+    out.push({ title: (rem ? '🔔 ' : '') + ev.title + (ev.who ? ' · ' + ev.who : ''), start: start.toISOString(), end: end.toISOString(), allDay, color: rem ? '#a78bfa' : '#fbbf24', local: true, id: ev.id, kind: rem ? 'reminder' : 'event' });
+  }
+  return out;
+}
 function eventsOn(date) {
   const k = dayKey(date);
   return (App.state.events || []).filter(ev => {
     const s = toDate(ev.start), e = toDate(ev.end);
     if (ev.allDay) { const endK = dayKey(new Date(e.getTime() - 1)); return dayKey(s) <= k && k <= endK; }
     return dayKey(s) === k;
-  }).sort((a, b) => (b.allDay ? 1 : 0) - (a.allDay ? 1 : 0) || (a.start < b.start ? -1 : 1));
+  }).concat(localEventsOn(date)).sort((a, b) => (b.allDay ? 1 : 0) - (a.allDay ? 1 : 0) || (a.start < b.start ? -1 : 1));
 }
 
 function dinnerFor(date) {
@@ -1564,7 +1615,7 @@ function renderCalendar() {
     for (let i = 0; i < 42; i++) {
       const d = addDays(first, i), k = dayKey(d);
       const evs = calEvents(d), tds = todosOn(d), din = dinnerFor(d);
-      const items = evs.map(ev => `<div class="mev ${ev.allDay ? 'all' : ''}" style="border-color:${esc(ev.color || '#60a5fa')};${ev.allDay ? '' : ''}">${ev.allDay ? '' : `<b>${esc(fmtTime(toDate(ev.start)).replace(':00', '').replace(/\s?([AP])M/i, (x, a) => a.toLowerCase()))}</b> `}${esc(ev.title)}</div>`)
+      const items = evs.map(ev => `<div class="mev ${ev.allDay ? 'all' : ''} ${ev.local ? 'local' : ''}" style="border-color:${esc(ev.color || '#60a5fa')};${ev.allDay ? '' : ''}">${ev.allDay ? '' : `<b>${esc(fmtTime(toDate(ev.start)).replace(':00', '').replace(/\s?([AP])M/i, (x, a) => a.toLowerCase()))}</b> `}${esc(ev.title)}</div>`)
         .concat(tds.map(t => `<div class="mev task">📝 ${esc(t.task)}</div>`));
       const max = 3;
       html += `<button class="mcell ${d.getMonth() !== m.getMonth() ? 'other' : ''} ${k === todayK ? 'today' : ''} ${k < todayK ? 'past' : ''}" data-day="${k}">
@@ -1592,7 +1643,7 @@ function renderCalendar() {
     if (!evs.length && !tds.length) html += `<div class="muted" style="text-align:center;font-size:15px;padding:10px 0">—</div>`;
     for (const ev of evs) {
       const past = !ev.allDay && toDate(ev.end) < now;
-      html += `<div class="ev ${ev.allDay ? 'allday' : ''} ${past ? 'past' : ''}" data-ev="${evRef(ev)}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${ev.allDay ? 'All day' : esc(fmtTime(toDate(ev.start)))}</div><div class="en">${esc(ev.title)}</div>${ev.location ? `<div class="el">📍 ${esc(ev.location)}</div>` : ''}${claimHtml(ev)}</div>`;
+      html += `<div class="ev ${ev.allDay ? 'allday' : ''} ${past ? 'past' : ''} ${ev.local ? 'local ' + ev.kind : ''}" data-ev="${evRef(ev)}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${ev.allDay ? 'All day' : esc(fmtTime(toDate(ev.start)))}</div><div class="en">${esc(ev.title)}</div>${ev.location ? `<div class="el">📍 ${esc(ev.location)}</div>` : ''}${claimHtml(ev)}</div>`;
     }
     for (const t of tds) {
       const late = k === todayK && t.due < todayK;
@@ -1831,7 +1882,7 @@ function repeatLabel(r) {
 function stepDue(fromKey, repeat) {
   const d = new Date(fromKey + 'T12:00:00'); const r = String(repeat).toLowerCase();
   if (r === 'daily') d.setDate(d.getDate() + 1); else if (r === 'weekly') d.setDate(d.getDate() + 7); else if (r === 'biweekly') d.setDate(d.getDate() + 14);
-  else if (r === 'monthly') d.setMonth(d.getMonth() + 1); else if (r.startsWith('every:')) d.setDate(d.getDate() + Math.max(1, parseInt(r.slice(6), 10) || 1)); else d.setDate(d.getDate() + 7);
+  else if (r === 'monthly') d.setMonth(d.getMonth() + 1); else if (r === 'yearly') d.setFullYear(d.getFullYear() + 1); else if (r.startsWith('every:')) d.setDate(d.getDate() + Math.max(1, parseInt(r.slice(6), 10) || 1)); else d.setDate(d.getDate() + 7);
   return dayKey(d);
 }
 function nextDue(due, repeat) {
@@ -1945,6 +1996,50 @@ const TD = {
 };
 
 /* Task editor */
+const EREPEATS = [['', 'Once'], ['daily', 'Daily'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly'], ['yearly', 'Yearly']];
+const EE = {
+  state: null,
+  open(ev, presetDate) {
+    this.state = ev ? { id: ev.id, title: ev.title, date: ev.date, time: ev.time || '', kind: String(ev.kind || 'event').toLowerCase() === 'reminder' ? 'reminder' : 'event', who: ev.who || '', repeat: String(ev.repeat || '').toLowerCase(), note: ev.note || '' }
+      : { id: '', title: '', date: presetDate || dayKey(new Date()), time: '', kind: 'event', who: '', repeat: '', note: '' };
+    $('#ee-title').textContent = ev ? 'Edit' : 'New event or reminder';
+    $('#ee-del').style.display = ev ? '' : 'none';
+    this.draw(); $('#ev-ed').classList.add('open');
+    if (!ev) setTimeout(() => this.editTitle(), 80);
+  },
+  close() { $('#ev-ed').classList.remove('open'); this.state = null; },
+  draw() {
+    const s = this.state; if (!s) return;
+    const nm = $('#ee-name'); nm.textContent = s.title || 'Tap to type…'; nm.classList.toggle('ph', !s.title);
+    $('#ee-kind').innerHTML = `<button data-ekind="event" class="${s.kind === 'event' ? 'modeon' : ''}">📅 Event</button><button data-ekind="reminder" class="${s.kind === 'reminder' ? 'modeon' : ''}">🔔 Reminder</button>`;
+    const now = new Date(); const d = (n) => { const x = new Date(now); x.setDate(x.getDate() + n); return dayKey(x); };
+    const opts = [[d(0), 'Today'], [d(1), 'Tomorrow']]; for (let i = 2; i < 7; i++) opts.push([d(i), DAYS[(now.getDay() + i) % 7]]);
+    const custom = !opts.some(o => o[0] === s.date);
+    $('#ee-date').innerHTML = opts.map(o => `<button data-edate="${o[0]}" class="${s.date === o[0] ? 'modeon' : ''}">${o[1]}</button>`).join('') + `<button data-epickdate class="${custom ? 'modeon' : ''}">📅 ${custom ? esc(new Date(s.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' })) : 'Pick…'}</button>`;
+    const times = [['', 'All day'], ['08:00', '8 AM'], ['09:00', '9 AM'], ['12:00', 'Noon'], ['15:00', '3 PM'], ['17:00', '5 PM'], ['18:00', '6 PM'], ['19:00', '7 PM']];
+    const tcustom = s.time && !times.some(t => t[0] === s.time);
+    $('#ee-time').innerHTML = times.map(t => `<button data-etime="${t[0]}" class="${s.time === t[0] ? 'modeon' : ''}">${t[1]}</button>`).join('') + `<button data-epicktime class="${tcustom ? 'modeon' : ''}">🕐 ${tcustom ? esc(fmtTime(new Date(s.date + 'T' + s.time + ':00'))) : 'Other…'}</button>`;
+    $('#ee-who').innerHTML = `<button data-ewho="" class="${!s.who ? 'modeon' : ''}">Everyone</button>` + members().map(m => `<button data-ewho="${esc(m.name)}" class="${s.who === m.name ? 'modeon' : ''}">${esc(m.emoji || '')} ${esc(m.name)}</button>`).join('');
+    $('#ee-repeat').innerHTML = EREPEATS.map(r => `<button data-erep="${r[0]}" class="${s.repeat === r[0] ? 'modeon' : ''}">${r[1]}</button>`).join('');
+    const nt = $('#ee-note'); nt.textContent = s.note || 'e.g. bring the forms'; nt.classList.toggle('ph', !s.note);
+  },
+  async editTitle() {
+    const v = await KB.open({ title: this.state.kind === 'reminder' ? 'Remind us to…' : 'What’s happening?', initial: this.state.title, placeholder: 'e.g. Piano recital' });
+    if (v !== null) { this.state.title = v; this.draw(); }
+  },
+  async save() {
+    const s = this.state; if (!s.title.trim()) { toast('Give it a name first', true); return; }
+    this.close();
+    await act('saveEvent', { id: s.id, title: s.title.trim(), date: s.date, time: s.time, kind: s.kind, who: s.who, repeat: s.repeat, note: s.note }, { toast: s.kind === 'reminder' ? 'Reminder saved' : 'Event saved' });
+  },
+  async del() {
+    const s = this.state;
+    if (!await Modal.confirm({ icon: '🗑️', title: `Delete “${s.title}”?`, body: s.repeat ? 'This removes every future occurrence.' : '', ok: 'Delete', okClass: 'bad' })) return;
+    this.close();
+    await act('deleteEvent', { id: s.id }, { toast: 'Deleted' });
+  },
+};
+
 const TE = {
   state: null,
   open(t, preset) {
@@ -2137,10 +2232,12 @@ function renderParent() {
   } else if (App.ptab === 'bonus') {
     const kids = members('kid'); App.bonus = App.bonus || { member: '', points: 5, reason: '' };
     if (!kids.find(k => k.name === App.bonus.member)) App.bonus.member = kids[0] ? kids[0].name : '';
+    const bvals = [1, 2, 3, 4, 5, 10, 15, 20, 25, 50, 100]; const mag = Math.abs(App.bonus.points), neg = App.bonus.points < 0;
     body.innerHTML = `<div class="form"><label>Who</label><div class="seg">${kids.map(k => `<button data-bm="${esc(k.name)}" class="${App.bonus.member === k.name ? 'active' : ''}">${esc(k.emoji)} ${esc(k.name)}</button>`).join('')}</div>
-      <label>Points</label><div class="seg">${[-10, -5, 5, 10, 25, 50].map(p => `<button data-bp="${p}" class="${App.bonus.points === p ? 'active' : ''}">${p > 0 ? '+' : ''}${p}</button>`).join('')}</div>
+      <label>Give or take</label><div class="seg"><button data-bsign="1" class="${neg ? '' : 'active'}">＋ Give points</button><button data-bsign="-1" class="${neg ? 'active' : ''}">− Take points</button></div>
+      <label>How many</label><div class="seg">${bvals.map(p => `<button data-bp="${p}" class="${mag === p ? 'active' : ''}">${p}</button>`).join('')}<button data-bp="custom" class="${bvals.includes(mag) ? '' : 'active'}">${bvals.includes(mag) ? 'Other…' : mag + ' ✎'}</button></div>
       <label>Reason</label><button class="field ${App.bonus.reason ? '' : 'ph'}" id="bonus-reason">${esc(App.bonus.reason) || 'e.g. Helped grandma, great report card…'}</button>
-      <div class="row"><button class="btn primary" id="bonus-go">Give ${App.bonus.points > 0 ? '+' : ''}${App.bonus.points} to ${esc(App.bonus.member || '…')}</button></div></div>`;
+      <div class="row"><button class="btn primary" id="bonus-go">${App.bonus.points < 0 ? `Take ${Math.abs(App.bonus.points)} from` : `Give +${App.bonus.points} to`} ${esc(App.bonus.member || '…')}</button></div></div>`;
   } else if (App.ptab === 'display') {
     const now = new Date();
     const cur = periodAt(now), eff = Display.effective(), nx = nextChange(now);
@@ -2355,13 +2452,21 @@ const Photos = {
 /* ------------------------------------------------------------------------
    Keyboard, modal, PIN, toast
    ------------------------------------------------------------------------ */
+const EMOJI = {
+  '😀': ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤔', '😴', '😭', '😡', '🥳', '🤩', '🙃', '😇', '🤗', '🤪', '😬', '🥺', '👍', '👎', '👏', '🙏', '💪', '👋', '✌️', '🤞', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💖', '⭐', '🌟', '✨', '🔥'],
+  '🏠': ['🏠', '🛏️', '🛋️', '🚿', '🧹', '🧺', '🧼', '🗑️', '♻️', '🪥', '🧽', '🧻', '🪣', '🔧', '🔨', '🪛', '🧰', '💡', '🔑', '🚪', '🪟', '🧯', '🛒', '🧾', '📦', '📬', '🐈', '🐕', '🐠', '🪴', '🌳', '🌷', '🌻', '🍂', '☀️', '🌧️', '❄️', '🌈', '🕐', '⏰'],
+  '🍽️': ['🍽️', '🍳', '🥞', '🧇', '🥓', '🍞', '🥪', '🌮', '🌯', '🍕', '🍔', '🍟', '🌭', '🍗', '🥩', '🍝', '🍜', '🍣', '🍱', '🥗', '🥦', '🥕', '🍎', '🍌', '🍇', '🍓', '🍉', '🍪', '🍩', '🎂', '🧁', '🍦', '🍫', '🍿', '☕', '🧃', '🥛', '🍷', '🍺', '🎉'],
+  '📚': ['📚', '📖', '✏️', '📝', '🎒', '🏫', '🚌', '🧮', '🔬', '🎨', '🎭', '🎵', '🎸', '🎹', '🎤', '⚽', '🏀', '🏈', '⚾', '🎾', '🏊', '🚴', '🛹', '🏃', '🧘', '🎮', '🧩', '🎲', '🪁', '🧸', '🚗', '✈️', '🚲', '🛝', '🏕️', '🏖️', '🎪', '🎁', '🏆', '🥇'],
+  '👨‍👩‍👧': ['👨‍👩‍👧', '👨‍👩‍👦', '👩', '👨', '👧', '👦', '👶', '👵', '👴', '🧑‍⚕️', '🦷', '💊', '🩹', '🏥', '💇', '💈', '🛁', '🧴', '🎓', '💼', '💻', '📱', '📞', '💬', '📅', '📌', '🔔', '⚠️', '✅', '❌', '❓', '❗', '💤', '🚀', '🦄', '🦖', '🐉', '🐢', '🦊', '🐸'],
+};
 const KB = {
-  resolve: null, shift: false, multi: false,
+  resolve: null, shift: false, multi: false, mode: 'abc', cat: '😀',
   field() { return this.multi ? $('#kb-area') : $('#kb-input'); },
-  layout: [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"], ['⇧', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '⌫'], ['cancel', 'space', 'done']],
+  layout: [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"], ['⇧', 'z', 'x', 'c', 'v', 'b', 'n', 'm', '.', '⌫'], ['cancel', '?123', '😀', 'space', 'done']],
+  symbols: [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['@', '#', '$', '%', '&', '*', '-', '+', '(', ')'], ['!', '?', ':', ';', '"', "'", '/', '=', '_', '~'], ['abc', '.', ',', '<', '>', '[', ']', '{', '}', '⌫'], ['cancel', '?123', '😀', 'space', 'done']],
   open(opts) {
     return new Promise((resolve) => {
-      this.resolve = resolve; this.shift = true;
+      this.resolve = resolve; this.shift = true; this.mode = opts.emoji ? 'emoji' : 'abc';
       $('#kb-title').textContent = opts.title || 'Type';
       this.multi = !!opts.multiline;
       $('#kb-input').style.display = this.multi ? 'none' : ''; $('#kb-area').style.display = this.multi ? '' : 'none';
@@ -2370,13 +2475,28 @@ const KB = {
     });
   },
   draw() {
-    $('#kb-rows').innerHTML = `<div class="kb-row native-row"><button class="wide cancel" data-k="cancel">Cancel</button><button class="wide done" data-k="done">Done ✓</button></div>` + this.layout.map(row => `<div class="kb-row">${row.map(k => {
+    const nativeRow = `<div class="kb-row native-row"><button class="wide cancel" data-k="cancel">Cancel</button><button class="mode" data-k="mode:emoji">😀</button><button class="wide done" data-k="done">Done ✓</button></div>`;
+    if (this.mode === 'emoji') {
+      const cats = Object.keys(EMOJI);
+      const list = EMOJI[this.cat] || EMOJI[cats[0]];
+      const rows = []; for (let i = 0; i < list.length; i += 10) rows.push(list.slice(i, i + 10));
+      $('#kb-rows').innerHTML = nativeRow + `<div class="kb-cats">${cats.map(c => `<button data-k="cat:${c}" class="${c === this.cat ? 'on' : ''}">${c}</button>`).join('')}</div>` +
+        rows.map(r => `<div class="kb-row">${r.map(e => `<button class="emo" data-k="${e}">${e}</button>`).join('')}</div>`).join('') +
+        `<div class="kb-row"><button class="wide cancel" data-k="cancel">Cancel</button><button class="mode" data-k="mode:abc">ABC</button><button class="space" data-k=" ">space</button><button data-k="bs">⌫</button><button class="wide done" data-k="done">Done ✓</button></div>`;
+      return;
+    }
+    const layout = this.mode === 'sym' ? this.symbols : this.layout;
+    $('#kb-rows').innerHTML = nativeRow + layout.map(row => `<div class="kb-row">${row.map(k => {
       if (k === 'space') return `<button class="space" data-k=" ">space</button>` + (this.multi ? `<button data-k="\n">↵</button>` : '');
       if (k === 'done') return `<button class="wide done" data-k="done">Done ✓</button>`;
       if (k === 'cancel') return `<button class="wide cancel" data-k="cancel">Cancel</button>`;
+      if (k === '?123') return `<button class="mode" data-k="mode:${this.mode === 'sym' ? 'abc' : 'sym'}">${this.mode === 'sym' ? 'ABC' : '?123'}</button>`;
+      if (k === 'abc') return `<button class="mode" data-k="mode:abc">ABC</button>`;
+      if (k === '😀') return `<button class="mode" data-k="mode:emoji">😀</button>`;
       if (k === '⇧') return `<button data-k="shift" style="${this.shift ? 'background:var(--info);color:#06213f' : ''}">⇧</button>`;
       if (k === '⌫') return `<button data-k="bs">⌫</button>`;
-      return `<button data-k="${k}">${this.shift ? k.toUpperCase() : k}</button>`;
+      const up = this.mode === 'abc' && this.shift;
+      return `<button data-k="${esc(k)}">${up ? k.toUpperCase() : k}</button>`;
     }).join('')}</div>`).join('');
   },
   press(k) {
@@ -2384,10 +2504,14 @@ const KB = {
     if (k === 'done') return this.close(inp.value.trim());
     if (k === 'cancel') return this.close(null);
     if (k === 'shift') { this.shift = !this.shift; this.draw(); return; }
-    if (k === 'bs') { inp.value = inp.value.slice(0, -1); return; }
-    inp.value += this.shift ? k.toUpperCase() : k;
-    if (this.shift && k !== ' ') { this.shift = false; this.draw(); }
-    if (k === ' ' || inp.value === '') { /* keep */ }
+    if (k.startsWith('mode:')) { this.mode = k.slice(5); this.draw(); if (isPhone()) inp.focus(); return; }
+    if (k.startsWith('cat:')) { this.cat = k.slice(4); this.draw(); return; }
+    if (k === 'bs') { inp.value = Array.from(inp.value).slice(0, -1).join(''); return; }
+    const up = this.mode === 'abc' && this.shift;
+    inp.value += up ? k.toUpperCase() : k;
+    if (up && k !== ' ') { this.shift = false; this.draw(); }
+    // After a sentence-ending mark, capitalise the next letter
+    if (this.mode === 'abc' && /[.!?]\s?$/.test(inp.value) && k !== ' ') { this.shift = true; this.draw(); }
   },
   close(v) { $('#kb').classList.remove('open'); const r = this.resolve; this.resolve = null; if (r) r(v); },
 };
@@ -2425,7 +2549,7 @@ function bumpIdle() {
   const secs = Math.max(20, parseInt(cfg('idle_timeout_sec', '90'), 10) || 90);
   idleTimer = setTimeout(() => {
     if (Modal.resolve && Modal.info) Modal.close(true);   // a calendar details popup left open
-    if (!KB.resolve && !Modal.resolve && !TE.state && !GE.state && !DE.state && !TD.id) { App.unlocked = false; Cal.offset = 0; renderCalendar(); showScreen(CFG.HOME_SCREEN || 'home'); renderParent(); renderTodos(); Photos.next(); }
+    if (!KB.resolve && !Modal.resolve && !TE.state && !GE.state && !DE.state && !EE.state && !QE.state && !TD.id) { App.unlocked = false; Cal.offset = 0; renderCalendar(); showScreen(CFG.HOME_SCREEN || 'home'); renderParent(); renderTodos(); Photos.next(); }
   }, secs * 1000);
 }
 
@@ -2691,9 +2815,10 @@ function bind() {
   $('#cal-week').addEventListener('click', e => {
     const b = e.target.closest('[data-todo]');
     if (b) { const t = (App.state.todos || []).find(x => x.id === b.dataset.todo); if (t) { showScreen('todo'); TD.open(t); } return; }
-    const ev = e.target.closest('[data-ev]'); if (ev) { const x = App.calIndex[+ev.dataset.ev]; if (x) showEvent(x); return; }
+    const ev = e.target.closest('[data-ev]'); if (ev) { const x = App.calIndex[+ev.dataset.ev]; if (x && x.local) { const src = (App.state.local_events || []).find(y => y.id === x.id); if (src) EE.open(src); } else if (x) showEvent(x); return; }
     const day = e.target.closest('[data-day]'); if (day) showDay(day.dataset.day);
   });
+  $('#cal-add').addEventListener('click', () => EE.open(null, Cal.view === 'week' ? dayKey(addDays(startOfDay(new Date()), Cal.offset * 7)) : ''));
   $('#homeside').addEventListener('click', e => {
     if (e.target.closest('#note-add')) { addNote(); return; }
     const n = e.target.closest('[data-note]'); if (n) removeNote(n.dataset.note);
@@ -2875,7 +3000,7 @@ function bind() {
     if (e.target.closest('#qe-save')) { QE.save(); return; }
     if (e.target.closest('#qe-del')) { QE.del(); return; }
     if (e.target.closest('#qe-name')) { const v = await KB.open({ title: QE.kind === 'quest' ? 'Quest' : 'Reward', initial: QE.state.title, placeholder: QE.kind === 'quest' ? 'e.g. Empty the dishwasher' : 'e.g. 30 min screen time' }); if (v !== null) { QE.state.title = v.trim(); QE.draw(); } return; }
-    if (e.target.closest('#qe-icon')) { const v = await KB.open({ title: 'Icon — paste or type an emoji', initial: QE.state.icon }); if (v !== null && v.trim()) { QE.state.icon = firstGrapheme(v.trim()); QE.draw(); } return; }
+    if (e.target.closest('#qe-icon')) { const v = await KB.open({ title: 'Pick an icon', initial: '', emoji: true }); if (v !== null && v.trim()) { QE.state.icon = firstGrapheme(v.trim()); QE.draw(); } return; }
     const qp = e.target.closest('[data-qpts]'); if (qp) { if (qp.dataset.qpts === 'custom') { const v = await KB.open({ title: 'How many points?', placeholder: 'e.g. 30', initial: '' }); const n = parseInt(v, 10); if (n >= 0) { QE.state.points = n; QE.draw(); } } else { QE.state.points = +qp.dataset.qpts; QE.draw(); } return; }
     const qw = e.target.closest('[data-qwho]'); if (qw) { QE.state.who = qw.dataset.qwho; QE.draw(); return; }
     const qr = e.target.closest('[data-qrep]'); if (qr) { QE.state.repeat = qr.dataset.qrep; QE.draw(); return; }
@@ -2922,7 +3047,13 @@ function bind() {
       return;
     }
     const bm = e.target.closest('[data-bm]'); if (bm) { App.bonus.member = bm.dataset.bm; renderParent(); return; }
-    const bp = e.target.closest('[data-bp]'); if (bp) { App.bonus.points = +bp.dataset.bp; renderParent(); return; }
+    const bsg = e.target.closest('[data-bsign]'); if (bsg) { App.bonus.points = Math.abs(App.bonus.points) * +bsg.dataset.bsign; renderParent(); return; }
+    const bp = e.target.closest('[data-bp]'); if (bp) {
+      const sign = App.bonus.points < 0 ? -1 : 1;
+      if (bp.dataset.bp === 'custom') { const v = await KB.open({ title: 'How many points?', placeholder: 'e.g. 7', initial: '' }); const n = parseInt(v, 10); if (n > 0) App.bonus.points = n * sign; }
+      else App.bonus.points = +bp.dataset.bp * sign;
+      renderParent(); return;
+    }
     if (e.target.closest('#bonus-reason')) { const v = await KB.open({ title: 'Reason', initial: App.bonus.reason }); if (v !== null) { App.bonus.reason = v; renderParent(); } return; }
     if (e.target.closest('#bonus-go')) { if (!App.bonus.member) return; if (await act('adjustPoints', { member: App.bonus.member, points: App.bonus.points, reason: App.bonus.reason || 'Bonus', pin: App.pinValue }, { toast: 'Points updated' })) { App.bonus.reason = ''; renderParent(); } return; }
     const ovr = e.target.closest('[data-ovr]');
@@ -2972,6 +3103,23 @@ function bind() {
     }
     if (e.target.closest('#set-fs')) { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); return; }
   });
+
+  $('#ev-ed').addEventListener('click', async e => {
+    if (e.target.id === 'ev-ed' || e.target.closest('#ee-cancel')) { EE.close(); return; }
+    if (e.target.closest('#ee-save')) { EE.save(); return; }
+    if (e.target.closest('#ee-del')) { EE.del(); return; }
+    if (e.target.closest('#ee-name')) { EE.editTitle(); return; }
+    if (e.target.closest('#ee-note')) { const v = await KB.open({ title: 'Note', initial: EE.state.note, placeholder: 'Anything useful' }); if (v !== null) { EE.state.note = v; EE.draw(); } return; }
+    const ek = e.target.closest('[data-ekind]'); if (ek) { EE.state.kind = ek.dataset.ekind; EE.draw(); return; }
+    const ed = e.target.closest('[data-edate]'); if (ed) { EE.state.date = ed.dataset.edate; EE.draw(); return; }
+    if (e.target.closest('[data-epickdate]')) { const inp = $('#ee-dateinput'); inp.value = EE.state.date; try { inp.showPicker(); } catch (_) { inp.click(); } return; }
+    const et = e.target.closest('[data-etime]'); if (et) { EE.state.time = et.dataset.etime; EE.draw(); return; }
+    if (e.target.closest('[data-epicktime]')) { const inp = $('#ee-timeinput'); inp.value = EE.state.time || '12:00'; try { inp.showPicker(); } catch (_) { inp.click(); } return; }
+    const ew = e.target.closest('[data-ewho]'); if (ew) { EE.state.who = ew.dataset.ewho; EE.draw(); return; }
+    const er = e.target.closest('[data-erep]'); if (er) { EE.state.repeat = er.dataset.erep; EE.draw(); return; }
+  });
+  $('#ee-dateinput').addEventListener('change', e => { if (EE.state && e.target.value) { EE.state.date = e.target.value; EE.draw(); } });
+  $('#ee-timeinput').addEventListener('change', e => { if (EE.state && e.target.value) { EE.state.time = e.target.value.slice(0, 5); EE.draw(); } });
 
   // Keyboard
   $('#kb-rows').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) KB.press(b.dataset.k); });
