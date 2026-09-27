@@ -594,13 +594,26 @@ function askHelp(b) {
 // ---------------------------------------------------------------------------
 // Alerts: ntfy push (free app) and/or SMS via carrier email gateways
 // ---------------------------------------------------------------------------
+// Run this ONCE from the script editor (pick testAlerts in the toolbar, click Run).
+// It makes Google ask for the "connect to an external service" permission that
+// push alerts need, then sends a test. Check View -> Logs / Execution log.
+function testAlerts() {
+  var cfg = getConfig();
+  Logger.log('Push topic: ' + (cfg.notify_ntfy_topic || '(not set — add it under Parents -> Settings -> Alerts)'));
+  Logger.log('Text numbers: ' + (cfg.notify_sms || '(none)'));
+  Logger.log('Alerts on for: ' + (cfg.notify_events || 'quest,help,reward,streak'));
+  var r = notify('test', '🏰 Family Quest Board', 'Texts are working! (sent from the script editor)');
+  Logger.log(r && r.error ? 'Text FAILED: ' + r.error : (cfg.notify_sms ? 'Text sent — check your phone.' : 'No text numbers set.'));
+  Logger.log('Push notifications are sent by the Pi — use "Send a test" on the board to test those.');
+}
+
 function testNotify(b) {
   requirePin(b.pin);
   var cfg = getConfig();
-  if (!String(cfg.notify_ntfy_topic || '').trim() && !String(cfg.notify_sms || '').trim()) throw new Error('Add a push topic or a text number first');
-  var r = notify('test', '🏰 Family Quest Board', 'Alerts are working! Sent ' + new Date().toLocaleTimeString());
+  if (!String(cfg.notify_sms || '').trim()) return { ok: true, sms: false };
+  var r = notify('test', '🏰 Family Quest Board', 'Texts are working! Sent ' + new Date().toLocaleTimeString());
   if (r && r.error) throw new Error(r.error);
-  return { ok: true };
+  return { ok: true, sms: true };
 }
 
 function notify(kind, title, message) {
@@ -608,13 +621,7 @@ function notify(kind, title, message) {
     var cfg = getConfig();
     var kinds = String(cfg.notify_events || 'quest,help,reward,streak').split(',').map(function (s) { return s.trim().toLowerCase(); });
     if (kind !== 'test' && kinds.indexOf(kind) < 0) return;
-    var topic = String(cfg.notify_ntfy_topic || '').trim();
-    if (topic) {
-      UrlFetchApp.fetch('https://ntfy.sh/' + encodeURIComponent(topic), {
-        method: 'post', payload: message || title, muteHttpExceptions: true,
-        headers: { Title: title, Priority: kind === 'help' ? 'high' : 'default', Tags: kind === 'help' ? 'raising_hand' : kind === 'reward' ? 'gift' : 'white_check_mark' },
-      });
-    }
+    // Push (ntfy) is sent by the Pi — Google's servers can't reliably reach ntfy.sh.
     var sms = String(cfg.notify_sms || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     if (sms.length) MailApp.sendEmail({ to: sms.join(','), subject: title, body: message || title });
     return { ok: true };

@@ -1602,7 +1602,8 @@ async function checkStreaks() {
           } else if (m.type === 'prize') {
             toast(`🏆 ${kid.name} earned: ${m.text} (${label})`);
           } else toast(`🎟️ ${kid.name} earned a coupon: −${m.value} pts (${label})`);
-          try { await App.backend.post('notifyStreak', { member: kid.name, label, prize: prizeText(m) }); } catch (_) { /* older script: no alert */ }
+          pushNotify('streak', `🔥 ${kid.name} hit a streak!`, `${label} → ${prizeText(m)}`);
+          try { await App.backend.post('notifyStreak', { member: kid.name, label, prize: prizeText(m) }); } catch (_) { /* older script: no text */ }
         }
       }
     }
@@ -2381,6 +2382,16 @@ const DE = {
   },
 };
 
+// Push alerts are sent by the Pi (server.py -> ntfy.sh); texts are sent by the Google script.
+async function pushNotify(kind, title, message, force) {
+  const topic = String(cfg('notify_ntfy_topic', '')).trim();
+  if (!topic || (!force && !notifyOn(kind))) return { ok: false, skipped: true };
+  try {
+    const r = await fetch('/api/notify', { method: 'POST', body: JSON.stringify({ topic, title, message, priority: kind === 'help' ? 'high' : 'default', tags: { help: 'raising_hand', reward: 'gift', streak: 'fire', quest: 'white_check_mark', test: 'tada' }[kind] || '' }) });
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok && j.ok, detail: j.detail || r.status };
+  } catch (e) { return { ok: false, detail: 'Pi server not reachable' }; }
+}
 const notifyList = () => String(cfg('notify_events', 'quest,help,reward,streak')).split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
 const notifyOn = (k) => notifyList().includes(k);
 function pinPadHtml(title) {
@@ -3112,11 +3123,12 @@ function bind() {
       return;
     }
     const v = await Modal.confirm({ icon: q.icon || '⭐', title: `${q.title} — done?`, body: auto ? `${esc(App.kid)} gets <b>+${esc(q.points)} points</b> right away.` : `${esc(App.kid)} will get <b>+${esc(q.points)} points</b> once a parent approves it.`, ok: 'Yes, done!', alt: helpAsked(q, App.kid) ? '' : '🙋 I need help' });
-    if (v === 'alt') { await act('askHelp', { questId: q.id, member: App.kid }, { toast: `Asked for help with “${q.title}” 🙋` }); return; }
+    if (v === 'alt') { const who = App.kid; if (await act('askHelp', { questId: q.id, member: who }, { toast: `Asked for help with “${q.title}” 🙋` })) pushNotify('help', `🙋 ${who} needs help`, q.title); return; }
     if (v === true) {
       const kid = App.kid;
       try {
         const res = await App.backend.post('submitQuest', { questId: q.id, member: kid });
+        pushNotify('quest', `${kid} finished: ${q.title}`, auto ? `+${q.points} pts (auto-approved)` : `+${q.points} pts waiting for approval`);
         if (auto && res && res.id) {
           try { await App.backend.post('reviewQueue', { id: res.id, status: 'approved', pin: cfg('pin', '') }); X.merge('auto', { [res.id]: 1 }); toast(`Nice work, ${kid}! +${q.points} points 🎉`); }
           catch (e2) { toast(`Saved — waiting for a parent (auto-approve failed: ${e2.message})`, true); }
@@ -3146,6 +3158,7 @@ function bind() {
     if (v !== true) return;
     try {
       const res = await App.backend.post('redeemReward', { rewardId: r.id, member: kid });
+      pushNotify('reward', `🎁 ${kid} wants: ${r.title}`, `${eff} pts — approve on the board`);
       if (off && cp) {
         try {
           await App.backend.post('adjustPoints', { member: kid, points: off, reason: `🎟️ Coupon on ${r.title}`, pin: cfg('pin', '') });
@@ -3353,7 +3366,16 @@ function bind() {
       act('setConfig', { key: 'notify_events', value: cur.join(','), pin: App.pinValue }, { toast: cur.includes(k) ? 'Alert on' : 'Alert off' });
       return;
     }
-    if (e.target.closest('#notify-test')) { toast('Sending…'); await act('testNotify', { pin: App.pinValue }, { toast: 'Test sent — check your phone', fail: 'Test failed' }); return; }
+    if (e.target.closest('#notify-test')) {
+      toast('Sending…');
+      const hasTopic = !!String(cfg('notify_ntfy_topic', '')).trim(), hasSms = !!String(cfg('notify_sms', '')).trim();
+      if (!hasTopic && !hasSms) { toast('Add a push topic or a text number first', true); return; }
+      const out = [];
+      if (hasTopic) { const r = await pushNotify('test', '🏰 Family Quest Board', 'Push alerts are working!', true); out.push(r.ok ? 'push ✓' : `push ✗ (${r.detail})`); }
+      if (hasSms) { try { await App.backend.post('testNotify', { pin: App.pinValue }); out.push('text ✓'); } catch (e2) { out.push('text ✗ (' + (e2.message || e2) + ')'); } }
+      toast('Test: ' + out.join(' · '), out.some(x => x.includes('✗')));
+      return;
+    }
     if (e.target.closest('#set-access')) {
       const v = await KB.open({ title: 'Family password for internet access', placeholder: 'at least 6 characters', initial: '' });
       if (v === null) return;

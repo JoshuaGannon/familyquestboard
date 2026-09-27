@@ -32,7 +32,8 @@ import sys
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
+import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DASHBOARD = os.path.join(HERE, "dashboard")
@@ -136,6 +137,27 @@ input:focus{border-color:#fbbf24}button{margin-top:14px;width:100%;font-size:19p
 <form method="post" action="/login"><h1>🏰 Family Quest Board</h1><p>Enter the family password to continue.</p>
 <input type="password" name="password" placeholder="Password" autofocus autocomplete="current-password">
 <button>Open the board</button>%ERR%</form></body></html>"""
+
+# Push alerts go out from here (the Pi's own internet), because Google's servers
+# can't reliably reach ntfy.sh. The Google script still sends the text messages.
+def ntfy_send(topic, title, message, priority="default", tags=""):
+    topic = "".join(c for c in str(topic or "") if c.isalnum() or c in "-_")[:64]
+    if not topic:
+        return False, "no topic"
+    req = urllib.request.Request("https://ntfy.sh/" + quote(topic), data=(message or title or "").encode("utf-8"), method="POST")
+    # HTTP headers must be latin-1: ntfy accepts RFC 2047 encoded titles for emoji
+    import base64
+    t = "=?UTF-8?B?" + base64.b64encode((title or "").encode("utf-8")).decode() + "?="
+    req.add_header("Title", t)
+    req.add_header("Priority", str(priority or "default"))
+    if tags:
+        req.add_header("Tags", "".join(c for c in tags if c.isalnum() or c in ",_"))
+    try:
+        with urllib.request.urlopen(req, timeout=12) as r:
+            return 200 <= r.status < 300, f"HTTP {r.status}"
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".heic", ".heif"}
 MAX_EDGE = 1920  # resize longest edge to this when Pillow is available
@@ -575,6 +597,11 @@ class Handler(SimpleHTTPRequestHandler):
                     _heartbeat["idle"] = 0
                 _heartbeat["busy"] = bool(body.get("busy"))
             self._send_json({"ok": True})
+            return
+        if path == "/api/notify":
+            body = self._read_json()
+            ok, msg = ntfy_send(body.get("topic"), body.get("title", ""), body.get("message", ""), body.get("priority", "default"), body.get("tags", ""))
+            self._send_json({"ok": ok, "detail": msg}, 200 if ok else 502)
             return
         if path == "/api/config":
             body = self._read_json()
