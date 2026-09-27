@@ -172,8 +172,8 @@ _msg_push_times = {}
 QUICK_REPLIES = [("yes", "👍 Yes"), ("no", "👎 Not now"), ("omw", "🏃 On my way")]
 
 
-def _msg_sig(mid, code):
-    return hmac.new(_access["secret"].encode(), f"{mid}|{code}".encode(), "sha256").hexdigest()[:24]
+def _msg_sig(mid, code, as_name=""):
+    return hmac.new(_access["secret"].encode(), f"{mid}|{code}|{as_name}".encode(), "sha256").hexdigest()[:24]
 
 
 def msg_post(body):
@@ -188,8 +188,14 @@ def msg_post(body):
         msg["reply_to"] = str(body.get("reply_to"))[:20]
     extras_op({"op": "push", "key": "messages", "value": msg})
     pushed, limited, detail = False, False, ""
-    topic = str(body.get("topic", "")).strip()
-    if msg["kind"] == "kid" and topic:
+    # targets: [{topic, as}] — one per recipient phone. "as" is who a one-tap reply
+    # from that phone will be signed as (e.g. "Dad"). Old clients send a single topic.
+    targets = body.get("targets")
+    if not isinstance(targets, list):
+        t = str(body.get("topic", "")).strip()
+        targets = [{"topic": t, "as": "Parent"}] if (t and msg["kind"] == "kid") else []
+    targets = [x for x in targets if isinstance(x, dict) and str(x.get("topic", "")).strip()][:6]
+    if targets:
         now = time.time()
         recent = [t for t in _msg_push_times.get(frm, []) if now - t < MSG_PUSH_WINDOW]
         if len(recent) >= MSG_PUSH_LIMIT:
@@ -199,19 +205,25 @@ def msg_post(body):
             host = os.environ.get("FQB_PUBLIC_HOST", "").strip()
             base = f"https://{host}" if host else ""
             full = str(body.get("fulltext", "TRUE")).upper() != "FALSE"
-            to = msg["to"] if msg["to"] not in ("all", "parents", "") else ""
-            title = f"💬 {frm}" + (f" → {to}" if to else "")
-            actions = [{"action": "http", "label": label, "method": "POST", "clear": True,
-                        "url": f"{base}/api/msg-quick?m={msg['id']}&r={code}&s={_msg_sig(msg['id'], code)}"}
-                       for code, label in QUICK_REPLIES] if base else None
-            pushed, detail = ntfy_send(topic, title, text if full else "New message — open the board to read it",
-                                       "high", "speech_balloon", (base + "/#messages") if base else "", actions)
+            results = []
+            for tg in targets:
+                as_name = str(tg.get("as") or "Parent")[:40]
+                # "💬 Mia" when it's just for you; "💬 Mia → Mom & Dad" when both parents got it
+                title = f"💬 {frm}" + (" → Mom & Dad" if msg["to"] == "parents" else "")
+                q = lambda code: f"{base}/api/msg-quick?m={msg['id']}&r={code}&a={quote(as_name)}&s={_msg_sig(msg['id'], code, as_name)}"
+                actions = [{"action": "http", "label": label, "method": "POST", "clear": True, "url": q(code)}
+                           for code, label in QUICK_REPLIES] if base else None
+                ok, why = ntfy_send(tg.get("topic"), title, text if full else "New message — open the board to read it",
+                                    "high", "", (base + "/#messages") if base else "", actions)
+                results.append(ok); detail = why
+            pushed = any(results)
     return {"ok": True, "id": msg["id"], "pushed": pushed, "limited": limited, "detail": detail}
 
 
-def msg_quick(mid, code, sig):
+def msg_quick(mid, code, sig, as_name=""):
     label = dict(QUICK_REPLIES).get(code)
-    if not label or not hmac.compare_digest(sig or "", _msg_sig(mid, code)):
+    as_name = (as_name or "")[:40]
+    if not label or not hmac.compare_digest(sig or "", _msg_sig(mid, code, as_name)):
         return False, "bad link"
     with _extras_lock:
         d = _extras_load()
@@ -219,9 +231,10 @@ def msg_quick(mid, code, sig):
     orig = next((m for m in msgs if isinstance(m, dict) and m.get("id") == mid), None)
     if not orig:
         return False, "message not found"
-    if any(isinstance(m, dict) and m.get("reply_to") == mid and m.get("quick") == code for m in msgs):
+    who = as_name or "Parent"
+    if any(isinstance(m, dict) and m.get("reply_to") == mid and m.get("quick") == code and m.get("from") == who for m in msgs):
         return True, "already sent"
-    reply = {"id": secrets.token_hex(6), "from": "Parent", "to": orig.get("from", ""), "text": label,
+    reply = {"id": secrets.token_hex(6), "from": who, "to": orig.get("from", ""), "text": label,
              "kind": "parent", "reply_to": mid, "quick": code,
              "at": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + "Z"}
     extras_op({"op": "push", "key": "messages", "value": reply})
@@ -616,9 +629,17 @@ class Handler(SimpleHTTPRequestHandler):
             self._do_login()
             return
         if path == "/api/msg-quick":
+            # Called by the ntfy app / ntfy.sh web page when a parent taps a reply
+            # button. The link is signed, so it's safe to allow from any origin.
             q = parse_qs(urlparse(self.path).query)
-            ok, why = msg_quick((q.get("m") or [""])[0], (q.get("r") or [""])[0], (q.get("s") or [""])[0])
-            self._send_json({"ok": ok, "detail": why}, 200 if ok else 403)
+            ok, why = msg_quick((q.get("m") or [""])[0], (q.get("r") or [""])[0], (q.get("s") or [""])[0], (q.get("a") or [""])[0])
+            body = json.dumps({"ok": ok, "detail": why}).encode()
+            self.send_response(200 if ok else 403)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
             return
         if path == "/api/access":
             # LAN only: set / clear the internet password
@@ -696,6 +717,19 @@ class Handler(SimpleHTTPRequestHandler):
                 self._send_json({"ok": False, "error": str(e)})
             return
         self.send_error(404)
+
+    def do_OPTIONS(self):
+        # CORS preflight for the one-tap reply link only
+        if urlparse(self.path).path == "/api/msg-quick":
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "*")
+            self.send_header("Access-Control-Max-Age", "86400")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_error(405)
 
     def do_HEAD(self):
         if self._gate():

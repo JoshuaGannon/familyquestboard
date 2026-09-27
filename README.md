@@ -401,9 +401,11 @@ screen with no browser bars.
 ## 💬 Messages (kids → parents, with one-tap replies)
 
 The 💬 screen is a family chat. Kids pick their name, who it's to, and tap a
-quick message (or type one, emoji welcome). Parents get a push on the
-**messages topic** (Parents → Settings → Messages; subscribe to the same name
-in the ntfy app) with three buttons right on the notification:
+quick message (or type one, emoji welcome). **Each parent has their own ntfy
+topic** (Parents → Settings → Messages → *Dad's phone*, *Mom's phone*; each
+parent subscribes to their own in the ntfy app), so "Mia → Dad" only buzzes
+Dad and his one-tap reply shows as "Dad: 🏃 On my way". Parents can message
+each other the same way. The notification has three buttons:
 👍 Yes · 👎 Not now · 🏃 On my way. Tapping one posts the reply on the wall,
 which chimes, shows a banner and wakes the screen. Tapping the notification
 itself opens the chat on your phone (signed in via the installed app) for a

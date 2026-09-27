@@ -1320,6 +1320,20 @@ const Msg = {
   unread() { const s = this.seen(); return this.all().filter(m => m.at > s && m.from !== this.me()).length; },
   badge() { const n = X.ok ? this.unread() : 0; const b = $('#badge-msg'); if (b) { b.textContent = n; b.classList.toggle('on', n > 0); } },
   isKid(name) { return members('kid').some(k => k.name === name); },
+  // Which phones get a push: each recipient parent's own topic (falls back to the
+  // shared topic). Kids have no phone, so messages to kids only show on the wall.
+  topicFor(name) { return String(cfg('msg_topic_' + name, '') || cfg('notify_msg_topic', '')).trim(); },
+  targets(from, to) {
+    const parents = members('parent').map(p => p.name).filter(n => n !== from);
+    const who = to === 'parents' ? parents : parents.includes(to) ? [to] : [];
+    const seen = {}; const out = [];
+    for (const n of who) {
+      const t = this.topicFor(n); if (!t) continue;
+      if (seen[t]) { seen[t].as = 'Parent'; continue; }   // two parents sharing one topic: reply can't tell who
+      seen[t] = { topic: t, as: n }; out.push(seen[t]);
+    }
+    return out;
+  },
   // Called whenever extras reload: spot messages that arrived since last look
   check() {
     const ids = new Set(this.all().map(m => m.id));
@@ -1344,11 +1358,11 @@ const Msg = {
     if (!d.from) { toast('Tap who’s sending first', true); return; }
     const kid = this.isKid(d.from);
     try {
-      const r = await fetch('/api/msg', { method: 'POST', body: JSON.stringify({ from: d.from, to: d.to, text, kind: kid ? 'kid' : 'parent', topic: cfg('notify_msg_topic', ''), fulltext: cfg('msg_fulltext', 'TRUE') }) });
+      const r = await fetch('/api/msg', { method: 'POST', body: JSON.stringify({ from: d.from, to: d.to, text, kind: kid ? 'kid' : 'parent', targets: this.targets(d.from, d.to), fulltext: cfg('msg_fulltext', 'TRUE') }) });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'not sent');
       d.text = ''; await X.load(); this.knownIds = new Set(this.all().map(m => m.id)); renderMessages(); this.markSeen();
-      toast(kid ? (j.limited ? 'Sent to the wall 💬 (phone alerts paused for a minute — lots of messages!)' : j.pushed ? 'Sent 💬 — parents got it on their phones' : 'Sent 💬') : 'Sent 💬');
+      toast(j.limited ? 'Sent to the wall 💬 (phone alerts paused for a minute — lots of messages!)' : j.pushed ? `Sent 💬 — ${d.to === 'parents' ? 'Mom & Dad' : d.to} got it on their phone` : 'Sent 💬');
     } catch (e) { toast('Couldn’t send: ' + (e.message || e), true); }
   },
 };
@@ -1380,14 +1394,15 @@ function renderMessages() {
   const d = Msg.draft;
   if (!d.from) d.from = isPhone() ? (Msg.me() || (members('parent')[0] || {}).name || '') : (App.kid || (members('kid')[0] || {}).name || '');
   const kid = Msg.isKid(d.from);
-  const toOpts = kid ? [['parents', '👨‍👩 Mom & Dad']].concat(members('parent').map(p => [p.name, `${p.emoji || ''} ${p.name}`])) : [['all', '👨‍👩‍👧 Everyone']].concat(members('kid').map(k => [k.name, `${k.emoji || ''} ${k.name}`]));
+  const toOpts = kid ? [['parents', '👨‍👩 Mom & Dad']].concat(members('parent').map(p => [p.name, `${p.emoji || ''} ${p.name}`]))
+    : [['all', '👨‍👩‍👧 Everyone']].concat(members('parent').filter(p => p.name !== d.from).map(p => [p.name, `${p.emoji || ''} ${p.name} 📲`]), members('kid').map(k => [k.name, `${k.emoji || ''} ${k.name}`]));
   if (!toOpts.some(o => o[0] === d.to)) d.to = toOpts[0][0];
   co.innerHTML = `<label>Who’s writing</label><div class="seg">${members().map(m => `<button data-mfrom="${esc(m.name)}" class="${d.from === m.name ? 'modeon' : ''}">${esc(m.emoji || '')} ${esc(m.name)}</button>`).join('')}</div>
     <label>To</label><div class="seg">${toOpts.map(o => `<button data-mto="${esc(o[0])}" class="${d.to === o[0] ? 'modeon' : ''}">${esc(o[1])}</button>`).join('')}</div>
     <label>Quick message — tap to send</label><div class="seg">${(kid ? KID_QUICK : PARENT_QUICK).map(q => `<button data-mquick="${esc(q)}">${esc(q)}</button>`).join('')}</div>
     <label>Or write your own</label><button class="field draft ${d.text ? '' : 'ph'}" id="msg-type">${esc(d.text) || 'Tap to type… (😀 for emoji)'}</button>
     <div class="row" style="margin-top:8px"><button class="btn primary" id="msg-send" style="flex:1">Send 💬</button></div>
-    ${kid && !cfg('notify_msg_topic', '') ? '<div class="note" style="font-size:13px">Phone alerts aren’t set up yet — Parents → Settings → Messages.</div>' : ''}`;
+    ${Msg.targets(d.from, d.to).length ? '' : (kid || members('parent').some(p => p.name === d.to)) ? '<div class="note" style="font-size:13px">No phone alert for this one yet — set each parent’s topic in Parents → Settings → Messages.</div>' : '<div class="note" style="font-size:13px">Shows on the wall.</div>'}`;
 }
 
 async function act(action, body, opts) {
@@ -2632,8 +2647,10 @@ function renderParent() {
       <div class="seg" style="margin-top:8px">${[['quest', '✅ Quest finished'], ['help', '🙋 Needs help'], ['reward', '🎁 Reward requested'], ['streak', '🔥 Streak prize earned']].map(([k, l]) => `<button data-nev="${k}" class="${notifyOn(k) ? 'modeon' : ''}">${l}</button>`).join('')}<button class="btn sm ghost" id="notify-test" style="margin-left:auto">Send a test</button></div>
       <div class="note" style="font-size:14px">Texts: your number as an email — Verizon <code>5551234567@vtext.com</code>, AT&amp;T <code>@txt.att.net</code>, T-Mobile <code>@tmomail.net</code>. Several, comma-separated.</div>
       <label>Messages</label>
-      <div class="note">Kids’ messages from the 💬 screen go to this ntfy topic, with one-tap replies (👍 Yes · 👎 Not now · 🏃 On my way). Subscribe to it in the ntfy app on each parent’s phone. Max 3 alerts per kid per minute — extras still show on the wall.</div>
-      <div class="row"><button class="btn sm" data-ncfg="notify_msg_topic">💬 Messages topic: <b style="margin-left:8px">${esc(cfg('notify_msg_topic', '')) || 'not set'}</b></button>
+      <div class="note">Messages from the 💬 screen push to the phone of whoever they’re for, with one-tap replies (👍 Yes · 👎 Not now · 🏃 On my way). Max 3 alerts per person per minute — extras still show on the wall.</div>
+      <div class="row">${members('parent').map(p => `<button class="btn sm" data-ncfg="msg_topic_${esc(p.name)}">${esc(p.emoji || '📲')} ${esc(p.name)}’s phone: <b style="margin-left:8px">${esc(cfg('msg_topic_' + p.name, '')) || (cfg('notify_msg_topic', '') ? '(shared) ' + esc(cfg('notify_msg_topic', '')) : 'not set')}</b></button>`).join('')}</div>
+      <div class="note" style="font-size:13px">Each parent subscribes to <b>their own</b> topic in the ntfy app — then “Mia → Dad” only buzzes Dad, and a one-tap reply shows as “Dad: 🏃 On my way”. Topic names are case-sensitive; lowercase is easiest.</div>
+      <div class="row">
       <button class="btn sm ${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? 'good' : ''}" id="msg-full">${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? 'Lock screen shows the message ✓' : 'Lock screen says “new message” only'}</button>
       <button class="btn sm ghost" id="msg-clear">🧹 Clear message history</button></div>
       <label>Internet access</label>
@@ -3483,7 +3500,7 @@ function bind() {
     const ncfg = e.target.closest('[data-ncfg]');
     if (ncfg) {
       const key = ncfg.dataset.ncfg;
-      const v = await KB.open({ title: key === 'notify_sms' ? 'Text numbers (as email, comma-separated)' : key === 'notify_msg_topic' ? 'ntfy topic for kids’ messages' : 'ntfy topic name', initial: cfg(key, ''), placeholder: key === 'notify_sms' ? '5551234567@vtext.com' : 'e.g. ourfamily-board-x7k2q' });
+      const v = await KB.open({ title: key === 'notify_sms' ? 'Text numbers (as email, comma-separated)' : key.startsWith('msg_topic_') ? `ntfy topic for ${key.slice(10)}’s phone` : 'ntfy topic name', initial: cfg(key, ''), placeholder: key === 'notify_sms' ? '5551234567@vtext.com' : 'e.g. ourfamily-board-x7k2q' });
       if (v === null) return;
       App.state.config[key] = v.trim(); renderParent();
       act('setConfig', { key, value: v.trim(), pin: App.pinValue }, { toast: 'Saved' });
