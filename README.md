@@ -240,15 +240,6 @@ Sheet). Each task can have **tags**, a **due date**, and an owner.
 
 ---
 
-## Events and reminders on the board
-
-Calendar → **＋ Add event**. Pick Event or Reminder, a day, a time (or all
-day), who it's for, and whether it repeats (daily → yearly). These live on the
-**Events** tab of your Sheet, separate from Google Calendar, and show up on the
-week view (yellow = event, purple = reminder) and the Home agenda alongside
-Google events. Tap one on the calendar to edit or delete it. If the Events tab
-doesn't exist yet it's created the first time you save one.
-
 ## How the quest board works
 
 1. Kid taps their name, taps a quest, confirms → the quest shows **WAITING ⏳**
@@ -385,3 +376,22 @@ from SSH: `pkill chromium`. It comes back on the next login/reboot.
 
 Editing the look: everything visual is CSS at the top of `dashboard/index.html`
 (colors in `:root`).
+
+## Staying healthy on the wall (Pi)
+
+The board looks after itself so you shouldn't need to reboot it by hand:
+
+- **Hourly fresh start** (`pi/hourly-refresh.sh`) — the server restarts the wall
+  browser every hour (frees all its memory), waiting while anyone is using the
+  board, and skipping hours when the screen is scheduled off.
+- **Photos from Google Drive** are shrunk to screen size as they load, so full
+  camera-resolution photos don't run a 2 GB Pi out of memory.
+- **Watchdog** (`pi/watchdog.sh`, every minute) — restarts the server if it stops
+  answering, relaunches the browser if the page freezes or crashes (no heartbeat for ~2.5 min) or
+  the browser disappears, and gets back past the login screen by restarting
+  auto-login. Three rescues in 30 minutes → full reboot. See `pi/watchdog.log`.
+- **Hardware watchdog** — if the whole Pi locks up, it resets itself.
+- **Screen off** uses `wlopm` (true power-off). `wlr-randr --off` is no longer used
+  because removing the only display can crash the desktop to the login screen.
+
+These are installed by `pi/install-extras.sh`, which runs automatically on every update.

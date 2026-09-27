@@ -162,6 +162,42 @@
   .ev.past { opacity: .45; }
   .cal-day .dinner { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 14px; color: var(--muted); }
   .cal-day .dinner b { color: var(--text); }
+  .cal-day { cursor: pointer; }
+  .cal-day.past { opacity: .6; }
+  .cal-day .dh .dw { font-size: 14px; font-weight: 700; color: var(--muted); margin-top: 2px; white-space: nowrap; }
+  .cal-day .dh .dw span { font-size: 18px; vertical-align: -2px; }
+  .ev { cursor: pointer; }
+  .ev .el { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Calendar toolbar */
+  .cal-bar { margin-left: auto; display: flex; gap: 8px; align-items: center; font-size: 16px; }
+  .cal-bar button { background: var(--card); border-radius: 12px; padding: 8px 14px; font-weight: 700; color: var(--muted); min-height: 44px; }
+  .cal-bar button.on { background: var(--info); color: #06213f; }
+  .cal-bar .sep { width: 10px; }
+  .cal-cals { display: flex; gap: 8px; flex-wrap: wrap; margin: -8px 0 12px; }
+  .cal-cals button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 10px; background: var(--card); font-size: 14px; font-weight: 700; }
+  .cal-cals button i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .cal-cals button.off { opacity: .4; text-decoration: line-through; }
+  /* Month view */
+  .cal-month { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto; grid-auto-rows: 1fr; gap: 6px; height: calc(100% - 118px); }
+  .cal-month .mhd { text-align: center; font-size: 13px; font-weight: 800; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; padding-bottom: 2px; }
+  .mcell { background: var(--card); border-radius: 12px; padding: 6px 8px; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px; cursor: pointer; text-align: left; }
+  .mcell.other { opacity: .35; }
+  .mcell.past:not(.other) { opacity: .65; }
+  .mcell.today { outline: 3px solid var(--accent); }
+  .mcell .mtop { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 700; }
+  .mcell .mnum { font-size: 18px; font-weight: 800; color: var(--text); }
+  .mcell.today .mnum { color: var(--accent-2); }
+  .mcell .mw { margin-left: auto; white-space: nowrap; }
+  .mev { font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--info); padding-left: 5px; border-radius: 2px; }
+  .mev.all { background: rgba(255,255,255,.08); }
+  .mev.task { border-color: var(--accent); color: var(--muted); }
+  .mmore { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .mdin { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: auto; }
+  /* Day / event details */
+  .agenda { text-align: left; max-height: 58vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; color: var(--text); font-size: 17px; }
+  .agenda .ev { cursor: default; }
+  .agenda .aw { color: var(--muted); font-size: 16px; margin-bottom: 4px; }
+  .agenda .ad { color: var(--muted); font-size: 16px; border-top: 1px dashed var(--line); padding-top: 8px; }
 
   /* ---------- Groceries ---------- */
   .gtabs { display: flex; gap: 10px; margin-bottom: 14px; }
@@ -201,6 +237,24 @@
   .seg button.storeon { background: var(--info); color: #06213f; }
   .seg button.prio-ess.on { background: var(--accent); color: #1a1200; }
   .seg button.prio-nice.on { background: var(--card-hi); color: var(--text); border: 2px solid var(--muted); }
+  /* Compact grocery layout: several columns of small tiles so the whole list fits */
+  .cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .cgrid .gitem { margin: 0; min-height: 50px; padding: 7px 12px; border-radius: 12px; gap: 8px; border-width: 2px; }
+  .cgrid .gitem .name { font-size: 17px; line-height: 1.2; }
+  .cgrid .gitem .note { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+  .cgrid .gitem > span:nth-child(2) { min-width: 0; }
+  .cgrid .gitem .meta, .lgrid .gchip .meta { margin-top: 2px; gap: 4px; }
+  .cgrid .spill, .cgrid .npill, .cgrid .rpill, .lgrid .spill, .lgrid .npill, .lgrid .rpill { font-size: 10.5px; padding: 1px 6px; border-radius: 6px; }
+  .cgrid .gitem.keep .box { width: 26px; height: 26px; border-radius: 8px; font-size: 14px; }
+  .cgrid .gitem .keeplbl { font-size: 10px; }
+  .groc-list .shead { font-size: 17px; margin: 4px 0 6px; }
+  .lgrid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .lgrid .gchip { min-height: 48px; padding: 6px 10px; gap: 8px; border-radius: 12px; border-width: 2px; }
+  .lgrid .gchip .box { width: 24px; height: 24px; border-radius: 7px; border-width: 2px; font-size: 13px; }
+  .lgrid .gchip .name { font-size: 16px; }
+  .lgrid .gchip .note { font-size: 11.5px; }
+  .groc-list .lhead { font-size: 18px; padding: 2px 6px 4px; }
+  .groc-list .lsec { margin-bottom: 8px; }
   /* Shopping-list rows */
   .gitem { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 18px; padding: 14px 18px; min-height: 76px; width: 100%; text-align: left; margin-bottom: 10px; border: 3px solid transparent; }
   .gitem .box { display: none; }
@@ -265,6 +319,40 @@
   .reward .rt { font-size: 18px; font-weight: 700; flex: 1; }
   .reward .rc { font-weight: 800; color: var(--accent-2); }
   .reward.locked { opacity: .45; }
+  .reward.cant { opacity: .55; }
+  .reward .rsub { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .reward .rc s { opacity: .6; font-weight: 600; margin-right: 4px; }
+  .reward.slock { border: 2px dashed var(--line); }
+  .reward.sopen { border: 2px solid var(--good); }
+  .quest .flame { position: absolute; top: 12px; right: 14px; font-size: 16px; font-weight: 800; color: #fb923c; }
+  .quest .auto { font-size: 12px; color: var(--good); font-weight: 700; }
+  .goal { margin-top: 10px; }
+  .goal .gl { font-size: 14px; font-weight: 700; display: flex; gap: 6px; align-items: baseline; }
+  .goal .gl b { margin-left: auto; }
+  .goal .gb { height: 10px; border-radius: 6px; background: rgba(0,0,0,.25); overflow: hidden; margin-top: 4px; }
+  .goal .gb i { display: block; height: 100%; background: linear-gradient(90deg, #34d399, #a3e635); border-radius: 6px; }
+  .leader .goal .gb { background: rgba(255,255,255,.15); height: 6px; }
+  .leader .goal .gl { font-size: 12px; color: var(--muted); }
+  .coupons { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+  .coupon { font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 10px; background: rgba(52,211,153,.15); color: var(--good); border: 1px dashed var(--good); }
+  /* Home: countdowns + sticky notes */
+  #homeside { grid-row: 2; grid-column: 2; justify-self: end; align-self: start; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; max-width: 360px; }
+  .cdown { display: flex; align-items: baseline; gap: 8px; background: rgba(14,17,26,.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 8px 14px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .cdown .ce { font-size: 20px; } .cdown .cn { font-size: 20px; font-weight: 800; color: var(--accent-2); } .cdown .ct { font-size: 16px; font-weight: 600; }
+  .note-card { color: #1f2937; font-size: 18px; font-weight: 700; line-height: 1.3; padding: 12px 16px; border-radius: 6px; max-width: 320px; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.35); overflow-wrap: anywhere; white-space: pre-wrap; }
+  .note-card small { display: block; font-size: 13px; font-weight: 600; opacity: .7; margin-top: 4px; }
+  .note-add { font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 10px; background: rgba(14,17,26,.45); color: rgba(255,255,255,.75); }
+  .weather .wtip { margin-top: 10px; font-size: 17px; font-weight: 700; background: rgba(14,17,26,.55); border-radius: 12px; padding: 6px 12px; display: inline-block; }
+  .claim { color: var(--good) !important; font-weight: 700; }
+  .claimrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .claimrow button { padding: 8px 14px; border-radius: 12px; background: var(--card); font-weight: 700; font-size: 15px; }
+  .claimrow button.on { background: var(--good); color: #032b1c; }
+  /* Parents -> Family tab */
+  .fx-sec { background: var(--card); border-radius: 18px; padding: 14px 18px; margin-bottom: 12px; }
+  .fx-sec h3 { margin: 0 0 8px; font-size: 18px; }
+  .fx-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 16px; }
+  .fx-row:first-of-type { border-top: 0; }
+  .fx-row .grow { flex: 1; min-width: 0; }
 
   /* ---------- To-do ---------- */
   .tfilters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
@@ -471,6 +559,7 @@
     .weather { grid-column: 1; text-align: left; }
     .weather .now { justify-content: flex-start; font-size: 44px; }
     .weather .days { justify-content: flex-start; }
+    #homeside { grid-row: auto; grid-column: 1; justify-self: start; align-items: flex-start; }
     .home-bottom { grid-row: 3; grid-template-columns: 1fr; gap: 14px; align-items: start; }
     .smart { min-height: 0; padding: 16px 18px; }
     .smart .big { font-size: 28px; }
@@ -481,6 +570,13 @@
     .cal-day .dh { display: flex; align-items: baseline; gap: 10px; text-align: left; }
     .cal-day .dh .dd { font-size: 22px; }
     .cal-day .evs { overflow: visible; }
+    .cal-bar { width: 100%; margin: 6px 0 0; flex-wrap: wrap; }
+    .screen h1:has(.cal-bar) { flex-wrap: wrap; }
+    .cal-month { height: auto; gap: 3px; }
+    .mcell { min-height: 58px; padding: 4px; }
+    .mcell .mw, .mcell .mdin { display: none; }
+    .mev { font-size: 0; height: 5px; border-left: 0; background: var(--info); padding: 0; border-radius: 3px; }
+    .mev.task { background: var(--accent); }
     /* Groceries */
     .groc { display: flex; flex-direction: column-reverse; gap: 12px; height: auto; }
     .groc-side { flex-direction: row; flex-wrap: wrap; align-items: center; }
@@ -495,7 +591,8 @@
     .letter-rail span { font-size: 12px; }
     .letter-bubble { width: 84px; height: 84px; font-size: 48px; border-radius: 22px; }
     .lhead { top: -14px; }
-    .lgrid { grid-template-columns: 1fr; gap: 8px; }
+    .lgrid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .cgrid { grid-template-columns: 1fr 1fr; gap: 6px; }
     .gchip { min-height: 56px; padding: 10px 12px; }
     .gtabs { gap: 8px; }
     .gtab { flex: 1; justify-content: center; padding: 10px 8px; font-size: 15px; }
@@ -577,6 +674,7 @@
           <div class="family" id="family-name"></div>
         </div>
         <div class="weather" id="weather"></div>
+        <div id="homeside"></div>
         <div class="home-bottom">
           <div class="smart" id="smart"></div>
           <div class="leader" id="leader"></div>
@@ -586,7 +684,13 @@
 
     <!-- CALENDAR -->
     <section class="screen" id="screen-calendar">
-      <h1>📅 This Week <small id="cal-sub"></small></h1>
+      <h1><span id="cal-title">📅 This Week</span> <small id="cal-sub"></small>
+        <span class="cal-bar" id="cal-bar">
+          <button data-cal="prev" aria-label="Previous">‹</button><button data-cal="today">Today</button><button data-cal="next" aria-label="Next">›</button>
+          <span class="sep"></span>
+          <button data-calview="week">Week</button><button data-calview="month">Month</button>
+        </span></h1>
+      <div class="cal-cals" id="cal-cals"></div>
       <div class="cal-week" id="cal-week"></div>
     </section>
 
@@ -653,6 +757,7 @@
           <button class="ptab" data-ptab="quests">Quests & rewards</button>
           <button class="ptab" data-ptab="bonus">Bonus points</button>
           <button class="ptab" data-ptab="display">Display</button>
+          <button class="ptab" data-ptab="family">Family extras</button>
           <button class="ptab" data-ptab="settings">Settings</button>
         </div>
         <div class="pbody" id="pbody"></div>
@@ -723,6 +828,11 @@
     <label>Who</label><div class="seg" id="qe-who"></div>
     <label>How often</label><div class="seg" id="qe-repeat"></div>
     <div class="note" id="qe-hint"></div>
+    <label>Approval</label><div class="seg" id="qe-approve"></div>
+  </div>
+  <div id="qe-rewardonly">
+    <label>Unlock with streaks</label><div class="seg" id="qe-lock"></div>
+    <div id="qe-lockopts"></div>
   </div>
   <label>Status</label><div class="seg" id="qe-active"></div>
   <div class="actions"><button class="btn bad" id="qe-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="qe-cancel">Cancel</button><button class="btn primary" id="qe-save">Save</button></div>
@@ -997,6 +1107,9 @@ function balance(name) {
   return { approved, pending };
 }
 
+// A quest repeat of "3" or "every:3" means every 3 days
+function everyDays(r) { const m = /^(?:every[:\s]*)?(\d+)(?:\s*days?)?$/i.exec(String(r || '').trim()); return m ? Math.max(1, +m[1]) : 0; }
+
 function questStatus(quest, memberName) {
   const monday = isTrue(cfg('week_starts_monday', 'TRUE'));
   const now = new Date();
@@ -1009,6 +1122,10 @@ function questStatus(quest, memberName) {
     else if (period === 'weekly') same = weekKey(t, monday) === weekKey(now, monday);
     else if (period === 'biweekly') same = (now - t) < 14 * 86400000;
     else if (period === 'monthly') same = t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth();
+    else if (everyDays(period)) {   // "3" or "every:3" -> available again 3 calendar days after the last time
+      const d0 = new Date(t.getFullYear(), t.getMonth(), t.getDate()), d1 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      same = Math.round((d1 - d0) / 86400000) < everyDays(period);
+    }
     if (same) return k.status === 'pending' ? 'pending' : 'done';
   }
   return 'available';
@@ -1169,11 +1286,15 @@ function renderHome() {
   let lh = `<div class="kicker">🏆 Quest points</div>`;
   if (!kids.length) lh += `<div class="muted">Add kids on the Members tab</div>`;
   for (const k of kids.map(k => ({ k, b: balance(k.name) })).sort((a, b) => b.b.approved - a.b.approved)) {
-    lh += `<div class="lrow"><span class="av" style="background:${esc(k.k.color || '#334')}">${esc(k.k.emoji || '⭐')}</span><span>${esc(k.k.name)}</span><span class="pts">${k.b.approved}${k.b.pending ? ` <span class="pend">+${k.b.pending} pending</span>` : ''}</span></div>`;
+    lh += `<div class="lrow"><span class="av" style="background:${esc(k.k.color || '#334')}">${esc(k.k.emoji || '⭐')}</span><span>${esc(k.k.name)}</span><span class="pts">${k.b.approved}${k.b.pending ? ` <span class="pend">+${k.b.pending} pending</span>` : ''}</span></div>${goalBar(goalFor(k.k.name))}`;
   }
   $('#leader').innerHTML = lh;
+  renderHomeSide();
   renderWeather();
+  if (App.state) renderCalendar();
 }
+const wxFor = (d) => { const w = App.weather; if (!w || !w.days) return null; const k = dayKey(d); return w.days.find(x => x.t === k) || null; };
+const wxHtml = (d) => { const x = wxFor(d); return x ? `<span>${wmo(x.code)[1]}</span> ${x.hi}°/${x.lo}°` : ''; };
 
 /* ---------- Weather (Open-Meteo, no API key) ---------- */
 const WMO = [[0, '☀️', 'Clear'], [1, '🌤️', 'Mostly clear'], [2, '⛅', 'Partly cloudy'], [3, '☁️', 'Overcast'], [45, '🌫️', 'Fog'], [48, '🌫️', 'Fog'],
@@ -1186,11 +1307,11 @@ const wmo = (c) => (WMO.find(w => w[0] === c) || [0, '🌡️', '']);
 async function loadWeather() {
   const lat = cfg('lat', '34.05'), lon = cfg('lon', '-118.24');
   const unit = String(cfg('weather_units', 'F')).toUpperCase() === 'C' ? 'celsius' : 'fahrenheit';
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=${unit}&timezone=auto&forecast_days=4`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max&temperature_unit=${unit}&timezone=auto&forecast_days=16`;
   try {
     const r = await fetch(url); const j = await r.json();
     App.weather = { temp: Math.round(j.current.temperature_2m), feels: Math.round(j.current.apparent_temperature), code: j.current.weather_code,
-      days: j.daily.time.map((t, i) => ({ t, hi: Math.round(j.daily.temperature_2m_max[i]), lo: Math.round(j.daily.temperature_2m_min[i]), code: j.daily.weather_code[i] })) };
+      days: j.daily.time.map((t, i) => ({ t, hi: Math.round(j.daily.temperature_2m_max[i]), lo: Math.round(j.daily.temperature_2m_min[i]), code: j.daily.weather_code[i], pp: (j.daily.precipitation_probability_max || [])[i] || 0, uv: (j.daily.uv_index_max || [])[i] || 0 })) };
   } catch (e) { console.warn('weather failed', e); }
   renderWeather();
 }
@@ -1202,31 +1323,315 @@ function renderWeather() {
   const d0 = w.days[0] || {};
   el.innerHTML = `<div class="now"><span>${icon}</span><span>${w.temp}°</span></div><div class="desc">${desc} · feels ${w.feels}°</div>
     <div class="hilo">H ${d0.hi}° · L ${d0.lo}°</div>
-    <div class="days">${w.days.slice(1).map(d => { const dt = new Date(d.t + 'T12:00:00'); return `<div><div>${DAYS[dt.getDay()]}</div><div class="i">${wmo(d.code)[1]}</div><div>${d.hi}°/${d.lo}°</div></div>`; }).join('')}</div>`;
+    ${wxTip() ? `<div class="wtip">${esc(wxTip())}</div>` : ''}
+    <div class="days">${w.days.slice(1, 4).map(d => { const dt = new Date(d.t + 'T12:00:00'); return `<div><div>${DAYS[dt.getDay()]}</div><div class="i">${wmo(d.code)[1]}</div><div>${d.hi}°/${d.lo}°</div></div>`; }).join('')}</div>`;
 }
 
+/* ------------------------------------------------------------------------
+   Extras — data kept on the Pi (server.py /api/extras), not in the Sheet:
+   sticky notes, countdowns, "who's got it", reward goals, quest options
+   (auto-approve), streak settings, coupons, streak-locked prizes.
+   ------------------------------------------------------------------------ */
+const X = {
+  d: {}, ok: false,
+  async load() {
+    try { const r = await fetch('/api/extras', { cache: 'no-store' }); if (r.ok) { this.d = await r.json() || {}; this.ok = true; } } catch (e) { this.ok = false; }
+  },
+  async op(body) {
+    const r = await fetch('/api/extras', { method: 'POST', body: JSON.stringify(body) });
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || 'could not save');
+    this.d = j.extras || this.d; return j.changed;
+  },
+  get(k, def) { const v = this.d[k]; return v === undefined || v === null ? def : v; },
+  async merge(key, value) { try { await this.op({ op: 'merge', key, value }); } catch (e) { toast('Could not save: ' + e.message, true); } },
+};
+const xuid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------- Streaks ---------- */
+const streakCfg = () => Object.assign({ milestones: [{ n: 7, off: 10 }, { n: 14, off: 25 }], shield: true, pauses: [] }, X.get('streak', {}));
+const epochDay = (d) => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+function periodKey(rep, d) {
+  const n = everyDays(rep);
+  if (n) return 'e' + Math.floor(epochDay(d) / n);
+  if (rep === 'weekly') return 'w' + weekKey(d, isTrue(cfg('week_starts_monday', 'TRUE')));
+  if (rep === 'biweekly') return 'b' + Math.floor(epochDay(d) / 14);
+  if (rep === 'monthly') return 'm' + d.getFullYear() + '-' + d.getMonth();
+  return dayKey(d);
+}
+function periodLen(rep) { const n = everyDays(rep); return n || ({ weekly: 7, biweekly: 14, monthly: 30 }[rep] || 1); }
+function stepBack(rep, d) {
+  const n = everyDays(rep);
+  if (n) return addDays(d, -n);
+  if (rep === 'weekly') return addDays(d, -7);
+  if (rep === 'biweekly') return addDays(d, -14);
+  if (rep === 'monthly') return new Date(d.getFullYear(), d.getMonth() - 1, Math.min(d.getDate(), 28));
+  return addDays(d, -1);
+}
+function isPausedDay(d) {
+  const k = dayKey(d), today = dayKey(new Date());
+  return (streakCfg().pauses || []).some(p => p.from && p.from <= k && k <= (p.to || today));
+}
+// Current streak for one quest + kid: consecutive scheduled periods done (pending
+// counts, rejected doesn't). The current period doesn't break it until it's over.
+// With the shield on, one missed day per 7 is forgiven (daily-ish quests only).
+function questStreak(q, member) {
+  const rep = String(q.repeat || 'daily').toLowerCase();
+  if (rep === 'once') return { cur: 0, start: null };
+  const done = new Set(); let earliest = null;
+  for (const k of (App.state.queue || [])) {
+    if (k.type !== 'quest' || k.ref_id !== q.id || k.member !== member || k.status === 'rejected') continue;
+    const t = toDate(k.submitted_at); done.add(periodKey(rep, t));
+    if (!earliest || t < earliest) earliest = t;
+  }
+  if (!earliest) return { cur: 0, start: null };
+  const cfgS = streakCfg(), shieldOK = cfgS.shield && periodLen(rep) <= 3;
+  const stop = startOfDay(earliest);
+  let d = startOfDay(new Date()), count = 0, start = null, first = true, lastShield = null, guard = 0;
+  while (guard++ < 500 && d >= stop) {
+    if (rep === 'weekdays' && (d.getDay() === 0 || d.getDay() === 6)) { d = addDays(d, -1); continue; }
+    if (isPausedDay(d)) { d = stepBack(rep, d); first = false; continue; }
+    const key = periodKey(rep, d);
+    if (done.has(key)) { count++; start = key; }
+    else if (first) { /* still today / this period: not missed yet */ }
+    else if (shieldOK && (lastShield === null || (lastShield - d) / 86400000 >= 7)) { lastShield = d; }
+    else break;
+    first = false; d = stepBack(rep, d);
+  }
+  return { cur: count, start };
+}
+function kidQuests(member) {
+  return (App.state.quests || []).filter(q => q.title && (q.active === '' || q.active === undefined || isTrue(q.active)))
+    .filter(q => { const a = (q.assigned_to || 'Anyone').trim().toLowerCase(); return a === 'anyone' || a === '' || a.split(',').map(s => s.trim()).includes(member.toLowerCase()); });
+}
+const bestKey = (m, q) => m + '|' + q;
+const bestStreak = (m, q) => +(X.get('bests', {})[bestKey(m, q)] || 0);
+
+// Award milestone coupons + record bests. The server de-duplicates awards, so
+// the wall and phones can all run this safely.
+let awarding = false;
+async function checkStreaks() {
+  if (!App.state || !X.ok || awarding) return;
+  awarding = true;
+  try {
+    const cfgS = streakCfg(), awarded = new Set(X.get('awarded', [])), bests = X.get('bests', {}), newBests = {};
+    for (const kid of members('kid')) {
+      for (const q of kidQuests(kid.name)) {
+        const s = questStreak(q, kid.name); if (!s.cur) continue;
+        if (s.cur > (+bests[bestKey(kid.name, q.id)] || 0)) newBests[bestKey(kid.name, q.id)] = s.cur;
+        for (const m of cfgS.milestones || []) {
+          const key = `${kid.name}|${q.id}|${m.n}|${s.start}`;
+          if (s.cur < m.n || awarded.has(key)) continue;
+          const changed = await X.op({ op: 'award', key, value: { id: xuid(), member: kid.name, off: +m.off, label: `🔥${m.n} × ${q.title}`, at: new Date().toISOString() } });
+          if (changed) toast(`🎟️ ${kid.name} earned a coupon: −${m.off} pts (🔥${m.n} ${q.title})`);
+        }
+      }
+    }
+    if (Object.keys(newBests).length) await X.op({ op: 'merge', key: 'bests', value: newBests });
+  } catch (e) { console.warn('streak check failed', e); }
+  awarding = false;
+}
+const couponsFor = (m) => X.get('coupons', []).filter(c => c && c.member === m && !c.used);
+
+/* ---------- Streak-locked prizes ---------- */
+function lockStatus(r, member) {
+  const lock = X.get('locks', {})[r.id];
+  if (!lock) return { locked: false };
+  const qs = kidQuests(member);
+  let met = false, text = '';
+  if (lock.type === 'quest') {
+    const q = (App.state.quests || []).find(x => x.id === lock.quest);
+    const cur = q ? questStreak(q, member).cur : 0;
+    met = cur >= lock.n; text = q ? `${esc(q.icon || '⭐')} ${esc(q.title)} 🔥${Math.min(cur, lock.n)}/${lock.n}` : 'quest removed';
+  } else {
+    const have = qs.filter(q => (+q.points || 0) >= (+lock.min || 0) && questStreak(q, member).cur >= lock.n).length;
+    met = have >= lock.count; text = `${Math.min(have, lock.count)} of ${lock.count} different quests at 🔥${lock.n}+`;
+  }
+  const key = member + '|' + r.id;
+  const stored = !!X.get('unlocked', {})[key];
+  if (met && !stored && X.ok) X.merge('unlocked', { [key]: new Date().toISOString() });
+  return { locked: !(met || stored), text, unlockedNow: met || stored };
+}
+function lockLabel(lock) {
+  if (!lock) return '';
+  if (lock.type === 'quest') { const q = (App.state.quests || []).find(x => x.id === lock.quest); return `🔒 ${q ? q.title : 'a quest'} 🔥${lock.n} in a row`; }
+  return `🔒 ${lock.count} different quests at 🔥${lock.n}+`;
+}
+
+/* ---------- Goals ---------- */
+function goalFor(member) {
+  const rid = X.get('goals', {})[member]; if (!rid) return null;
+  const r = (App.state.rewards || []).find(x => x.id === rid); if (!r) return null;
+  const cost = Math.max(0, (parseInt(r.cost || 0, 10)) - (couponsFor(member)[0] ? Math.max(...couponsFor(member).map(c => +c.off || 0)) : 0));
+  const have = balance(member).approved;
+  return { r, cost, have, pct: cost ? Math.min(100, Math.round(have / cost * 100)) : 100 };
+}
+const goalBar = (g) => g ? `<div class="goal"><div class="gl">🎯 ${esc(g.r.icon || '🎁')} ${esc(g.r.title)} <b>${Math.min(g.have, g.cost)}/${g.cost}</b></div><div class="gb"><i style="width:${g.pct}%"></i></div></div>` : '';
+
+/* ---------- Countdowns + notes ---------- */
+function countdowns() {
+  const today = startOfDay(new Date()), out = [];
+  for (const c of X.get('countdowns', [])) { if (!c || !c.date) continue; const d = new Date(c.date + 'T00:00:00'); if (d >= today) out.push({ title: c.title, emoji: c.emoji || '⏳', d, id: c.id }); }
+  for (const ev of (App.state.events || [])) {
+    if (!/⏳|#countdown/i.test(ev.title || '')) continue;
+    const d = startOfDay(toDate(ev.start)); if (d < today) continue;
+    const title = ev.title.replace(/#countdown/ig, '').replace('⏳', '').trim();
+    if (!out.some(o => o.title === title && dayKey(o.d) === dayKey(d))) out.push({ title, emoji: '⏳', d });
+  }
+  return out.sort((a, b) => a.d - b.d).map(o => Object.assign(o, { days: Math.round((o.d - today) / 86400000) }));
+}
+const NOTE_COLORS = ['#fde68a', '#bbf7d0', '#bfdbfe', '#fbcfe8'];
+function renderHomeSide() {
+  const el = $('#homeside'); if (!el) return;
+  const cds = countdowns().slice(0, 3);
+  const notes = X.get('notes', []).filter(Boolean).slice(-4).reverse();
+  el.innerHTML = cds.map(c => `<div class="cdown"><span class="ce">${esc(c.emoji)}</span><span class="cn">${c.days === 0 ? 'Today!' : c.days === 1 ? '1 sleep' : c.days + ' days'}</span><span class="ct">${esc(c.title)}</span></div>`).join('')
+    + notes.map((n, i) => `<button class="note-card" data-note="${esc(n.id)}" style="background:${esc(n.color || NOTE_COLORS[i % 4])};transform:rotate(${i % 2 ? 1.2 : -1.4}deg)">${esc(n.text)}${n.by ? `<small>— ${esc(n.by)}</small>` : ''}</button>`).join('')
+    + (X.ok ? `<button class="note-add" id="note-add">＋ Note</button>` : '');
+}
+async function addNote() {
+  const v = await KB.open({ title: 'Leave a note on the board', placeholder: 'e.g. Soccer cleats are in the car ❤️', multi: true });
+  if (!v || !v.trim()) return;
+  const list = X.get('notes', []);
+  try { await X.op({ op: 'push', key: 'notes', value: { id: xuid(), text: v.trim().slice(0, 200), color: NOTE_COLORS[list.length % 4], at: new Date().toISOString() } }); renderHomeSide(); toast('Note posted 📌'); }
+  catch (e) { toast('Could not save the note: ' + e.message, true); }
+}
+async function removeNote(id) {
+  const n = X.get('notes', []).find(x => x && x.id === id); if (!n) return;
+  if (!await Modal.confirm({ icon: '📌', title: 'Take this note down?', body: esc(n.text), ok: 'Done ✓' })) return;
+  try { await X.op({ op: 'remove', key: 'notes', id }); renderHomeSide(); } catch (e) { toast('Could not remove: ' + e.message, true); }
+}
+
+/* ---------- Weather heads-up ---------- */
+function wxTip() {
+  const w = App.weather; if (!w || !w.days || !w.days.length) return '';
+  const late = new Date().getHours() >= 17;
+  const d = late ? w.days[1] : w.days[0]; if (!d) return '';
+  const pfx = late ? 'Tomorrow: ' : '';
+  const C = String(cfg('weather_units', 'F')).toUpperCase() === 'C';
+  const hot2 = C ? 35 : 95, hot = C ? 31 : 88, cold = C ? 4 : 40;
+  if (d.pp >= 60) return `☔ ${pfx}Rain likely (${d.pp}%) — grab umbrellas`;
+  if (d.pp >= 35) return `🌦️ ${pfx}Chance of rain (${d.pp}%)`;
+  if (d.hi >= hot2) return `🥵 ${pfx}Very hot (${d.hi}°) — water and shade`;
+  if (d.hi >= hot) return `☀️ ${pfx}Hot day (${d.hi}°) — bring water`;
+  if (d.lo <= cold) return `🧥 ${pfx}Cold morning (${d.lo}°) — jackets`;
+  if (d.uv >= 8) return `🧴 ${pfx}Strong sun (UV ${Math.round(d.uv)}) — sunscreen`;
+  return '';
+}
+
+/* ---------- Who's got it ---------- */
+const evKey = (ev) => (ev.title || '') + '|' + ev.start;
+const claimOf = (ev) => X.get('claims', {})[evKey(ev)] || '';
+const claimHtml = (ev) => { const c = claimOf(ev); if (!c) return ''; const m = members().find(x => x.name === c) || {}; return `<div class="el claim">${esc(m.emoji || '👤')} ${esc(c)} has it</div>`; };
+
 /* ---------- Calendar ---------- */
+// Week view = 7 days from the chosen start (today by default). Month view = a
+// 6-week grid. Tap a day for its agenda, tap an event for details. Calendars can
+// be hidden with the chips under the title. View + hidden calendars persist.
+const Cal = {
+  view: (() => { try { return localStorage.getItem('fqb_calview') || 'week'; } catch (e) { return 'week'; } })(),
+  offset: 0,
+  hidden: (() => { try { return JSON.parse(localStorage.getItem('fqb_calhide') || '[]'); } catch (e) { return []; } })(),
+  save() { try { localStorage.setItem('fqb_calview', this.view); localStorage.setItem('fqb_calhide', JSON.stringify(this.hidden)); } catch (e) {} },
+};
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const calEvents = (d) => eventsOn(d).filter(ev => !Cal.hidden.includes(ev.calendar || ''));
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const evTime = (ev) => ev.allDay ? 'All day' : `${fmtTime(toDate(ev.start))}–${fmtTime(toDate(ev.end))}`;
+App.calIndex = [];
+const evRef = (ev) => { App.calIndex.push(ev); return App.calIndex.length - 1; };
+
 function renderCalendar() {
-  const now = new Date(); const wrap = $('#cal-week'); let html = '';
+  if (!App.state) return;
+  App.calIndex = [];
+  const now = new Date(), today = startOfDay(now), todayK = dayKey(now);
+  const wrap = $('#cal-week');
+  $$('#cal-bar [data-calview]').forEach(b => b.classList.toggle('on', b.dataset.calview === Cal.view));
+
+  // Calendar filter chips (only when there's more than one calendar)
+  const cals = {}; (App.state.events || []).forEach(ev => { const n = ev.calendar || ''; if (n && !cals[n]) cals[n] = ev.color || '#60a5fa'; });
+  const names = Object.keys(cals).sort();
+  $('#cal-cals').innerHTML = names.length > 1 ? names.map(n => `<button class="${Cal.hidden.includes(n) ? 'off' : ''}" data-calname="${esc(n)}"><i style="background:${esc(cals[n])}"></i>${esc(n)}</button>`).join('') : '';
+  $('#cal-cals').style.display = names.length > 1 ? '' : 'none';
+
+  if (Cal.view === 'month') {
+    const m = new Date(now.getFullYear(), now.getMonth() + Cal.offset, 1);
+    const monday = isTrue(cfg('week_starts_monday', 'FALSE'));
+    const lead = (m.getDay() - (monday ? 1 : 0) + 7) % 7;
+    const first = addDays(m, -lead);
+    const hdr = Array.from({ length: 7 }, (_, i) => DAYS[(i + (monday ? 1 : 0)) % 7]);
+    let html = hdr.map(h => `<div class="mhd">${h}</div>`).join('');
+    for (let i = 0; i < 42; i++) {
+      const d = addDays(first, i), k = dayKey(d);
+      const evs = calEvents(d), tds = todosOn(d), din = dinnerFor(d);
+      const items = evs.map(ev => `<div class="mev ${ev.allDay ? 'all' : ''}" style="border-color:${esc(ev.color || '#60a5fa')};${ev.allDay ? '' : ''}">${ev.allDay ? '' : `<b>${esc(fmtTime(toDate(ev.start)).replace(':00', '').replace(/\s?([AP])M/i, (x, a) => a.toLowerCase()))}</b> `}${esc(ev.title)}</div>`)
+        .concat(tds.map(t => `<div class="mev task">📝 ${esc(t.task)}</div>`));
+      const max = 3;
+      html += `<button class="mcell ${d.getMonth() !== m.getMonth() ? 'other' : ''} ${k === todayK ? 'today' : ''} ${k < todayK ? 'past' : ''}" data-day="${k}">
+        <div class="mtop"><span class="mnum">${d.getDate()}</span><span class="mw">${wxHtml(d)}</span></div>
+        ${items.slice(0, max).join('')}${items.length > max ? `<div class="mmore">+${items.length - max} more</div>` : ''}
+        ${din ? `<div class="mdin">🍽️ ${esc(din.meal)}</div>` : ''}</button>`;
+    }
+    wrap.className = 'cal-month'; wrap.innerHTML = html;
+    $('#cal-title').textContent = `📅 ${MONTHS[m.getMonth()]} ${m.getFullYear()}`;
+    const loaded = +cfg('calendar_days', '14');
+    const lastDay = new Date(m.getFullYear(), m.getMonth() + 1, 0);
+    $('#cal-sub').textContent = App.backend.mode === 'demo' ? 'sample events' : (addDays(today, loaded) < lastDay ? `events load ${loaded} days ahead — raise calendar_days in the Sheet to see more` : '');
+    return;
+  }
+
+  // Week view
+  const startD = addDays(today, Cal.offset * 7);
+  let html = '';
   for (let i = 0; i < 7; i++) {
-    const d = new Date(now); d.setDate(d.getDate() + i); d.setHours(0, 0, 0, 0);
-    const evs = eventsOn(d); const dinner = dinnerFor(d);
-    html += `<div class="cal-day ${i === 0 ? 'today' : ''}"><div class="dh"><div class="dn">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAYS[d.getDay()]}</div><div class="dd">${d.getDate()}</div></div><div class="evs">`;
-    if (!evs.length && !todosOn(d).length) html += `<div class="muted" style="text-align:center;font-size:15px;padding:10px 0">—</div>`;
+    const d = addDays(startD, i), k = dayKey(d);
+    const evs = calEvents(d); const dinner = dinnerFor(d);
+    const rel = k === todayK ? 'Today' : k === dayKey(addDays(today, 1)) ? 'Tomorrow' : DAYS[d.getDay()];
+    html += `<div class="cal-day ${k === todayK ? 'today' : ''} ${k < todayK ? 'past' : ''}" data-day="${k}"><div class="dh"><div class="dn">${rel}</div><div class="dd">${d.getDate()}</div><div class="dw">${wxHtml(d) || '&nbsp;'}</div></div><div class="evs">`;
+    const tds = todosOn(d);
+    if (!evs.length && !tds.length) html += `<div class="muted" style="text-align:center;font-size:15px;padding:10px 0">—</div>`;
     for (const ev of evs) {
       const past = !ev.allDay && toDate(ev.end) < now;
-      html += `<div class="ev ${ev.allDay ? 'allday' : ''} ${past ? 'past' : ''}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${ev.allDay ? 'All day' : esc(fmtTime(toDate(ev.start)))}</div><div class="en">${esc(ev.title)}</div></div>`;
+      html += `<div class="ev ${ev.allDay ? 'allday' : ''} ${past ? 'past' : ''}" data-ev="${evRef(ev)}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${ev.allDay ? 'All day' : esc(fmtTime(toDate(ev.start)))}</div><div class="en">${esc(ev.title)}</div>${ev.location ? `<div class="el">📍 ${esc(ev.location)}</div>` : ''}${claimHtml(ev)}</div>`;
     }
-    const tds = todosOn(d); const todayK = dayKey(now);
     for (const t of tds) {
-      const late = i === 0 && t.due < todayK;
+      const late = k === todayK && t.due < todayK;
       html += `<div class="ev task ${late ? 'late' : ''}" data-todo="${esc(t.id)}"><div class="et">${late ? '⚠ Overdue' : '📝 Task'}${t.repeat ? ' ↻' : ''}${t.assigned_to ? ' · ' + esc(t.assigned_to) : ''}</div><div class="en">${esc(t.task)}</div></div>`;
     }
     html += `</div>${dinner ? `<div class="dinner">🍽️ <b>${esc(dinner.meal)}</b></div>` : ''}</div>`;
   }
-  wrap.innerHTML = html;
+  wrap.className = 'cal-week'; wrap.innerHTML = html;
+  const endD = addDays(startD, 6);
+  $('#cal-title').textContent = Cal.offset === 0 ? '📅 This Week' : Cal.offset === 1 ? '📅 Next Week' : `📅 ${MONTHS[startD.getMonth()].slice(0, 3)} ${startD.getDate()} – ${startD.getMonth() !== endD.getMonth() ? MONTHS[endD.getMonth()].slice(0, 3) + ' ' : ''}${endD.getDate()}`;
   const n = (App.state.events || []).length;
   $('#cal-sub').textContent = App.backend.mode === 'demo' ? 'sample events — connect your Google Calendar to see yours' : `${n} event${n === 1 ? '' : 's'} in the next ${cfg('calendar_days', '14')} days`;
+}
+
+// Tap a day -> its agenda. Tap an event -> its details.
+function showDay(k) {
+  const d = new Date(k + 'T12:00:00');
+  const evs = calEvents(d), tds = todosOn(d), din = dinnerFor(d), wx = wxFor(d);
+  const body = `<div class="agenda">
+    ${wx ? `<div class="aw">${wmo(wx.code)[1]} ${esc(wmo(wx.code)[2])} · high ${wx.hi}° · low ${wx.lo}°</div>` : ''}
+    ${evs.map(ev => `<div class="ev ${ev.allDay ? 'allday' : ''}" style="border-color:${esc(ev.color || '#60a5fa')}"><div class="et">${esc(evTime(ev))}${ev.calendar ? ' · ' + esc(ev.calendar) : ''}</div><div class="en">${esc(ev.title)}</div>${ev.location ? `<div class="el">📍 ${esc(ev.location)}</div>` : ''}${claimHtml(ev)}</div>`).join('')}
+    ${tds.map(t => `<div class="ev task"><div class="et">📝 Task${t.assigned_to ? ' · ' + esc(t.assigned_to) : ''}</div><div class="en">${esc(t.task)}</div></div>`).join('')}
+    ${!evs.length && !tds.length ? '<div class="muted">Nothing scheduled.</div>' : ''}
+    ${din ? `<div class="ad">🍽️ Dinner: <b style="color:var(--text)">${esc(din.meal)}</b></div>` : ''}
+  </div>`;
+  Modal.confirm({ icon: '📅', title: d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }), body, ok: 'Close', alt: '＋ Add a task for this day', noCancel: true, wide: true })
+    .then(r => { if (r === 'alt') TE.open(null, { due: k }); });
+}
+function eventBody(ev) {
+  const s = toDate(ev.start), c = claimOf(ev);
+  const who = X.ok ? `<div class="claimrow" data-evk="${esc(evKey(ev))}"><span class="muted" style="align-self:center;font-weight:700">Who's got it?</span>${members().map(m => `<button data-claim="${esc(m.name)}" class="${c === m.name ? 'on' : ''}">${esc(m.emoji || '👤')} ${esc(m.name)}</button>`).join('')}${c ? '<button data-claim="">✕ Nobody</button>' : ''}</div>` : '';
+  return `<div class="agenda"><div class="ev ${ev.allDay ? 'allday' : ''}" style="border-color:${esc(ev.color || '#60a5fa')}">
+    <div class="et">${esc(s.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))} · ${esc(evTime(ev))}</div>
+    ${ev.location ? `<div style="margin-top:6px">📍 ${esc(ev.location)}</div>` : ''}
+    ${ev.calendar ? `<div class="el" style="margin-top:6px">Calendar: ${esc(ev.calendar)}</div>` : ''}</div>${who}</div>`;
+}
+function showEvent(ev) {
+  App.openEvent = ev;
+  Modal.confirm({ icon: '🗓️', title: ev.title, body: eventBody(ev), ok: 'Close', noCancel: true, wide: true }).then(() => { App.openEvent = null; });
 }
 
 /* ---------- Groceries (pantry-style master list) ---------- */
@@ -1278,7 +1683,7 @@ function renderGroceries() {
     const row = (g) => { const k = App.gKeep.includes(g.id); return `<button class="gitem ${k ? 'keep' : ''} ${isNice(g) ? 'nice' : ''}" data-id="${esc(g.id)}"><span class="box">${k ? '📌' : ''}</span><span><div class="name">${esc(g.item)}</div>${g.note ? `<div class="note">${esc(g.note)}</div>` : ''}${metaHtml(g)}</span>${k ? '<span class="keeplbl">KEEPING</span>' : ''}</button>`; };
     const groups = groupByStore(needed);
     const multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
-    list.innerHTML = toBuy ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + grp.items.map(row).join('')).join('')
+    list.innerHTML = toBuy ? groups.map(grp => (multi ? `<div class="shead">🏬 ${esc(grp.store)} <span class="n">${grp.items.length}</span></div>` : '') + `<div class="cgrid">${grp.items.map(row).join('')}</div>`).join('')
       : `<div class="empty">${App.gStore || App.gEssOnly ? 'Nothing needed with this filter' : "Nothing on the list — everything's stocked 🎉"}<br><span style="font-size:16px">Tap <b>All items</b> and mark what you're out of.</span></div>`;
     return;
   }
@@ -1381,13 +1786,21 @@ function renderQuests() {
   const items = quests.filter(q => !(wknd && String(q.repeat).toLowerCase() === 'weekdays')).map(q => ({ q, s: questStatus(q, kid.name) })).sort((a, b) => order[a.s] - order[b.s]);
   const label = { pending: 'WAITING ⏳', done: 'DONE ✓' };
   const rep = { daily: 'today', weekdays: 'today', weekly: 'this week', biweekly: 'every 2 weeks', monthly: 'this month', once: 'one time' };
-  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s !== 'available' ? 'disabled' : ''}><div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div><div class="qm"><span>${rep[(q.repeat || 'daily').toLowerCase()] || esc(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`).join('')
+  const repTxt = (r) => { const n = everyDays(r); return n ? (n === 1 ? 'today' : `every ${n} days`) : (rep[(r || 'daily').toLowerCase()] || esc(r)); };
+  const qopts = X.get('questOpts', {});
+  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur; return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s !== 'available' ? 'disabled' : ''}>${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${(qopts[q.id] || {}).auto ? '<div class="auto">✓ no approval needed</div>' : ''}<div class="qm"><span>${repTxt(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
     : `<div class="empty">No quests for ${esc(kid.name)} yet. Add some on the Quests tab.</div>`;
 
   const b = balance(kid.name);
   const rewards = (App.state.rewards || []).filter(r => r.title && (r.active === '' || r.active === undefined || isTrue(r.active)));
-  $('#rewards').innerHTML = `<div class="bal"><div class="l">${esc(kid.name)}'s points</div><div class="n">${b.approved}</div>${b.pending ? `<div class="p">+${b.pending} waiting for approval</div>` : ''}</div>
-    <div class="sect">Rewards</div>` + (rewards.length ? rewards.map(r => { const cost = parseInt(r.cost || 0, 10); const ok = b.approved >= cost; return `<button class="reward ${ok ? '' : 'locked'}" data-r="${esc(r.id)}" ${ok ? '' : 'disabled'}><span class="ri">${esc(r.icon || '🎁')}</span><span class="rt">${esc(r.title)}</span><span class="rc">${cost} pts</span></button>`; }).join('') : `<div class="muted">Add rewards on the Rewards tab.</div>`);
+  const cps = couponsFor(kid.name), bestOff = cps.length ? Math.max(...cps.map(c => +c.off || 0)) : 0;
+  $('#rewards').innerHTML = `<div class="bal"><div class="l">${esc(kid.name)}'s points</div><div class="n">${b.approved}</div>${b.pending ? `<div class="p">+${b.pending} waiting for approval</div>` : ''}${goalBar(goalFor(kid.name))}</div>
+    ${cps.length ? `<div class="coupons">${cps.map(c => `<span class="coupon" title="${esc(c.label || '')}">🎟️ −${esc(c.off)} pts</span>`).join('')}</div>` : ''}
+    <div class="sect">Rewards</div>` + (rewards.length ? rewards.map(r => {
+      const cost = parseInt(r.cost || 0, 10), eff = Math.max(0, cost - Math.min(bestOff, cost)), ls = lockStatus(r, kid.name), afford = b.approved >= eff;
+      const cls = ls.locked ? 'locked slock' : (X.get('locks', {})[r.id] ? 'sopen' : '') + (afford ? '' : ' cant');
+      return `<button class="reward ${cls}" data-r="${esc(r.id)}"><span class="ri">${ls.locked ? '🔒' : esc(r.icon || '🎁')}</span><span class="rt">${esc(r.title)}${ls.text ? `<span class="rsub">${ls.locked ? '' : '🔓 '}${ls.text}</span>` : ''}</span><span class="rc">${eff !== cost ? `<s>${cost}</s>` : ''}${eff} pts</span></button>`;
+    }).join('') : `<div class="muted">Add rewards on the Rewards tab.</div>`);
 }
 
 /* ---------- To-do ---------- */
@@ -1534,8 +1947,8 @@ const TD = {
 /* Task editor */
 const TE = {
   state: null,
-  open(t) {
-    this.state = t ? { id: t.id, task: t.task, tags: tagList(t), due: t.due || '', who: t.assigned_to || '', repeat: t.repeat || '' } : { task: '', tags: App.todoTag ? [App.todoTag] : [], due: '', who: '', repeat: '' };
+  open(t, preset) {
+    this.state = t ? { id: t.id, task: t.task, tags: tagList(t), due: t.due || '', who: t.assigned_to || '', repeat: t.repeat || '' } : Object.assign({ task: '', tags: App.todoTag ? [App.todoTag] : [], due: '', who: '', repeat: '' }, preset || {});
     $('#te-title').textContent = t ? 'Edit task' : 'New task';
     this.draw(); $('#todo-ed').classList.add('open');
     if (!t) setTimeout(() => this.editTask(), 80);
@@ -1591,10 +2004,16 @@ const QE = {
     $('#qe-title').textContent = (item ? 'Edit ' : 'New ') + kind;
     $('#qe-del').style.display = item ? '' : 'none';
     $('#qe-questonly').style.display = kind === 'quest' ? '' : 'none';
+    $('#qe-rewardonly').style.display = kind === 'reward' && X.ok ? '' : 'none';
+    const id = item && item.id;
+    this.state.auto = !!(id && (X.get('questOpts', {})[id] || {}).auto);
+    this.state.lock = id && X.get('locks', {})[id] ? Object.assign({}, X.get('locks', {})[id]) : null;
+    this.orig = JSON.stringify(this.sheetPart());
     $('#qe-ptslabel').textContent = kind === 'quest' ? 'Points earned' : 'Points it costs';
     this.draw(); $('#quest-ed').classList.add('open');
   },
   close() { $('#quest-ed').classList.remove('open'); this.state = null; },
+  sheetPart() { const s = this.state; return [s.title, s.icon, s.points, s.who, s.repeat, s.active, s.notes]; },
   draw() {
     const s = this.state; if (!s) return;
     $('#qe-icon').textContent = s.icon;
@@ -1606,13 +2025,36 @@ const QE = {
       $('#qe-who').innerHTML = [['Anyone', '👧👦 Anyone']].concat(kids.map(k => [k.name, `${k.emoji || '⭐'} ${k.name}`])).map(w => `<button data-qwho="${esc(w[0])}" class="${s.who.toLowerCase() === w[0].toLowerCase() ? 'modeon' : ''}">${esc(w[1])}</button>`).join('');
       $('#qe-repeat').innerHTML = QREPEATS.map(r => `<button data-qrep="${r[0]}" class="${s.repeat === r[0] ? 'modeon' : ''}">${r[1]}</button>`).join('');
       $('#qe-hint').textContent = QHINTS[s.repeat] || '';
+      $('#qe-approve').innerHTML = X.ok ? `<button data-qauto="0" class="${s.auto ? '' : 'modeon'}">👀 Parent approves</button><button data-qauto="1" class="${s.auto ? 'modeon' : ''}">✓ Auto-approve</button>` : '<span class="muted">Needs the Pi server</span>';
+    } else if (X.ok) {
+      const L = s.lock;
+      $('#qe-lock').innerHTML = `<button data-lk="" class="${!L ? 'modeon' : ''}">No lock</button><button data-lk="quest" class="${L && L.type === 'quest' ? 'modeon' : ''}">🔥 Streak on one quest</button><button data-lk="variety" class="${L && L.type === 'variety' ? 'modeon' : ''}">🔥 Several different streaks</button>`;
+      let o = '';
+      if (L && L.type === 'quest') {
+        const qs = (App.state.quests || []).filter(q => q.title && String(q.repeat || '').toLowerCase() !== 'once');
+        o = `<label>Which quest</label><div class="seg">${qs.map(q => `<button data-lkq="${esc(q.id)}" class="${L.quest === q.id ? 'modeon' : ''}">${esc(q.icon || '⭐')} ${esc(q.title)}</button>`).join('')}</div>
+          <label>Streak needed</label><div class="seg">${[3, 5, 7, 10, 14, 21, 30].map(n => `<button data-lkn="${n}" class="${L.n === n ? 'modeon' : ''}">🔥${n}</button>`).join('')}</div>`;
+      } else if (L && L.type === 'variety') {
+        o = `<label>How many different quests</label><div class="seg">${[2, 3, 4, 5].map(n => `<button data-lkc="${n}" class="${L.count === n ? 'modeon' : ''}">${n}</button>`).join('')}</div>
+          <label>Each with a streak of at least</label><div class="seg">${[3, 5, 7, 10, 14].map(n => `<button data-lkn="${n}" class="${L.n === n ? 'modeon' : ''}">🔥${n}</button>`).join('')}</div>
+          <label>Only quests worth at least</label><div class="seg">${[0, 2, 5, 10].map(n => `<button data-lkm="${n}" class="${(+L.min || 0) === n ? 'modeon' : ''}">${n ? n + '+ pts' : 'any'}</button>`).join('')}</div>`;
+      }
+      $('#qe-lockopts').innerHTML = o + (L ? '<div class="note">Once unlocked it stays unlocked until it’s redeemed, then it has to be earned again. It can cost few or no points.</div>' : '');
     }
     $('#qe-active').innerHTML = `<button data-qact="1" class="${s.active ? 'modeon' : ''}">Active</button><button data-qact="0" class="${s.active ? '' : 'modeon'}">Paused (hidden from kids)</button>`;
   },
   async save() {
     const s = this.state; if (!s.title.trim()) { toast('Give it a name first', true); return; }
+    const sheetChanged = !s.id || JSON.stringify(this.sheetPart()) !== this.orig;
+    const kind = this.kind, extra = { auto: s.auto, lock: s.lock };
     this.close();
-    if (this.kind === 'quest') await act('saveQuest', { id: s.id, title: s.title.trim(), icon: s.icon, points: s.points, assigned_to: s.who, repeat: s.repeat, active: s.active, notes: s.notes, pin: App.pinValue }, { toast: 'Quest saved' });
+    // Pi-side options first (they don't depend on the Google script)
+    if (s.id && X.ok) {
+      if (kind === 'quest') await X.merge('questOpts', { [s.id]: { auto: !!extra.auto } });
+      else await X.merge('locks', { [s.id]: extra.lock && (extra.lock.type === 'quest' ? extra.lock.quest && extra.lock.n : extra.lock.count && extra.lock.n) ? extra.lock : null });
+      if (!sheetChanged) { toast('Saved'); render(); return; }
+    }
+    if (kind === 'quest') await act('saveQuest', { id: s.id, title: s.title.trim(), icon: s.icon, points: s.points, assigned_to: s.who, repeat: s.repeat, active: s.active, notes: s.notes, pin: App.pinValue }, { toast: 'Quest saved' });
     else await act('saveReward', { id: s.id, title: s.title.trim(), icon: s.icon, cost: s.points, active: s.active, pin: App.pinValue }, { toast: 'Reward saved' });
   },
   async del() {
@@ -1674,7 +2116,7 @@ function renderParent() {
     const q = (App.state.queue || []).filter(k => k.status === 'pending').sort((a, b) => a.submitted_at < b.submitted_at ? 1 : -1);
     const recent = (App.state.queue || []).filter(k => k.status !== 'pending').sort((a, b) => (b.reviewed_at || b.submitted_at) < (a.reviewed_at || a.submitted_at) ? -1 : 1).slice(0, 8);
     const mem = (n) => members().find(m => m.name === n) || {};
-    const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'} · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status)}</div></span>${acts ? `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>` : ''}</div>`;
+    const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'} · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status) + (X.get('auto', {})[k.id] ? ' (auto)' : '')}</div></span>${acts ? `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>` : ''}</div>`;
     body.innerHTML = (q.length ? q.map(k => row(k, true)).join('') : `<div class="empty">Nothing waiting for approval 🎉</div>`) + (recent.length ? `<div class="sect">Recent</div>` + recent.map(k => row(k, false)).join('') : '');
   } else if (App.ptab === 'dinner') {
     let html = '';
@@ -1688,9 +2130,9 @@ function renderParent() {
     const quests = (App.state.quests || []).filter(q => q.title).slice().sort((a, b) => on(b) - on(a) || a.title.localeCompare(b.title));
     const rewards = (App.state.rewards || []).filter(r => r.title).slice().sort((a, b) => on(b) - on(a) || (+a.cost || 0) - (+b.cost || 0));
     body.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><label class="sect" style="margin:0">Quests · ${quests.length}</label><button class="btn primary sm" id="quest-add">＋ New quest</button></div>
-      ${quests.length ? quests.map(q => `<button class="prow ${on(q) ? '' : 'off'}" data-qedit="${esc(q.id)}"><span class="pt" style="font-size:26px">${esc(q.icon || '⭐')}</span><span><div class="pm">${esc(q.title)}</div><div class="pd">${esc(QREPEATS.find(r => r[0] === String(q.repeat || 'daily').toLowerCase())?.[1] || q.repeat)} · ${esc(q.assigned_to || 'Anyone')}${on(q) ? '' : ' · paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">+${esc(q.points || 0)}</span></button>`).join('') : '<div class="empty">No quests yet — tap New quest.</div>'}
+      ${quests.length ? quests.map(q => `<button class="prow ${on(q) ? '' : 'off'}" data-qedit="${esc(q.id)}"><span class="pt" style="font-size:26px">${esc(q.icon || '⭐')}</span><span><div class="pm">${esc(q.title)}</div><div class="pd">${esc(QREPEATS.find(r => r[0] === String(q.repeat || 'daily').toLowerCase())?.[1] || (everyDays(q.repeat) ? 'Every ' + everyDays(q.repeat) + ' days' : q.repeat))}${(X.get('questOpts', {})[q.id] || {}).auto ? ' · ✓ auto-approve' : ''}${esc('')} · ${esc(q.assigned_to || 'Anyone')}${on(q) ? '' : ' · paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">+${esc(q.points || 0)}</span></button>`).join('') : '<div class="empty">No quests yet — tap New quest.</div>'}
       <div style="display:flex;justify-content:space-between;align-items:center;margin:26px 0 10px"><label class="sect" style="margin:0">Rewards · ${rewards.length}</label><button class="btn primary sm" id="reward-add">＋ New reward</button></div>
-      ${rewards.length ? rewards.map(r => `<button class="prow ${on(r) ? '' : 'off'}" data-redit="${esc(r.id)}"><span class="pt" style="font-size:26px">${esc(r.icon || '🎁')}</span><span><div class="pm">${esc(r.title)}</div><div class="pd">${on(r) ? 'Available' : 'Paused'}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">${esc(r.cost || 0)} pts</span></button>`).join('') : '<div class="empty">No rewards yet.</div>'}
+      ${rewards.length ? rewards.map(r => `<button class="prow ${on(r) ? '' : 'off'}" data-redit="${esc(r.id)}"><span class="pt" style="font-size:26px">${esc(r.icon || '🎁')}</span><span><div class="pm">${esc(r.title)}</div><div class="pd">${on(r) ? 'Available' : 'Paused'}${X.get('locks', {})[r.id] ? ' · ' + esc(lockLabel(X.get('locks', {})[r.id])) : ''}</div></span><span class="badge2" style="background:var(--card-hi);color:var(--accent)">${esc(r.cost || 0)} pts</span></button>`).join('') : '<div class="empty">No rewards yet.</div>'}
       <div class="note" style="margin-top:14px">Tap a quest or reward to edit or delete it. Kids see quests that are assigned to them or to Anyone; a paused quest is hidden without losing its history.</div>`;
   } else if (App.ptab === 'bonus') {
     const kids = members('kid'); App.bonus = App.bonus || { member: '', points: 5, reason: '' };
@@ -1729,6 +2171,29 @@ function renderParent() {
         <button class="btn sm" data-cfg="clock_dim">Dim clock brightness: <b style="margin-left:8px">${esc(cfg('clock_dim', '35'))}%</b></button></div>
         <div class="note">Touch the screen during a clock or off period and the full board comes back for the touch-wake time, then it settles again.</div>
       </div>`;
+  } else if (App.ptab === 'family') {
+    if (!X.ok) { body.innerHTML = '<div class="empty">These extras are stored on the Pi and need its server running.</div>'; return; }
+    const cfgS = streakCfg(), paused = (cfgS.pauses || []).some(p => p.from && !p.to);
+    const notes = X.get('notes', []).filter(Boolean), cds = X.get('countdowns', []).filter(Boolean).sort((a, b) => a.date < b.date ? -1 : 1);
+    const coupons = X.get('coupons', []).filter(c => c && !c.used);
+    body.innerHTML = `
+      <div class="fx-sec"><h3>🔥 Streaks</h3>
+        <div class="fx-row"><span class="grow">Milestone coupons<div class="muted" style="font-size:14px">${(cfgS.milestones || []).map(m => `🔥${m.n} in a row → −${m.off} pts`).join(' · ') || 'none'}</div></span><button class="btn sm" data-fx="milestones">Change</button></div>
+        <div class="fx-row"><span class="grow">Streak shield<div class="muted" style="font-size:14px">One missed day per week is forgiven (daily quests)</div></span><button class="btn sm ${cfgS.shield ? 'good' : ''}" data-fx="shield">${cfgS.shield ? 'On' : 'Off'}</button></div>
+        <div class="fx-row"><span class="grow">Pause streaks<div class="muted" style="font-size:14px">For vacations and sick days — paused days don't count or break streaks</div></span><button class="btn sm ${paused ? 'good' : ''}" data-fx="pause">${paused ? '⏸ Paused — tap to resume' : 'Pause now'}</button></div>
+      </div>
+      <div class="fx-sec"><h3>🎟️ Unused coupons</h3>
+        ${coupons.length ? coupons.map(c => `<div class="fx-row"><span class="grow">${esc(c.member)} · −${esc(c.off)} pts <span class="muted">${esc(c.label || '')}</span></span><button class="btn sm bad" data-fxdelcoupon="${esc(c.id)}">Remove</button></div>`).join('') : '<div class="muted">None yet — kids earn them from streak milestones.</div>'}
+        <div class="fx-row"><span class="grow muted" style="font-size:14px">Give a coupon by hand</span><button class="btn sm" data-fx="givecoupon">＋ Give coupon</button></div>
+      </div>
+      <div class="fx-sec"><h3>⏳ Countdowns</h3>
+        ${cds.length ? cds.map(c => `<div class="fx-row"><span style="font-size:22px">${esc(c.emoji || '⏳')}</span><span class="grow">${esc(c.title)} <span class="muted">· ${esc(new Date(c.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }))}</span></span><button class="btn sm bad" data-fxdelcd="${esc(c.id)}">Remove</button></div>`).join('') : '<div class="muted">No countdowns. Tip: calendar events with ⏳ or #countdown in the title show up automatically.</div>'}
+        <div class="fx-row"><span class="grow"></span><button class="btn sm primary" data-fx="addcd">＋ Add countdown</button></div>
+        <input type="date" class="hidden-date" id="fx-cddate">
+      </div>
+      <div class="fx-sec"><h3>📌 Notes on the board</h3>
+        ${notes.length ? notes.map(n => `<div class="fx-row"><span class="grow">${esc(n.text)}</span><button class="btn sm bad" data-fxdelnote="${esc(n.id)}">Remove</button></div>`).join('') : '<div class="muted">No notes. Anyone can post one from the home screen (＋ Note).</div>'}
+      </div>`;
   } else if (App.ptab === 'settings') {
     const live = App.backend.mode === 'live';
     body.innerHTML = `<div class="form">
@@ -1741,6 +2206,9 @@ function renderParent() {
       <label>Display</label>
       <div class="note">Photos: <b>${esc(Photos.sourceLabel())}</b> (${Photos.list.length} loaded) <button class="btn sm" id="set-photos" style="margin-left:8px">↻ Rescan photos</button> · Weather ${esc(cfg('lat', ''))}, ${esc(cfg('lon', ''))}<br>Screen schedule, sleep times and timeouts are on the <b>Display</b> tab above.</div>
       <div class="row"><button class="btn ghost" id="set-reload">Reload app</button><button class="btn ghost" id="set-fs">Toggle fullscreen</button></div>
+      <label>Wall controls</label>
+      <div class="note">Works from your phone even when the wall screen is frozen.</div>
+      <div class="row"><button class="btn primary" data-sys="restart_app">↻ Restart app</button><button class="btn ghost" data-sys="exit_app">✕ Close app (1 hr)</button><button class="btn ghost" data-sys="reboot">⏻ Reboot Pi</button></div>
       <div class="note">Family Quest Board v1.0</div></div>`;
   }
 }
@@ -1799,9 +2267,31 @@ const Photos = {
   async src(p) {
     if (p.url) return p.url;
     if (this.cache.has(p.id)) return this.cache.get(p.id);
+    // Drive photos arrive at full camera resolution (a 12 MP photo is ~50 MB once
+    // decoded). Shrink each one to screen size right away and keep only a small
+    // JPEG, so the Pi doesn't run out of memory. Keep just a few in the cache.
     const data = await App.backend.getPhoto(p.id);
-    if (this.cache.size > 25) this.cache.delete(this.cache.keys().next().value);
-    this.cache.set(p.id, data); return data;
+    const url = await this.shrink(data);
+    while (this.cache.size >= 4) {
+      const k = this.cache.keys().next().value; const old = this.cache.get(k);
+      this.cache.delete(k);
+      if (old && old.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(old), 5000); // after it has faded out
+    }
+    this.cache.set(p.id, url); return url;
+  },
+  async shrink(dataUrl) {
+    try {
+      const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+      const max = Math.max(window.screen.width, window.screen.height, 1280) * (window.devicePixelRatio || 1) * 1.15;
+      const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      im.src = '';
+      const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.86));
+      c.width = c.height = 0;
+      return blob ? URL.createObjectURL(blob) : dataUrl;
+    } catch (e) { return dataUrl; }
   },
   // Fit a photo to the screen. Same-ish aspect ratio → gentle Ken Burns zoom.
   // Portrait on a landscape screen (or vice versa) → fill the short side and
@@ -1908,6 +2398,8 @@ const Modal = {
     return new Promise((resolve) => {
       this.resolve = resolve;
       $('#m-icon').textContent = o.icon || '❓'; $('#m-title').textContent = o.title || ''; $('#m-body').innerHTML = o.body || '';
+      $('#m-cancel').style.display = o.noCancel ? 'none' : ''; this.info = !!o.noCancel;
+      $('.modal-box').style.width = o.wide ? 'min(760px, 94vw)' : '';
       $('#m-ok').textContent = o.ok || 'Yes'; $('#m-ok').className = 'btn ' + (o.okClass || 'primary'); $('#m-cancel').textContent = o.cancel || 'Cancel';
       const alt = $('#m-alt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '';
       $('#modal').classList.add('open');
@@ -1925,12 +2417,16 @@ function toast(msg, isErr) {
 /* ------------------------------------------------------------------------
    Idle + night mode
    ------------------------------------------------------------------------ */
-let idleTimer;
+let idleTimer, lastTouch = Date.now();
 function bumpIdle() {
+  lastTouch = Date.now();
   clearTimeout(idleTimer);
   if (isPhone()) return;
   const secs = Math.max(20, parseInt(cfg('idle_timeout_sec', '90'), 10) || 90);
-  idleTimer = setTimeout(() => { if (!KB.resolve && !Modal.resolve && !TE.state && !GE.state && !DE.state && !TD.id) { App.unlocked = false; showScreen(CFG.HOME_SCREEN || 'home'); renderParent(); renderTodos(); Photos.next(); } }, secs * 1000);
+  idleTimer = setTimeout(() => {
+    if (Modal.resolve && Modal.info) Modal.close(true);   // a calendar details popup left open
+    if (!KB.resolve && !Modal.resolve && !TE.state && !GE.state && !DE.state && !TD.id) { App.unlocked = false; Cal.offset = 0; renderCalendar(); showScreen(CFG.HOME_SCREEN || 'home'); renderParent(); renderTodos(); Photos.next(); }
+  }, secs * 1000);
 }
 
 const MODES = [['photos', '🖼 Photos + board'], ['clock', '🕐 Dim clock only'], ['off', '⏻ Screen off']];
@@ -2032,7 +2528,13 @@ const Display = {
     return s;
   },
 
-  tick() { if (App.state) this.apply(this.effective()); },
+  tick() {
+    if (!App.state) return;
+    this.apply(this.effective());
+    // Screen should be off but the panel didn't power down (e.g. the display
+    // wasn't ready at boot): try again every 5 minutes instead of giving up.
+    if (this.applied === 'off' && !isPhone() && (this.hw.on || !this.hw.supported) && Date.now() - (this.hw.lastTry || 0) > 300000) this.power(false);
+  },
 
   apply(mode) {
     if (mode === this.applied) return;
@@ -2049,11 +2551,12 @@ const Display = {
   },
 
   async power(on) {
-    if (this.hw.supported === false || this.hw.on === on) return;
+    if (this.hw.supported && this.hw.on === on) return;
+    this.hw.lastTry = Date.now();
     try {
       const r = await fetch('/api/display', { method: 'POST', body: JSON.stringify({ state: on ? 'on' : 'off' }) });
       if (r.ok) { const j = await r.json(); this.hw.supported = j.supported; this.hw.method = j.method; this.hw.on = j.state !== 'off'; }
-    } catch (e) { this.hw.supported = false; }
+    } catch (e) { /* server busy or restarting: the tick below retries */ }
   },
 
   // Touch during a clock/off period: full board for touch_wake_min
@@ -2185,23 +2688,124 @@ function bind() {
   rail.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') railMove(e); });
   ['pointerup', 'pointercancel'].forEach(ev => rail.addEventListener(ev, () => { $('#letter-bubble').classList.remove('on'); }));
 
-  $('#cal-week').addEventListener('click', e => { const b = e.target.closest('[data-todo]'); if (!b) return; const t = (App.state.todos || []).find(x => x.id === b.dataset.todo); if (t) { showScreen('todo'); TD.open(t); } });
+  $('#cal-week').addEventListener('click', e => {
+    const b = e.target.closest('[data-todo]');
+    if (b) { const t = (App.state.todos || []).find(x => x.id === b.dataset.todo); if (t) { showScreen('todo'); TD.open(t); } return; }
+    const ev = e.target.closest('[data-ev]'); if (ev) { const x = App.calIndex[+ev.dataset.ev]; if (x) showEvent(x); return; }
+    const day = e.target.closest('[data-day]'); if (day) showDay(day.dataset.day);
+  });
+  $('#homeside').addEventListener('click', e => {
+    if (e.target.closest('#note-add')) { addNote(); return; }
+    const n = e.target.closest('[data-note]'); if (n) removeNote(n.dataset.note);
+  });
+  $('#m-body').addEventListener('click', async e => {
+    const c = e.target.closest('[data-claim]'); if (!c || !App.openEvent) return;
+    await X.merge('claims', { [evKey(App.openEvent)]: c.dataset.claim || null });
+    $('#m-body').innerHTML = eventBody(App.openEvent); renderCalendar();
+    if (c.dataset.claim) toast(`${c.dataset.claim} has it 👍`);
+  });
+  $('#pbody').addEventListener('click', async e => {
+    const fx = e.target.closest('[data-fx]');
+    const cfgS = streakCfg();
+    const saveCfg = async (patch) => { await X.op({ op: 'set', key: 'streak', value: Object.assign({}, X.get('streak', {}), patch) }); renderParent(); renderQuests(); };
+    if (fx && fx.dataset.fx === 'shield') { await saveCfg({ shield: !cfgS.shield }); return; }
+    if (fx && fx.dataset.fx === 'pause') {
+      const pauses = (cfgS.pauses || []).slice(), open = pauses.find(p => p.from && !p.to), today = dayKey(new Date());
+      if (open) open.to = today; else pauses.push({ from: today, to: '' });
+      await saveCfg({ pauses }); toast(open ? 'Streaks resumed' : '⏸ Streaks paused'); return;
+    }
+    if (fx && fx.dataset.fx === 'milestones') {
+      const presets = [['7:10,14:25', '🔥7 → −10 · 🔥14 → −25'], ['5:5,10:15,20:30', '🔥5 → −5 · 🔥10 → −15 · 🔥20 → −30'], ['7:15,14:30,30:75', '🔥7 → −15 · 🔥14 → −30 · 🔥30 → −75'], ['', 'No milestone coupons']];
+      const v = await KB.open({ title: 'Milestones — streak:points off, comma separated', initial: (cfgS.milestones || []).map(m => m.n + ':' + m.off).join(','), placeholder: presets.map(p => p[0]).filter(Boolean).join('   or   ') });
+      if (v === null) return;
+      const ms = v.split(',').map(x => x.trim().split(':').map(Number)).filter(a => a[0] > 0 && a[1] >= 0).map(a => ({ n: a[0], off: a[1] })).sort((a, b) => a.n - b.n);
+      await saveCfg({ milestones: ms }); toast('Milestones saved'); return;
+    }
+    if (fx && fx.dataset.fx === 'givecoupon') {
+      const kids = members('kid'); if (!kids.length) return;
+      const who = kids.length === 1 ? kids[0].name : await KB.open({ title: 'Which kid? (' + kids.map(k => k.name).join(', ') + ')', initial: kids[0].name });
+      if (!who || !kids.some(k => k.name.toLowerCase() === who.trim().toLowerCase())) return;
+      const off = parseInt(await KB.open({ title: 'Points off', initial: '10' }), 10); if (!(off > 0)) return;
+      const name = kids.find(k => k.name.toLowerCase() === who.trim().toLowerCase()).name;
+      await X.op({ op: 'push', key: 'coupons', value: { id: xuid(), member: name, off, label: 'From a parent', at: new Date().toISOString() } });
+      renderParent(); renderQuests(); toast(`🎟️ Coupon for ${name}`); return;
+    }
+    if (fx && fx.dataset.fx === 'addcd') {
+      const title = await KB.open({ title: 'Countdown to…', placeholder: 'e.g. Grandma visits' }); if (!title || !title.trim()) return;
+      const emoji = await KB.open({ title: 'Emoji (optional)', initial: '⏳' });
+      const inp = $('#fx-cddate'); inp.value = '';
+      inp.onchange = async () => { if (!inp.value) return; await X.op({ op: 'push', key: 'countdowns', value: { id: xuid(), title: title.trim(), emoji: firstGrapheme((emoji || '⏳').trim() || '⏳'), date: inp.value } }); renderParent(); renderHomeSide(); toast('Countdown added'); };
+      try { inp.showPicker(); } catch (_) { inp.click(); }
+      return;
+    }
+    const dc = e.target.closest('[data-fxdelcd]'); if (dc) { await X.op({ op: 'remove', key: 'countdowns', id: dc.dataset.fxdelcd }); renderParent(); renderHomeSide(); return; }
+    const dn = e.target.closest('[data-fxdelnote]'); if (dn) { await X.op({ op: 'remove', key: 'notes', id: dn.dataset.fxdelnote }); renderParent(); renderHomeSide(); return; }
+    const dcp = e.target.closest('[data-fxdelcoupon]'); if (dcp) { await X.op({ op: 'remove', key: 'coupons', id: dcp.dataset.fxdelcoupon }); renderParent(); renderQuests(); return; }
+  });
+  $('#cal-bar').addEventListener('click', e => {
+    const v = e.target.closest('[data-calview]'); if (v) { if (Cal.view !== v.dataset.calview) { Cal.view = v.dataset.calview; Cal.offset = 0; Cal.save(); } renderCalendar(); return; }
+    const n = e.target.closest('[data-cal]'); if (!n) return;
+    Cal.offset = n.dataset.cal === 'today' ? 0 : Cal.offset + (n.dataset.cal === 'next' ? 1 : -1);
+    renderCalendar();
+  });
+  $('#cal-cals').addEventListener('click', e => {
+    const c = e.target.closest('[data-calname]'); if (!c) return;
+    const n = c.dataset.calname, i = Cal.hidden.indexOf(n);
+    if (i >= 0) Cal.hidden.splice(i, 1); else Cal.hidden.push(n);
+    Cal.save(); renderCalendar();
+  });
 
   // Quests
   $('#kid-tabs').addEventListener('click', e => { const b = e.target.closest('.kid-tab'); if (b) { App.kid = b.dataset.kid; renderQuests(); } });
   $('#quest-grid').addEventListener('click', async e => {
     const b = e.target.closest('.quest'); if (!b || b.disabled) return;
     const q = App.state.quests.find(x => x.id === b.dataset.q); if (!q) return;
-    if (await Modal.confirm({ icon: q.icon || '⭐', title: `${q.title} — done?`, body: `${esc(App.kid)} will get <b>+${esc(q.points)} points</b> once a parent approves it.`, ok: 'Yes, done!' })) {
-      act('submitQuest', { questId: q.id, member: App.kid }, { toast: `Nice work, ${App.kid}! Waiting for a parent to approve.` });
+    const auto = !!(X.get('questOpts', {})[q.id] || {}).auto;
+    if (await Modal.confirm({ icon: q.icon || '⭐', title: `${q.title} — done?`, body: auto ? `${esc(App.kid)} gets <b>+${esc(q.points)} points</b> right away.` : `${esc(App.kid)} will get <b>+${esc(q.points)} points</b> once a parent approves it.`, ok: 'Yes, done!' })) {
+      const kid = App.kid;
+      try {
+        const res = await App.backend.post('submitQuest', { questId: q.id, member: kid });
+        if (auto && res && res.id) {
+          try { await App.backend.post('reviewQueue', { id: res.id, status: 'approved', pin: cfg('pin', '') }); X.merge('auto', { [res.id]: 1 }); toast(`Nice work, ${kid}! +${q.points} points 🎉`); }
+          catch (e2) { toast(`Saved — waiting for a parent (auto-approve failed: ${e2.message})`, true); }
+        } else toast(`Nice work, ${kid}! Waiting for a parent to approve.`);
+        await refresh(true); checkStreaks();
+      } catch (e) { toast('That didn’t save: ' + (e.message || e), true); }
     }
   });
   $('#rewards').addEventListener('click', async e => {
-    const b = e.target.closest('.reward'); if (!b || b.disabled) return;
+    const b = e.target.closest('.reward'); if (!b) return;
     const r = App.state.rewards.find(x => x.id === b.dataset.r); if (!r) return;
-    if (await Modal.confirm({ icon: r.icon || '🎁', title: `Redeem ${r.title}?`, body: `This will use <b>${esc(r.cost)} points</b> once a parent approves it.`, ok: 'Redeem' })) {
-      act('redeemReward', { rewardId: r.id, member: App.kid }, { toast: 'Sent to a parent for approval!' });
+    const kid = App.kid, cost = parseInt(r.cost || 0, 10), bal = balance(kid).approved;
+    const cps = couponsFor(kid).slice().sort((a, c) => (+c.off || 0) - (+a.off || 0)), cp = cps[0], off = cp ? Math.min(+cp.off || 0, cost) : 0, eff = cost - off;
+    const ls = lockStatus(r, kid), isGoal = X.get('goals', {})[kid] === r.id;
+    const goalBtn = isGoal ? '✕ Remove goal' : '🎯 Make this my goal';
+    const setGoal = () => X.merge('goals', { [kid]: isGoal ? null : r.id }).then(() => { renderQuests(); renderHome(); toast(isGoal ? 'Goal removed' : `🎯 Goal set: ${r.title}`); });
+    if (ls.locked) {
+      const v = await Modal.confirm({ icon: '🔒', title: r.title, body: `Unlock it with streaks:<br><b>${esc(lockLabel(X.get('locks', {})[r.id]).replace('🔒 ', ''))}</b><br><br>So far: ${ls.text}`, ok: goalBtn, cancel: 'OK' });
+      if (v === true) setGoal(); return;
     }
+    if (bal < eff) {
+      const v = await Modal.confirm({ icon: r.icon || '🎁', title: r.title, body: `${esc(kid)} needs <b>${eff - bal} more points</b> for this one.`, ok: goalBtn, cancel: 'OK' });
+      if (v === true) setGoal(); return;
+    }
+    const v = await Modal.confirm({ icon: r.icon || '🎁', title: `Redeem ${r.title}?`, body: off ? `Costs <b>${cost}</b> − 🎟️ <b>${off}</b> coupon = <b>${eff} points</b>, once a parent approves it.` : `This will use <b>${esc(r.cost)} points</b> once a parent approves it.`, ok: 'Redeem', alt: goalBtn });
+    if (v === 'alt') { setGoal(); return; }
+    if (v !== true) return;
+    try {
+      const res = await App.backend.post('redeemReward', { rewardId: r.id, member: kid });
+      if (off && cp) {
+        try {
+          await App.backend.post('adjustPoints', { member: kid, points: off, reason: `🎟️ Coupon on ${r.title}`, pin: cfg('pin', '') });
+          const list = X.get('coupons', []).map(c => c && c.id === cp.id ? Object.assign({}, c, { used: new Date().toISOString(), used_on: res && res.id || '', reward: r.title }) : c);
+          await X.op({ op: 'set', key: 'coupons', value: list });
+        } catch (e2) { toast('Coupon not applied: ' + e2.message, true); }
+      }
+      if (X.get('locks', {})[r.id]) X.merge('unlocked', { [kid + '|' + r.id]: null });
+      if (isGoal) X.merge('goals', { [kid]: null });
+      toast('Sent to a parent for approval!');
+      await refresh(true);
+    } catch (e) { toast('That didn’t save: ' + (e.message || e), true); }
   });
 
   // PIN pads (parent zone, and the to-do screen when todos_require_pin is on)
@@ -2276,6 +2880,12 @@ function bind() {
     const qw = e.target.closest('[data-qwho]'); if (qw) { QE.state.who = qw.dataset.qwho; QE.draw(); return; }
     const qr = e.target.closest('[data-qrep]'); if (qr) { QE.state.repeat = qr.dataset.qrep; QE.draw(); return; }
     const qa = e.target.closest('[data-qact]'); if (qa) { QE.state.active = qa.dataset.qact === '1'; QE.draw(); return; }
+    const qx = e.target.closest('[data-qauto]'); if (qx) { QE.state.auto = qx.dataset.qauto === '1'; QE.draw(); return; }
+    const lk = e.target.closest('[data-lk]'); if (lk) { const t = lk.dataset.lk; QE.state.lock = !t ? null : t === 'quest' ? { type: 'quest', quest: '', n: 7 } : { type: 'variety', count: 3, n: 7, min: 0 }; QE.draw(); return; }
+    const lq = e.target.closest('[data-lkq]'); if (lq) { QE.state.lock.quest = lq.dataset.lkq; QE.draw(); return; }
+    const ln = e.target.closest('[data-lkn]'); if (ln) { QE.state.lock.n = +ln.dataset.lkn; QE.draw(); return; }
+    const lc = e.target.closest('[data-lkc]'); if (lc) { QE.state.lock.count = +lc.dataset.lkc; QE.draw(); return; }
+    const lm = e.target.closest('[data-lkm]'); if (lm) { QE.state.lock.min = +lm.dataset.lkm; QE.draw(); return; }
   });
   $('#disp-ed').addEventListener('click', e => {
     if (e.target.id === 'disp-ed' || e.target.closest('#de-cancel')) { DE.close(); return; }
@@ -2293,7 +2903,18 @@ function bind() {
     if (e.target.closest('.pinpad')) return;
     if (e.target.closest('#parent-lockbtn')) { App.unlocked = false; renderParent(); renderTodos(); return; }
     const pt = e.target.closest('.ptab'); if (pt) { App.ptab = pt.dataset.ptab; renderParent(); return; }
-    const rv = e.target.closest('[data-review]'); if (rv) { rv.closest('.qrow').style.opacity = .4; act('reviewQueue', { id: rv.dataset.id, status: rv.dataset.review, pin: App.pinValue }, { toast: rv.dataset.review === 'approved' ? 'Approved ✓' : 'Rejected' }); return; }
+    const rv = e.target.closest('[data-review]'); if (rv) {
+      rv.closest('.qrow').style.opacity = .4;
+      const id = rv.dataset.id, rejecting = rv.dataset.review === 'rejected';
+      const cp = rejecting && X.get('coupons', []).find(c => c && c.used_on === id);
+      await act('reviewQueue', { id, status: rv.dataset.review, pin: App.pinValue }, { toast: rejecting ? 'Rejected' : 'Approved ✓' });
+      if (cp) {   // reward rejected: undo the coupon credit and give the coupon back
+        try { await App.backend.post('adjustPoints', { member: cp.member, points: -Math.abs(+cp.off), reason: '🎟️ Coupon returned', pin: App.pinValue });
+          await X.op({ op: 'set', key: 'coupons', value: X.get('coupons', []).map(c => c && c.id === cp.id ? Object.assign({}, c, { used: '', used_on: '', reward: '' }) : c) });
+          await refresh(false); toast('Coupon given back 🎟️'); } catch (e2) { toast('Could not return the coupon: ' + e2.message, true); }
+      }
+      return;
+    }
     const dr = e.target.closest('.drow'); if (dr) {
       const cur = dinnerFor(new Date(dr.dataset.date + 'T12:00:00'));
       const v = await KB.open({ title: 'Dinner on ' + dr.dataset.date, initial: cur ? cur.meal : '', placeholder: 'What’s for dinner?' });
@@ -2334,6 +2955,21 @@ function bind() {
     if (e.target.closest('#set-photos')) { toast('Scanning photos…'); await Photos.rescan(); renderParent(); toast(Photos.list.length ? `${Photos.list.length} photos ready` : (Photos.note || 'No photos found'), !Photos.list.length); return; }
     if (e.target.closest('#set-reset')) { App.backend.reset(); refresh(true); toast('Demo data reset'); return; }
     if (e.target.closest('#set-reload')) { location.reload(); return; }
+    const sb = e.target.closest('[data-sys]');
+    if (sb) {
+      const a = sb.dataset.sys;
+      const info = {
+        restart_app: { icon: '↻', title: 'Restart the board app?', body: 'Closes and reopens the wall screen. Takes about 10 seconds.', ok: 'Restart' },
+        exit_app: { icon: '✕', title: 'Close the board app?', body: 'Leaves full screen and shows the Pi desktop. It reopens on its own in 1 hour, or tap <b>Restart app</b>.', ok: 'Close it' },
+        reboot: { icon: '⏻', title: 'Reboot the Pi?', body: 'The whole Pi restarts. The board is back in about a minute.', ok: 'Reboot', okClass: 'bad' },
+      }[a];
+      if (!(await Modal.confirm(info))) return;
+      try {
+        const r = await fetch('/api/system', { method: 'POST', body: JSON.stringify({ action: a }) });
+        const j = await r.json(); toast(j.message || (j.ok ? 'Done' : 'Failed'), !j.ok);
+      } catch (_) { toast('Could not reach the Pi', true); }
+      return;
+    }
     if (e.target.closest('#set-fs')) { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); return; }
   });
 
@@ -2361,8 +2997,11 @@ async function boot() {
   App.backend = url ? new SheetsBackend(url) : new DemoBackend();
   bind();
   tickClock(); setInterval(tickClock, 1000);
-  showScreen(CFG.HOME_SCREEN || 'home');
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('calview')) Cal.view = qs.get('calview');
+  showScreen(qs.get('screen') || CFG.HOME_SCREEN || 'home');
   $('#smart').innerHTML = `<div class="kicker">Loading</div><div class="big"><span class="spin"></span> ${url ? 'Reading your Google Sheet…' : 'Starting demo…'}</div>`;
+  await X.load();
   await refresh(true);
   if (!App.state) {
     // Live backend failed on first load — fall back to demo so the screen is never blank
@@ -2373,9 +3012,28 @@ async function boot() {
   scheduleRefresh();
   fetch('/api/health', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { App.server = j; }).catch(() => {});
   loadWeather(); setInterval(loadWeather, 15 * 60000);
+  // Extras (Pi-side data): re-read every 20 s so phone changes show on the wall
+  setInterval(async () => { const before = JSON.stringify(X.d); await X.load(); if (JSON.stringify(X.d) !== before && App.state) { renderHomeSide(); renderQuests(); renderCalendar(); renderHome(); if (App.screen === 'parent') renderParent(); } }, 20000);
+  checkStreaks(); setInterval(checkStreaks, 5 * 60000);
   setInterval(() => { if (App.state) { renderHome(); Display.tick(); } }, 30000);
   Display.init();
   Photos.init();
+  keepAlive();
+}
+
+/* Keep the wall healthy over days of uptime:
+   - heartbeat so pi/watchdog.sh can tell if the page has frozen
+   - the server restarts the browser hourly when the board is idle */
+function keepAlive() {
+  if (isPhone()) return;
+  // The server restarts the browser every hour (pi/hourly-refresh.sh), but only
+  // when nobody is using the board: tell it how long since the last touch.
+  const beat = () => {
+    const busy = !!(KB.resolve || Modal.resolve || TE.state || GE.state || DE.state || TD.id);
+    fetch('/api/heartbeat', { method: 'POST', body: JSON.stringify({ idle: Math.round((Date.now() - lastTouch) / 1000), busy }) }).catch(() => {});
+  };
+  beat(); setInterval(beat, 30000);
+  document.addEventListener('pointerdown', () => setTimeout(beat, 50));
 }
 
 window.addEventListener('DOMContentLoaded', boot);

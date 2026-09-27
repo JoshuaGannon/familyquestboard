@@ -118,13 +118,6 @@ var TABS = {
     headers: ['date', 'meal', 'note'],
     seed: [],
   },
-  // Events and reminders added on the board itself (separate from Google
-  // Calendar). time blank = all day. repeat: '', daily, weekly, biweekly,
-  // monthly, yearly. kind: event | reminder.
-  Events: {
-    headers: ['id', 'title', 'date', 'time', 'kind', 'who', 'repeat', 'note', 'added_by', 'created_at'],
-    seed: [],
-  },
   Display: {
     // When the wall shows what. mode: photos | clock | off
     //   photos = full board with the photo slideshow
@@ -164,7 +157,7 @@ var HEADER_FG = '#ffffff';
 
 function setup() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var order = ['Config', 'Members', 'Quests', 'Rewards', 'Queue', 'Groceries', 'Dinner', 'Todos', 'Events', 'Display'];
+  var order = ['Config', 'Members', 'Quests', 'Rewards', 'Queue', 'Groceries', 'Dinner', 'Todos', 'Display'];
   order.forEach(function (name) {
     var def = TABS[name];
     var sheet = ss.getSheetByName(name);
@@ -207,9 +200,6 @@ function setup() {
   CalendarApp.getAllCalendars();
   DriveApp.getRootFolder();
   MailApp.getRemainingDailyQuota();
-  ScriptApp.getOAuthToken(); // photo thumbnails use UrlFetch with this token
-  var pf = findPhotoFolder(getConfig().photo_folder);
-  Logger.log(pf ? 'Photo folder found: ' + pf.getName() : 'Photo folder not found yet');
 
   SpreadsheetApp.getUi().alert(
     'Family Quest Board is set up!\n\n' +
@@ -231,7 +221,7 @@ function doGet(e) {
       case 'state':   out = getState(); break;
       case 'events':  out = { events: getEvents() }; break;
       case 'ping':    out = { ok: true, time: new Date().toISOString() }; break;
-      case 'photos':  out = listDrivePhotos(); break;
+      case 'photos':  out = { photos: listDrivePhotos() }; break;
       case 'photo':   out = getDrivePhoto(p.id); break;
       default: throw new Error('Unknown action: ' + action);
     }
@@ -269,8 +259,6 @@ function doPost(e) {
       case 'reviewQueue':    out = reviewQueue(body); break;
       case 'setDinner':      out = setDinner(body); break;
       case 'adjustPoints':   out = adjustPoints(body); break;
-      case 'saveEvent':      out = saveEvent(body); break;
-      case 'deleteEvent':    out = deleteEvent(body); break;
       case 'saveQuest':      out = saveQuest(body); break;
       case 'deleteQuest':    out = deleteQuest(body); break;
       case 'saveReward':     out = saveReward(body); break;
@@ -307,7 +295,6 @@ function getState() {
     queue: readTab('Queue'),
     dinner: readTab('Dinner'),
     todos: safeReadTab('Todos'),
-    local_events: safeReadTab('Events'),
     display: safeReadTab('Display'),
     events: getEvents(config),
   };
@@ -663,40 +650,6 @@ function deleteTodo(b) {
 }
 
 // ---------------------------------------------------------------------------
-// Board events / reminders (no PIN — anyone at the wall can add one)
-// ---------------------------------------------------------------------------
-
-function ensureTab(name) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (ss.getSheetByName(name)) return;
-  var def = TABS[name];
-  var sheet = ss.insertSheet(name);
-  sheet.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);
-  sheet.getRange(1, 1, 500, def.headers.length).setNumberFormat('@');
-  sheet.getRange(1, 1, 1, def.headers.length).setBackground(HEADER_BG).setFontColor(HEADER_FG).setFontWeight('bold');
-  sheet.setFrozenRows(1);
-}
-
-function saveEvent(b) {
-  ensureTab('Events');
-  var title = String(b.title || '').trim();
-  if (!title) throw new Error('Event needs a title');
-  var date = String(b.date || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Date must be yyyy-mm-dd');
-  var time = String(b.time || '').trim();
-  if (time && !/^\d{1,2}:\d{2}$/.test(time)) throw new Error('Time must look like 15:30');
-  if (time.length === 4) time = '0' + time;
-  var row = { title: title, date: date, time: time, kind: String(b.kind || 'event'), who: String(b.who || ''),
-    repeat: String(b.repeat || '').toLowerCase(), note: String(b.note || '') };
-  if (b.id && findRow('Events', b.id)) { updateRow('Events', b.id, row); return { ok: true, id: b.id }; }
-  row.id = uid(); row.added_by = String(b.by || 'Wall'); row.created_at = nowIso();
-  appendRow('Events', row);
-  return { ok: true, id: row.id };
-}
-
-function deleteEvent(b) { deleteRowById('Events', b.id); return { ok: true }; }
-
-// ---------------------------------------------------------------------------
 // Quests + rewards (parent-PIN protected). Repeat: once, daily, weekdays,
 // weekly, biweekly, monthly.
 // ---------------------------------------------------------------------------
@@ -779,61 +732,26 @@ function safeReadTab(name) {
 // Drive photo fallback (used only if the local photo server is not running)
 // ---------------------------------------------------------------------------
 
-// The Config key photo_folder can be a folder NAME ("Wall Photos"), a folder
-// ID, or the folder's URL from the browser bar. Photos come back as Drive's
-// own resized JPEG thumbnails (~1600px), so 4 MB phone shots and iPhone HEICs
-// both show up quickly on the wall.
-function findPhotoFolder(key) {
-  key = String(key || 'Wall Photos').trim();
-  var m = key.match(/[-\w]{25,}/);
-  if (m) { try { return DriveApp.getFolderById(m[0]); } catch (e) { /* not an id */ } }
-  var it = DriveApp.getFoldersByName(key);
-  if (it.hasNext()) return it.next();
-  // Case-insensitive fallback
-  var q = DriveApp.searchFolders("title contains '" + key.replace(/'/g, "\\'") + "' and trashed = false");
-  while (q.hasNext()) { var f = q.next(); if (f.getName().toLowerCase() === key.toLowerCase()) return f; }
-  return null;
-}
-
 function listDrivePhotos() {
   var cfg = getConfig();
-  var folder = findPhotoFolder(cfg.photo_folder);
-  if (!folder) return { photos: [], error: 'No Drive folder called "' + (cfg.photo_folder || 'Wall Photos') + '" — check the photo_folder value on the Config tab (a name, ID or link).' };
+  var folders = DriveApp.getFoldersByName(cfg.photo_folder || 'Wall Photos');
+  if (!folders.hasNext()) return [];
+  var files = folders.next().getFiles();
   var out = [];
-  var walk = function (dir, depth) {
-    var files = dir.getFiles();
-    while (files.hasNext()) {
-      var f = files.next();
-      var mime = f.getMimeType() || '';
-      if (mime.indexOf('image/') === 0 && !f.isTrashed()) out.push({ id: f.getId(), name: f.getName(), mime: mime, size: f.getSize() });
+  while (files.hasNext()) {
+    var f = files.next();
+    var mime = f.getMimeType();
+    if (mime && mime.indexOf('image/') === 0) {
+      out.push({ id: f.getId(), name: f.getName(), mime: mime, size: f.getSize() });
     }
-    if (depth < 2) { var subs = dir.getFolders(); while (subs.hasNext()) walk(subs.next(), depth + 1); }
-  };
-  walk(folder, 0);
-  return { photos: out, folder: folder.getName() };
+  }
+  return out;
 }
 
 function getDrivePhoto(id) {
-  // Ask Drive for a resized JPEG rather than shipping the original.
-  try {
-    var token = ScriptApp.getOAuthToken();
-    var meta = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?fields=thumbnailLink', {
-      headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
-    if (meta.getResponseCode() === 200) {
-      var link = JSON.parse(meta.getContentText()).thumbnailLink;
-      if (link) {
-        link = link.replace(/=s\d+(-c)?$/, '=s1600');
-        var img = UrlFetchApp.fetch(link, { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
-        if (img.getResponseCode() === 200) {
-          var blob = img.getBlob();
-          return { id: id, mime: blob.getContentType() || 'image/jpeg', data: Utilities.base64Encode(blob.getBytes()) };
-        }
-      }
-    }
-  } catch (e) { /* fall through to the original file */ }
   var f = DriveApp.getFileById(id);
-  var b = f.getBlob();
-  return { id: id, mime: b.getContentType(), data: Utilities.base64Encode(b.getBytes()) };
+  var blob = f.getBlob();
+  return { id: id, mime: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()) };
 }
 
 // ---------------------------------------------------------------------------
