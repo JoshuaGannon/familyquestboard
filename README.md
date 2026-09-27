@@ -398,21 +398,23 @@ address) in the phone browser → Android/Chrome: menu ⋮ → *Add to Home scre
 / *Install app*; iPhone/Safari: Share → *Add to Home Screen*. It opens full
 screen with no browser bars.
 
-## 💬 Messages (kids → parents, with one-tap replies)
+## 💬 Messages
 
-The 💬 screen is a family chat. Kids pick their name, who it's to, and tap a
-quick message (or type one, emoji welcome). **Each parent has their own ntfy
-topic** (Parents → Settings → Messages → *Dad's phone*, *Mom's phone*; each
-parent subscribes to their own in the ntfy app), so "Mia → Dad" only buzzes
-Dad and his one-tap reply shows as "Dad: 🏃 On my way". Parents can message
-each other the same way. The notification has three buttons:
-👍 Yes · 👎 Not now · 🏃 On my way. Tapping one posts the reply on the wall,
-which chimes, shows a banner and wakes the screen. Tapping the notification
-itself opens the chat on your phone (signed in via the installed app) for a
-typed reply. Limit: 3 phone alerts per kid per minute — anything beyond that
-still shows on the wall. The chat keeps a week of history on the Pi;
-Settings → Messages → Clear wipes it. Needs internet access set up (the reply
-buttons call `https://<you>.duckdns.org`).
+A small messaging app inside the board: one conversation per pair of people
+(Ava & Dad, Mom & Dad…) plus a **Family** group. On the wall, tap a
+conversation (or ＋ New), pick who's speaking, then tap a quick message or
+type one. On a phone the app asks once who you are; from then on you only see
+your own conversations and everything you send is from you.
+
+A message to a parent buzzes **that parent's phone** (Parents → Settings →
+Messages → each parent's ntfy topic; subscribe to your own in the ntfy app).
+Tapping the notification opens that conversation in the installed app; the
+👍 / 👎 / 🏃 buttons on the notification reply without opening anything, and
+show on the wall under your name. New messages chime and banner on the wall
+and wake the screen. Limit: 3 buzzes per person per minute. Settings →
+Messages has the **on/off switch** (hides the screen everywhere), the
+lock-screen text toggle, and Clear history. Needs internet access set up for
+the phone side.
 
 ## Streak prizes (per quest)
 

@@ -344,23 +344,54 @@
   .srow { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--card); margin: 6px 0; font-size: 17px; }
   .srow .grow { flex: 1; }
   .sdraft { border: 2px dashed var(--line); border-radius: 14px; padding: 10px 12px; margin-top: 8px; }
-  .msg-wrap { display: grid; grid-template-columns: 1fr 460px; gap: 20px; height: calc(100% - 70px); min-height: 0; }
-  .msg-thread { background: var(--panel); border-radius: var(--radius); padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-  .msg-day { align-self: center; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 6px 0; }
-  .bub { max-width: 78%; display: flex; gap: 10px; align-items: flex-end; }
-  .bub .av { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; flex: none; background: var(--card-hi); }
-  .bub .bx { background: var(--card-hi); border-radius: 18px 18px 18px 6px; padding: 10px 14px; }
-  .bub .who { font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 2px; }
-  .bub .tx { font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
-  .bub .tm { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .bub.parent { align-self: flex-end; flex-direction: row-reverse; }
-  .bub.parent .bx { background: rgba(96,165,250,.22); border-radius: 18px 18px 6px 18px; }
-  .bub.new .bx { box-shadow: 0 0 0 3px var(--accent); }
-  .msg-compose { background: var(--panel); border-radius: var(--radius); padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
-  .msg-compose label { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
-  .msg-compose .draft { min-height: 70px; font-size: 20px; }
-  .msg-banner { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 70; background: var(--panel-solid); border: 3px solid var(--accent); border-radius: 22px; padding: 14px 24px; font-size: 26px; font-weight: 700; box-shadow: var(--shadow); display: none; max-width: 80vw; }
+  /* ---------- Messages (conversations) ---------- */
+  .chat { display: grid; grid-template-columns: 340px 1fr; gap: 16px; height: calc(100% - 64px); min-height: 0; }
+  .chat-list { background: var(--panel); border-radius: var(--radius); overflow-y: auto; min-height: 0; display: flex; flex-direction: column; }
+  .chat-list .clhead { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .chat-list .clhead button { background: var(--card-hi); border-radius: 10px; padding: 6px 12px; font-size: 14px; font-weight: 700; }
+  .convo { display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-align: left; width: 100%; border-left: 4px solid transparent; }
+  .convo:hover { background: rgba(255,255,255,.03); }
+  .convo.on { background: var(--card); border-left-color: var(--accent); }
+  .convo .avs { display: flex; flex: none; }
+  .convo .av, .thread-head .av, .bub .av { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: var(--card-hi); flex: none; }
+  .convo .avs .av + .av { margin-left: -14px; outline: 3px solid var(--panel-solid); }
+  .convo .ct { flex: 1; min-width: 0; }
+  .convo .cn { font-weight: 800; font-size: 17px; display: flex; justify-content: space-between; gap: 8px; }
+  .convo .cn .tm { font-weight: 600; font-size: 12px; color: var(--muted); }
+  .convo .cp { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .convo.unread .cp { color: var(--text); font-weight: 600; }
+  .convo .dot { width: 10px; height: 10px; border-radius: 5px; background: var(--accent); flex: none; }
+  .chat-pane { background: var(--panel); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .thread-head { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .thread-head .tn { font-weight: 800; font-size: 19px; }
+  .thread-head .ts { font-size: 13px; color: var(--muted); }
+  .thread-head .back { display: none; background: var(--card); border-radius: 12px; padding: 8px 12px; font-weight: 700; }
+  .thread { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .msg-day { align-self: center; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 8px 0 2px; }
+  .bub { max-width: 72%; display: flex; gap: 10px; align-items: flex-end; }
+  .bub .av { width: 34px; height: 34px; font-size: 19px; border-radius: 11px; }
+  .bub .bx { background: var(--card-hi); border-radius: 18px 18px 18px 5px; padding: 9px 14px; }
+  .bub .who { font-size: 11px; font-weight: 800; color: var(--muted); margin-bottom: 1px; }
+  .bub .tx { font-size: 19px; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .bub .tm { font-size: 11px; color: var(--muted); margin-top: 2px; text-align: right; }
+  .bub.me { align-self: flex-end; flex-direction: row-reverse; }
+  .bub.me .bx { background: rgba(96,165,250,.28); border-radius: 18px 18px 5px 18px; }
+  .bub.me .av { display: none; }
+  .bub.new .bx { box-shadow: 0 0 0 2px var(--accent); }
+  .composer { border-top: 1px solid var(--line); padding: 10px 14px 14px; }
+  .composer .as { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .composer .as button { background: var(--card); border-radius: 10px; padding: 5px 10px; font-weight: 700; font-size: 14px; }
+  .composer .as button.on { background: var(--info); color: #06213f; }
+  .composer .quick { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; scrollbar-width: none; }
+  .composer .quick button { flex: none; background: var(--card); border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 15px; white-space: nowrap; }
+  .composer .box { display: flex; gap: 8px; align-items: flex-end; }
+  .composer .box .field { flex: 1; min-height: 52px; border-radius: 26px; font-size: 18px; padding: 12px 18px; }
+  .composer .box .field.ph { color: var(--muted); }
+  .composer .box .send { width: 52px; height: 52px; border-radius: 26px; background: var(--accent); color: #1a1200; font-size: 22px; font-weight: 900; flex: none; }
+  .chat-empty { flex: 1; display: grid; place-items: center; color: var(--muted); text-align: center; padding: 30px; font-size: 18px; }
+  .msg-banner { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 70; background: var(--panel-solid); border: 3px solid var(--accent); border-radius: 22px; padding: 14px 24px; font-size: 24px; font-weight: 700; box-shadow: var(--shadow); display: none; max-width: 80vw; cursor: pointer; }
   .msg-banner.on { display: block; }
+  .msg-banner small { display: block; font-size: 14px; color: var(--muted); font-weight: 600; }
   .prizebox { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.35); border-radius: 16px; padding: 10px 14px; margin-bottom: 14px; }
   .quest .auto { font-size: 12px; color: var(--good); font-weight: 700; }
   .goal { margin-top: 10px; }
@@ -585,9 +616,12 @@
   /* ---------- Phone / remote mode (narrow screens) ---------- */
   @media (max-width: 900px) {
     .phone-only { display: inline-flex; }
-    .msg-wrap { grid-template-columns: 1fr; height: auto; }
-    .msg-thread { max-height: 55vh; }
-    .bub { max-width: 92%; }
+    .chat { grid-template-columns: 1fr; height: calc(100dvh - 150px); }
+    .chat.open .chat-list { display: none; }
+    .chat:not(.open) .chat-pane { display: none; }
+    .thread-head .back { display: inline-block; }
+    .bub { max-width: 88%; }
+    .composer .as { display: none; }
     :root { font-size: 16px; --radius: 16px; }
     body { overflow: auto; }
     #app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100dvh; }
@@ -707,7 +741,7 @@
     <button class="navbtn" data-screen="groceries"><span class="ico">🛒</span><span class="lbl">Groceries</span><span class="badge" id="badge-groc"></span></button>
     <button class="navbtn" data-screen="quests"><span class="ico">⚔️</span><span class="lbl">Quests</span></button>
     <button class="navbtn" data-screen="todo"><span class="ico">📝</span><span class="lbl">To-do</span><span class="badge" id="badge-todo"></span></button>
-    <button class="navbtn" data-screen="messages"><span class="ico">💬</span><span class="lbl">Messages</span><span class="badge" id="badge-msg"></span></button>
+    <button class="navbtn" id="nav-msg" data-screen="messages"><span class="ico">💬</span><span class="lbl">Messages</span><span class="badge" id="badge-msg"></span></button>
     <div class="spacer"></div>
     <button class="navbtn" data-screen="parent"><span class="ico">🔒</span><span class="lbl">Parents</span><span class="badge" id="badge-queue"></span></button>
     <div class="pill" id="mode-pill">DEMO</div>
@@ -787,10 +821,10 @@
 
     <!-- MESSAGES -->
     <section class="screen" id="screen-messages">
-      <h1>💬 Messages <small id="msg-sub">the family chat · parents get it on their phones</small></h1>
-      <div class="msg-wrap">
-        <div class="msg-thread" id="msg-thread"></div>
-        <div class="msg-compose" id="msg-compose"></div>
+      <h1>💬 Messages <small id="msg-sub"></small></h1>
+      <div class="chat" id="chat">
+        <div class="chat-list" id="chat-list"></div>
+        <div class="chat-pane" id="chat-pane"></div>
       </div>
     </section>
 
@@ -1306,64 +1340,98 @@ const Outbox = {
   },
 };
 
-/* ---------- Messages ---------- */
-const KID_QUICK = ['I’m hungry 🍎', 'Can I have screen time? 📺', 'Come here please 🙏', 'I’m done with homework ✅', 'I need help 🆘', 'I love you ❤️'];
-const PARENT_QUICK = ['👍 Yes', '👎 Not now', '🏃 On my way', 'Dinner’s ready! 🍽️', 'Come here please', 'Love you ❤️'];
+/* ---------- Messages: one thread per pair of people, plus the Family group ---------- */
+const KID_QUICK = ['I’m hungry 🍎', 'Can I have screen time? 📺', 'Come here please 🙏', 'I’m done with homework ✅', 'I need help 🆘', 'Love you ❤️'];
+const PARENT_QUICK = ['👍 Yes', '👎 Not now', '🏃 On my way', 'Dinner’s ready 🍽️', 'Come here please', 'Love you ❤️'];
+const FAMILY = 'family';
+const convoId = (a, b) => (a === FAMILY || b === FAMILY) ? FAMILY : [a, b].sort().join('|');
 const Msg = {
-  draft: { from: '', to: 'parents', text: '' },
-  lastSeenKey: 'fqb_msg_seen', meKey: 'fqb_me', knownIds: null,
+  cur: null, draft: {}, senderKey: 'fqb_me', seenKey: 'fqb_msg_seen2', knownIds: null, bt: null,
+  enabled() { return String(cfg('messages_enabled', 'TRUE')).toUpperCase() !== 'FALSE'; },
   all() { return X.get('messages', []).filter(m => m && m.text && m.at).slice().sort((a, b) => a.at < b.at ? -1 : 1); },
-  recent() { const cut = Date.now() - 7 * 86400000; return this.all().filter(m => new Date(m.at).getTime() > cut); },
-  seen() { try { return localStorage.getItem(this.lastSeenKey) || ''; } catch (_) { return ''; } },
-  markSeen() { const a = this.all(); if (a.length) try { localStorage.setItem(this.lastSeenKey, a[a.length - 1].at); } catch (_) {} this.badge(); },
-  me() { try { return localStorage.getItem(this.meKey) || ''; } catch (_) { return ''; } },
-  unread() { const s = this.seen(); return this.all().filter(m => m.at > s && m.from !== this.me()).length; },
-  badge() { const n = X.ok ? this.unread() : 0; const b = $('#badge-msg'); if (b) { b.textContent = n; b.classList.toggle('on', n > 0); } },
-  isKid(name) { return members('kid').some(k => k.name === name); },
-  // Which phones get a push: each recipient parent's own topic (falls back to the
-  // shared topic). Kids have no phone, so messages to kids only show on the wall.
-  topicFor(name) { return String(cfg('msg_topic_' + name, '') || cfg('notify_msg_topic', '')).trim(); },
-  targets(from, to) {
-    const parents = members('parent').map(p => p.name).filter(n => n !== from);
-    const who = to === 'parents' ? parents : parents.includes(to) ? [to] : [];
-    const seen = {}; const out = [];
-    for (const n of who) {
-      const t = this.topicFor(n); if (!t) continue;
-      if (seen[t]) { seen[t].as = 'Parent'; continue; }   // two parents sharing one topic: reply can't tell who
-      seen[t] = { topic: t, as: n }; out.push(seen[t]);
-    }
+  // Old rows addressed "parents"/"all" belong to the Family group
+  cid(m) { return convoId(m.from, (m.to === 'parents' || m.to === 'all' || !m.to) ? FAMILY : m.to); },
+  me() { try { return localStorage.getItem(this.senderKey) || ''; } catch (_) { return ''; } },
+  setMe(n) { try { localStorage.setItem(this.senderKey, n); } catch (_) {} },
+  seen() { try { return JSON.parse(localStorage.getItem(this.seenKey) || '{}'); } catch (_) { return {}; } },
+  markSeen(cid) { const s = this.seen(); const last = this.thread(cid).slice(-1)[0]; if (last) { s[cid] = last.at; try { localStorage.setItem(this.seenKey, JSON.stringify(s)); } catch (_) {} } this.badge(); },
+  isKid(n) { return members('kid').some(k => k.name === n); },
+  isParent(n) { return members('parent').some(k => k.name === n); },
+  // On a phone you are one person; on the wall everyone shares it
+  mine(cid) { const me = isPhone() ? this.me() : ''; return !me || cid === FAMILY || cid.split('|').includes(me); },
+  thread(cid) { return this.all().filter(m => this.cid(m) === cid); },
+  convos() {
+    const map = {};
+    for (const m of this.all()) { const c = this.cid(m); (map[c] = map[c] || { id: c, msgs: [] }).msgs.push(m); }
+    if (!map[FAMILY]) map[FAMILY] = { id: FAMILY, msgs: [] };
+    const seen = this.seen(), me = isPhone() ? this.me() : '';
+    return Object.values(map).filter(c => this.mine(c.id)).map(c => {
+      const last = c.msgs[c.msgs.length - 1];
+      const unread = c.msgs.filter(m => m.at > (seen[c.id] || '') && m.from !== me).length;
+      return Object.assign(c, { last, unread, at: last ? last.at : '' });
+    }).sort((a, b) => (b.at || '') < (a.at || '') ? -1 : 1);
+  },
+  people(cid) { return cid === FAMILY ? members().map(m => m.name) : cid.split('|'); },
+  title(cid) { if (cid === FAMILY) return 'Family'; const me = isPhone() ? this.me() : ''; const ps = cid.split('|'); return me && ps.includes(me) ? ps.find(p => p !== me) : ps.join(' & '); },
+  avatars(cid) {
+    const mem = (n) => members().find(x => x.name === n) || {};
+    const who = cid === FAMILY ? members().slice(0, 3).map(m => m.name) : (isPhone() && this.me() ? [this.title(cid)] : cid.split('|'));
+    return `<span class="avs">${who.map(n => `<span class="av" style="${mem(n).color ? `background:${esc(mem(n).color)}` : ''}">${esc(mem(n).emoji || '👤')}</span>`).join('')}</span>`;
+  },
+  unreadTotal() { return X.ok && this.enabled() ? this.convos().reduce((a, c) => a + c.unread, 0) : 0; },
+  badge() { const n = this.unreadTotal(); const b = $('#badge-msg'); if (b) { b.textContent = n; b.classList.toggle('on', n > 0); } },
+  // Who can speak in this thread from this device
+  senders(cid) {
+    if (isPhone() && this.me()) return [this.me()];
+    return cid === FAMILY ? members().map(m => m.name) : cid.split('|');
+  },
+  sender(cid) {
+    const ok = this.senders(cid); const d = this.draft[cid] || {};
+    if (d.as && ok.includes(d.as)) return d.as;
+    // Wall default: the kid in the pair (kids use the wall), else the first person
+    return ok.find(n => this.isKid(n)) || ok[0];
+  },
+  recipient(cid, from) { return cid === FAMILY ? FAMILY : cid.split('|').find(p => p !== from); },
+  // Phones to buzz: every parent in the thread except the sender, on their own topic
+  topicFor(n) { return String(cfg('msg_topic_' + n, '') || cfg('notify_msg_topic', '')).trim(); },
+  targets(cid, from) {
+    const who = this.people(cid).filter(n => n !== from && this.isParent(n));
+    const seen = {}, out = [];
+    for (const n of who) { const t = this.topicFor(n); if (!t) continue; if (seen[t]) { seen[t].as = 'Parent'; continue; } seen[t] = { topic: t, as: n }; out.push(seen[t]); }
     return out;
   },
-  // Called whenever extras reload: spot messages that arrived since last look
+  open(cid) { this.cur = cid; renderMessages(); this.markSeen(cid); $('#chat').classList.add('open'); },
+  back() { this.cur = null; $('#chat').classList.remove('open'); renderMessages(); },
+  async send(text) {
+    const cid = this.cur; if (!cid) return;
+    const d = this.draft[cid] = this.draft[cid] || {}; text = String(text || d.text || '').trim();
+    if (!text) { toast('Type a message first', true); return; }
+    const from = this.sender(cid), to = this.recipient(cid, from);
+    try {
+      const r = await fetch('/api/msg', { method: 'POST', body: JSON.stringify({ from, to, text, kind: this.isKid(from) ? 'kid' : 'parent', targets: this.targets(cid, from), fulltext: cfg('msg_fulltext', 'TRUE'), cid }) });
+      const j = await r.json(); if (!j.ok) throw new Error(j.error || 'not sent');
+      d.text = ''; await X.load(); this.knownIds = new Set(this.all().map(m => m.id)); renderMessages(); this.markSeen(cid);
+      if (j.limited) toast('Sent — phone alerts paused for a minute (lots of messages)');
+    } catch (e) { toast('Couldn’t send: ' + (e.message || e), true); }
+  },
+  // Called when the message store changes: announce anything new that isn't ours
   check() {
     const ids = new Set(this.all().map(m => m.id));
     if (this.knownIds) {
-      const fresh = this.all().filter(m => !this.knownIds.has(m.id) && m.from !== this.me());
+      const me = isPhone() ? this.me() : '';
+      const fresh = this.all().filter(m => !this.knownIds.has(m.id) && m.from !== me && this.mine(this.cid(m)));
       if (fresh.length) this.announce(fresh[fresh.length - 1]);
     }
     this.knownIds = ids; this.badge();
-    if (App.screen === 'messages') { renderMessages(); this.markSeen(); }
+    if (App.screen === 'messages') { renderMessages(); if (this.cur) this.markSeen(this.cur); }
   },
   announce(m) {
-    // On the wall: wake the screen, chime, and show who said what
     if (!isPhone()) { try { Display.wake(); } catch (_) {} }
-    const who = members().find(x => x.name === m.from);
-    const el = $('#msg-banner'); el.textContent = `💬 ${who && who.emoji ? who.emoji + ' ' : ''}${m.from}: ${m.text}`;
-    el.classList.add('on'); clearTimeout(this.bt); this.bt = setTimeout(() => el.classList.remove('on'), 9000);
+    if (isPhone() && App.screen === 'messages' && this.cur === this.cid(m)) { chime(); return; }   // phone: already reading it
+    const who = members().find(x => x.name === m.from) || {};
+    const el = $('#msg-banner'); el.innerHTML = `💬 ${esc(who.emoji || '')} ${esc(m.from)}: ${esc(m.text)}<small>tap to open</small>`;
+    el.dataset.cid = this.cid(m); el.classList.add('on'); clearTimeout(this.bt); this.bt = setTimeout(() => el.classList.remove('on'), 10000);
     chime();
-  },
-  async send(text) {
-    const d = this.draft; text = String(text || d.text || '').trim();
-    if (!text) { toast('Type or pick a message first', true); return; }
-    if (!d.from) { toast('Tap who’s sending first', true); return; }
-    const kid = this.isKid(d.from);
-    try {
-      const r = await fetch('/api/msg', { method: 'POST', body: JSON.stringify({ from: d.from, to: d.to, text, kind: kid ? 'kid' : 'parent', targets: this.targets(d.from, d.to), fulltext: cfg('msg_fulltext', 'TRUE') }) });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || 'not sent');
-      d.text = ''; await X.load(); this.knownIds = new Set(this.all().map(m => m.id)); renderMessages(); this.markSeen();
-      toast(j.limited ? 'Sent to the wall 💬 (phone alerts paused for a minute — lots of messages!)' : j.pushed ? `Sent 💬 — ${d.to === 'parents' ? 'Mom & Dad' : d.to} got it on their phone` : 'Sent 💬');
-    } catch (e) { toast('Couldn’t send: ' + (e.message || e), true); }
   },
 };
 let audioCtx;
@@ -1378,31 +1446,43 @@ function chime() {
     });
   } catch (_) {}
 }
+const relTime = (iso) => { const d = new Date(iso), now = new Date(); if (dayKey(d) === dayKey(now)) return fmtTime(d); const diff = (now - d) / 86400000; return diff < 7 ? DAYS[d.getDay()] : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
 function renderMessages() {
   if (!App.state) return;
-  const th = $('#msg-thread'), co = $('#msg-compose');
-  if (!X.ok) { th.innerHTML = '<div class="empty">Messages are stored on the Pi and need its server running.</div>'; co.innerHTML = ''; return; }
-  const seen = Msg.seen(); let lastDay = '';
-  const list = Msg.recent();
-  th.innerHTML = list.length ? list.map(m => {
+  const list = $('#chat-list'), pane = $('#chat-pane'), sub = $('#msg-sub');
+  if (!Msg.enabled()) { list.innerHTML = ''; pane.innerHTML = '<div class="chat-empty">Messages are turned off.<br><span style="font-size:14px">Parents → Settings → Messages</span></div>'; sub.textContent = ''; return; }
+  if (!X.ok) { list.innerHTML = ''; pane.innerHTML = '<div class="chat-empty">Messages live on the Pi and need its server running.</div>'; return; }
+  const me = isPhone() ? Msg.me() : '';
+  if (isPhone() && !me) { // first time on this phone: who are you?
+    list.innerHTML = ''; $('#chat').classList.add('open');
+    pane.innerHTML = `<div class="chat-empty"><div><div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">Who’s using this phone?</div><div style="margin-bottom:16px">Messages you send will come from them.</div><div class="seg" style="justify-content:center">${members().map(m => `<button data-setme="${esc(m.name)}">${esc(m.emoji || '👤')} ${esc(m.name)}</button>`).join('')}</div></div></div>`;
+    sub.textContent = ''; return;
+  }
+  sub.innerHTML = me ? `you’re <b>${esc(me)}</b> · <a href="#" data-changeme style="color:var(--muted)">change</a>` : 'tap a conversation · parents get a buzz on their phones';
+  const convos = Msg.convos();
+  list.innerHTML = `<div class="clhead"><span>Conversations</span><button data-newchat>＋ New</button></div>` + convos.map(c => `<button class="convo ${c.id === Msg.cur ? 'on' : ''} ${c.unread ? 'unread' : ''}" data-convo="${esc(c.id)}">${Msg.avatars(c.id)}<span class="ct"><span class="cn"><span>${esc(Msg.title(c.id))}</span>${c.last ? `<span class="tm">${esc(relTime(c.last.at))}</span>` : ''}</span><span class="cp">${c.last ? `${c.id === FAMILY || !me ? esc(c.last.from) + ': ' : c.last.from === me ? 'You: ' : ''}${esc(c.last.text)}` : 'No messages yet'}</span></span>${c.unread ? '<span class="dot"></span>' : ''}</button>`).join('');
+  const cid = Msg.cur;
+  if (!cid) { pane.innerHTML = `<div class="chat-empty"><div>💬<br>Pick a conversation, or tap <b>＋ New</b> to message someone.</div></div>`; $('#chat').classList.remove('open'); return; }
+  const msgs = Msg.thread(cid), seen = Msg.seen()[cid] || '', from = Msg.sender(cid), d = Msg.draft[cid] || {};
+  let lastDay = '';
+  const bubbles = msgs.map(m => {
     const mem = members().find(x => x.name === m.from) || {}; const t = new Date(m.at); const dk = dayKey(t);
     const day = dk !== lastDay ? `<div class="msg-day">${dk === dayKey(new Date()) ? 'Today' : t.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</div>` : ''; lastDay = dk;
-    const toTxt = m.to && m.to !== 'all' && m.to !== 'parents' ? ` → ${esc(m.to)}` : m.to === 'parents' ? ' → Mom & Dad' : '';
-    return day + `<div class="bub ${m.kind === 'parent' ? 'parent' : 'kid'} ${m.at > seen && m.from !== Msg.me() ? 'new' : ''}"><span class="av" style="${mem.color ? `background:${esc(mem.color)}` : ''}">${esc(mem.emoji || (m.kind === 'parent' ? '🧑' : '⭐'))}</span><div class="bx"><div class="who">${esc(m.from)}${toTxt}</div><div class="tx">${esc(m.text)}</div><div class="tm">${esc(fmtTime(t))}</div></div></div>`;
-  }).join('') : '<div class="empty">No messages yet.<br><span style="font-size:16px">Kids: pick your name, tap a message, send — Mom and Dad get it on their phones.</span></div>';
-  th.scrollTop = th.scrollHeight;
-  const d = Msg.draft;
-  if (!d.from) d.from = isPhone() ? (Msg.me() || (members('parent')[0] || {}).name || '') : (App.kid || (members('kid')[0] || {}).name || '');
-  const kid = Msg.isKid(d.from);
-  const toOpts = kid ? [['parents', '👨‍👩 Mom & Dad']].concat(members('parent').map(p => [p.name, `${p.emoji || ''} ${p.name}`]))
-    : [['all', '👨‍👩‍👧 Everyone']].concat(members('parent').filter(p => p.name !== d.from).map(p => [p.name, `${p.emoji || ''} ${p.name} 📲`]), members('kid').map(k => [k.name, `${k.emoji || ''} ${k.name}`]));
-  if (!toOpts.some(o => o[0] === d.to)) d.to = toOpts[0][0];
-  co.innerHTML = `<label>Who’s writing</label><div class="seg">${members().map(m => `<button data-mfrom="${esc(m.name)}" class="${d.from === m.name ? 'modeon' : ''}">${esc(m.emoji || '')} ${esc(m.name)}</button>`).join('')}</div>
-    <label>To</label><div class="seg">${toOpts.map(o => `<button data-mto="${esc(o[0])}" class="${d.to === o[0] ? 'modeon' : ''}">${esc(o[1])}</button>`).join('')}</div>
-    <label>Quick message — tap to send</label><div class="seg">${(kid ? KID_QUICK : PARENT_QUICK).map(q => `<button data-mquick="${esc(q)}">${esc(q)}</button>`).join('')}</div>
-    <label>Or write your own</label><button class="field draft ${d.text ? '' : 'ph'}" id="msg-type">${esc(d.text) || 'Tap to type… (😀 for emoji)'}</button>
-    <div class="row" style="margin-top:8px"><button class="btn primary" id="msg-send" style="flex:1">Send 💬</button></div>
-    ${Msg.targets(d.from, d.to).length ? '' : (kid || members('parent').some(p => p.name === d.to)) ? '<div class="note" style="font-size:13px">No phone alert for this one yet — set each parent’s topic in Parents → Settings → Messages.</div>' : '<div class="note" style="font-size:13px">Shows on the wall.</div>'}`;
+    const mine = me ? m.from === me : (!Msg.isKid(m.from) && cid !== FAMILY && false);
+    return day + `<div class="bub ${mine ? 'me' : ''} ${m.at > seen && m.from !== me ? 'new' : ''}"><span class="av" style="${mem.color ? `background:${esc(mem.color)}` : ''}">${esc(mem.emoji || '👤')}</span><div class="bx">${!mine ? `<div class="who">${esc(m.from)}</div>` : ''}<div class="tx">${esc(m.text)}</div><div class="tm">${esc(fmtTime(t))}</div></div></div>`;
+  }).join('');
+  const senders = Msg.senders(cid);
+  const quick = Msg.isKid(from) ? KID_QUICK : PARENT_QUICK;
+  const buzz = Msg.targets(cid, from);
+  pane.innerHTML = `<div class="thread-head"><button class="back" data-back>‹ Back</button>${Msg.avatars(cid)}<div><div class="tn">${esc(Msg.title(cid))}</div><div class="ts">${cid === FAMILY ? 'everyone sees this' : buzz.length ? `${esc(buzz.map(b => b.as).join(' & '))} gets a buzz on their phone` : Msg.people(cid).filter(n => n !== from).some(n => Msg.isParent(n)) ? 'no phone set for them yet (Parents → Settings → Messages)' : 'shows on the wall'}</div></div></div>
+    <div class="thread" id="thread">${bubbles || `<div class="chat-empty">Say hi 👋</div>`}</div>
+    <div class="composer">
+      ${senders.length > 1 ? `<div class="as">Sending as ${senders.map(n => `<button data-as="${esc(n)}" class="${n === from ? 'on' : ''}">${esc((members().find(x => x.name === n) || {}).emoji || '')} ${esc(n)}</button>`).join('')}</div>` : ''}
+      <div class="quick">${quick.map(q => `<button data-mquick="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div class="box"><button class="field ${d.text ? '' : 'ph'}" id="msg-type">${esc(d.text) || 'Message…'}</button><button class="send" id="msg-send" aria-label="Send">➤</button></div>
+    </div>`;
+  const th = $('#thread'); th.scrollTop = th.scrollHeight;
+  $('#chat').classList.add('open');
 }
 
 async function act(action, body, opts) {
@@ -1426,6 +1506,7 @@ function render() {
   if (!App.state) return;
   $('#family-name').textContent = cfg('family_name', '');
   renderHome(); renderCalendar(); renderGroceries(); renderQuests(); renderTodos(); renderParent(); Msg.badge();
+  $('#nav-msg').style.display = Msg.enabled() ? '' : 'none';
   if (App.screen === 'messages') renderMessages();
   const dueNow = (App.state.todos || []).filter(t => !isTrue(t.done) && t.due && t.due <= dayKey(new Date())).length;
   const bt = $('#badge-todo'); bt.textContent = dueNow; bt.classList.toggle('on', dueNow > 0);
@@ -1448,8 +1529,8 @@ function showScreen(name) {
   $$('#nav .navbtn').forEach(b => b.classList.toggle('active', b.dataset.screen === name));
   if (name === 'parent' && !App.unlocked) renderParent();
   if (name === 'todo' && App.state) renderTodos();
-  if (name === 'messages') { renderMessages(); Msg.markSeen(); }
-  if (isPhone() && name === 'messages') try { history.replaceState(null, '', '#messages'); } catch (_) {}
+  if (name === 'messages') { renderMessages(); if (Msg.cur) Msg.markSeen(Msg.cur); }
+  if (isPhone() && name === 'messages') try { history.replaceState(null, '', '#chat' + (Msg.cur ? '/' + encodeURIComponent(Msg.cur) : '')); } catch (_) {}
   if (name === 'home') tickClock();
 }
 
@@ -2647,12 +2728,11 @@ function renderParent() {
       <div class="seg" style="margin-top:8px">${[['quest', '✅ Quest finished'], ['help', '🙋 Needs help'], ['reward', '🎁 Reward requested'], ['streak', '🔥 Streak prize earned']].map(([k, l]) => `<button data-nev="${k}" class="${notifyOn(k) ? 'modeon' : ''}">${l}</button>`).join('')}<button class="btn sm ghost" id="notify-test" style="margin-left:auto">Send a test</button></div>
       <div class="note" style="font-size:14px">Texts: your number as an email — Verizon <code>5551234567@vtext.com</code>, AT&amp;T <code>@txt.att.net</code>, T-Mobile <code>@tmomail.net</code>. Several, comma-separated.</div>
       <label>Messages</label>
-      <div class="note">Messages from the 💬 screen push to the phone of whoever they’re for, with one-tap replies (👍 Yes · 👎 Not now · 🏃 On my way). Max 3 alerts per person per minute — extras still show on the wall.</div>
-      <div class="row">${members('parent').map(p => `<button class="btn sm" data-ncfg="msg_topic_${esc(p.name)}">${esc(p.emoji || '📲')} ${esc(p.name)}’s phone: <b style="margin-left:8px">${esc(cfg('msg_topic_' + p.name, '')) || (cfg('notify_msg_topic', '') ? '(shared) ' + esc(cfg('notify_msg_topic', '')) : 'not set')}</b></button>`).join('')}</div>
-      <div class="note" style="font-size:13px">Each parent subscribes to <b>their own</b> topic in the ntfy app — then “Mia → Dad” only buzzes Dad, and a one-tap reply shows as “Dad: 🏃 On my way”. Topic names are case-sensitive; lowercase is easiest.</div>
-      <div class="row">
-      <button class="btn sm ${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? 'good' : ''}" id="msg-full">${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? 'Lock screen shows the message ✓' : 'Lock screen says “new message” only'}</button>
-      <button class="btn sm ghost" id="msg-clear">🧹 Clear message history</button></div>
+      <div class="row"><button class="btn sm ${Msg.enabled() ? 'good' : ''}" id="msg-toggle">${Msg.enabled() ? '💬 Messages are on' : '💬 Messages are off'}</button>
+      <button class="btn sm ${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? '' : 'good'}" id="msg-full">${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? 'Lock screen shows the message' : 'Lock screen: “new message” only ✓'}</button>
+      <button class="btn sm ghost" id="msg-clear">🧹 Clear history</button></div>
+      <div class="note">One thread per pair of people, plus a Family group. A message to a parent buzzes <b>that parent’s phone</b>; tapping the notification opens the conversation. Each parent subscribes to their own ntfy topic (lowercase is easiest). Limit: 3 buzzes per person per minute.</div>
+      <div class="row">${members('parent').map(p => `<button class="btn sm" data-ncfg="msg_topic_${esc(p.name)}">${esc(p.emoji || '📲')} ${esc(p.name)}’s phone: <b style="margin-left:8px">${esc(cfg('msg_topic_' + p.name, '')) || 'not set'}</b></button>`).join('')}</div>
       <label>Internet access</label>
       <div class="note">${!App.server ? 'Needs the Pi / local server.' : App.server.remote ? 'You’re connected from outside the house right now. The password can only be changed from home Wi-Fi.' : App.server.public_host ? `Reachable at <b style="font-size:20px">https://${esc(App.server.public_host)}</b> from anywhere.` : 'Run <code>bash pi/setup-internet.sh</code> on the Pi and forward port 443 on the router — see README.'} Family password: <b>${App.server && App.server.access ? 'set ✓' : 'not set (blocked from outside)'}</b></div>
       ${App.server && !App.server.remote ? `<div class="row"><button class="btn primary" id="set-access">${App.server.access ? 'Change password' : 'Set password'}</button>${App.server.access ? '<button class="btn ghost" id="set-access-off">Turn off internet access</button>' : ''}</div>` : ''}
@@ -3187,14 +3267,33 @@ function bind() {
     const ev = e.target.closest('[data-ev]'); if (ev) { const x = App.calIndex[+ev.dataset.ev]; if (x && x.local) { const src = (App.state.local_events || []).find(y => y.id === x.id); if (src) EE.open(src); } else if (x) showEvent(x); return; }
     const day = e.target.closest('[data-day]'); if (day) showDay(day.dataset.day);
   });
-  $('#msg-compose').addEventListener('click', async e => {
-    const d = Msg.draft;
-    const f = e.target.closest('[data-mfrom]'); if (f) { d.from = f.dataset.mfrom; if (isPhone() && !Msg.isKid(d.from)) try { localStorage.setItem(Msg.meKey, d.from); } catch (_) {} renderMessages(); return; }
-    const t = e.target.closest('[data-mto]'); if (t) { d.to = t.dataset.mto; renderMessages(); return; }
+  $('#screen-messages').addEventListener('click', async e => {
+    const sm = e.target.closest('[data-setme]'); if (sm) { Msg.setMe(sm.dataset.setme); if (Msg.cur && !Msg.mine(Msg.cur)) Msg.cur = null; if (Msg.cur) Msg.open(Msg.cur); else renderMessages(); return; }
+    if (e.target.closest('[data-changeme]')) { e.preventDefault(); Msg.setMe(''); Msg.cur = null; renderMessages(); return; }
+    const c = e.target.closest('[data-convo]'); if (c) { Msg.open(c.dataset.convo); return; }
+    if (e.target.closest('[data-back]')) { Msg.back(); return; }
+    if (e.target.closest('[data-newchat]')) {
+      const me = isPhone() ? Msg.me() : '';
+      const others = members().filter(m => m.name !== me);
+      // Pick the two people (one on a phone: just the other person)
+      const a = me || await pick('Who’s writing?', members().map(m => m.name)); if (!a) return;
+      const b = await pick(`${a} → who?`, others.filter(m => m.name !== a).map(m => m.name).concat(['Family'])); if (!b) return;
+      Msg.open(b === 'Family' ? FAMILY : convoId(a, b)); if (a !== me) (Msg.draft[Msg.cur] = Msg.draft[Msg.cur] || {}).as = a; renderMessages(); return;
+    }
+    const as = e.target.closest('[data-as]'); if (as && Msg.cur) { (Msg.draft[Msg.cur] = Msg.draft[Msg.cur] || {}).as = as.dataset.as; renderMessages(); return; }
     const q = e.target.closest('[data-mquick]'); if (q) { await Msg.send(q.dataset.mquick); return; }
-    if (e.target.closest('#msg-type')) { const v = await KB.open({ title: `${d.from || 'Message'} says…`, initial: d.text, placeholder: 'Type a message', multiline: true }); if (v !== null) { d.text = v; renderMessages(); } return; }
+    if (e.target.closest('#msg-type') && Msg.cur) { const d = Msg.draft[Msg.cur] = Msg.draft[Msg.cur] || {}; const v = await KB.open({ title: `${Msg.sender(Msg.cur)} → ${Msg.title(Msg.cur)}`, initial: d.text || '', placeholder: 'Type a message', multiline: true }); if (v !== null) { d.text = v; if (v.trim()) await Msg.send(v); else renderMessages(); } return; }
     if (e.target.closest('#msg-send')) { await Msg.send(); return; }
   });
+  // tiny chooser built on the confirm modal
+  async function pick(title, names) {
+    return new Promise(res => {
+      const mem = (n) => members().find(x => x.name === n) || {};
+      Modal.confirm({ icon: '💬', title, body: `<div class="seg" style="justify-content:center">${names.map(n => `<button data-pick="${esc(n)}">${esc(n === 'Family' ? '👨‍👩‍👧' : mem(n).emoji || '👤')} ${esc(n)}</button>`).join('')}</div>`, ok: 'Cancel', noCancel: true }).then(() => res(null));
+      const h = (e) => { const b = e.target.closest('[data-pick]'); if (!b) return; $('#m-body').removeEventListener('click', h); Modal.close(true); res(b.dataset.pick); };
+      $('#m-body').addEventListener('click', h);
+    });
+  }
   $('#cal-add').addEventListener('click', () => EE.open(null, Cal.view === 'week' ? dayKey(addDays(startOfDay(new Date()), Cal.offset * 7)) : ''));
   $('#homeside').addEventListener('click', e => {
     if (e.target.closest('#note-add')) { addNote(); return; }
@@ -3524,13 +3623,18 @@ function bind() {
       toast('Test: ' + out.join(' · '), out.some(x => x.includes('✗')));
       return;
     }
+    if (e.target.closest('#msg-toggle')) {
+      const v = Msg.enabled() ? 'FALSE' : 'TRUE';
+      App.state.config.messages_enabled = v; renderParent(); $('#nav-msg').style.display = v === 'TRUE' ? '' : 'none';
+      act('setConfig', { key: 'messages_enabled', value: v, pin: App.pinValue }, { toast: v === 'TRUE' ? 'Messages on' : 'Messages off — hidden from the wall and phones' }); return;
+    }
     if (e.target.closest('#msg-full')) {
       const on = String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE'; const v = on ? 'FALSE' : 'TRUE';
       App.state.config.msg_fulltext = v; renderParent(); act('setConfig', { key: 'msg_fulltext', value: v, pin: App.pinValue }, { toast: 'Saved' }); return;
     }
     if (e.target.closest('#msg-clear')) {
       if (!await Modal.confirm({ icon: '🧹', title: 'Clear all messages?', body: 'The family chat history is removed from the wall and every phone.', ok: 'Clear', okClass: 'bad' })) return;
-      await X.op({ op: 'set', key: 'messages', value: [] }); Msg.knownIds = new Set(); Msg.badge(); toast('Messages cleared'); return;
+      await X.op({ op: 'set', key: 'messages', value: [] }); Msg.knownIds = new Set(); Msg.cur = null; Msg.badge(); toast('Messages cleared'); return;
     }
     if (e.target.closest('#set-access')) {
       const v = await KB.open({ title: 'Family password for internet access', placeholder: 'at least 6 characters', initial: '' });
@@ -3623,7 +3727,10 @@ async function boot() {
   loadWeather(); setInterval(loadWeather, 15 * 60000);
   // Extras (Pi-side data): re-read every 20 s so phone changes show on the wall
   Msg.check();
-  if (location.hash === '#messages') showScreen('messages');
+  const openChat = () => { const h = decodeURIComponent(location.hash || ''); if (!h.startsWith('#chat') && h !== '#messages') return false; const cid = h.split('/')[1]; if (cid) Msg.cur = cid; showScreen('messages'); return true; };
+  openChat(); window.addEventListener('hashchange', openChat);
+  $('#msg-banner').addEventListener('click', () => { const cid = $('#msg-banner').dataset.cid; $('#msg-banner').classList.remove('on'); if (cid) { showScreen('messages'); Msg.open(cid); } });
+  $('#nav').style.setProperty('--msg-nav', Msg.enabled() ? '' : 'none');
   setInterval(async () => { if (!X.ok && !App.state) return; const before = JSON.stringify(X.get('messages', [])); await X.load(); if (JSON.stringify(X.get('messages', [])) !== before) Msg.check(); }, 8000);
   setInterval(async () => { const before = JSON.stringify(X.d); await X.load(); if (JSON.stringify(X.d) !== before && App.state) { renderHomeSide(); renderQuests(); renderCalendar(); renderHome(); if (App.screen === 'parent') renderParent(); } }, 20000);
   checkStreaks(); setInterval(checkStreaks, 5 * 60000);

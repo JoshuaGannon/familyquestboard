@@ -208,13 +208,14 @@ def msg_post(body):
             results = []
             for tg in targets:
                 as_name = str(tg.get("as") or "Parent")[:40]
-                # "💬 Mia" when it's just for you; "💬 Mia → Mom & Dad" when both parents got it
-                title = f"💬 {frm}" + (" → Mom & Dad" if msg["to"] == "parents" else "")
+                title = f"💬 {frm}" + (" → Family" if msg["to"] in ("family", "parents", "all") else "")
+                cid = str(body.get("cid", "")).strip()[:100]
+                click = (base + "/#chat/" + quote(cid)) if (base and cid) else ((base + "/#messages") if base else "")
                 q = lambda code: f"{base}/api/msg-quick?m={msg['id']}&r={code}&a={quote(as_name)}&s={_msg_sig(msg['id'], code, as_name)}"
                 actions = [{"action": "http", "label": label, "method": "POST", "clear": True, "url": q(code)}
                            for code, label in QUICK_REPLIES] if base else None
-                ok, why = ntfy_send(tg.get("topic"), title, text if full else "New message — open the board to read it",
-                                    "high", "", (base + "/#messages") if base else "", actions)
+                ok, why = ntfy_send(tg.get("topic"), title, text if full else "New message — tap to read it",
+                                    "high", "", click, actions)
                 results.append(ok); detail = why
             pushed = any(results)
     return {"ok": True, "id": msg["id"], "pushed": pushed, "limited": limited, "detail": detail}
