@@ -140,23 +140,92 @@ input:focus{border-color:#fbbf24}button{margin-top:14px;width:100%;font-size:19p
 
 # Push alerts go out from here (the Pi's own internet), because Google's servers
 # can't reliably reach ntfy.sh. The Google script still sends the text messages.
-def ntfy_send(topic, title, message, priority="default", tags=""):
+def ntfy_send(topic, title, message, priority="default", tags="", click="", actions=None):
     topic = "".join(c for c in str(topic or "") if c.isalnum() or c in "-_")[:64]
     if not topic:
         return False, "no topic"
-    req = urllib.request.Request("https://ntfy.sh/" + quote(topic), data=(message or title or "").encode("utf-8"), method="POST")
-    # HTTP headers must be latin-1: ntfy accepts RFC 2047 encoded titles for emoji
-    import base64
-    t = "=?UTF-8?B?" + base64.b64encode((title or "").encode("utf-8")).decode() + "?="
-    req.add_header("Title", t)
-    req.add_header("Priority", str(priority or "default"))
-    if tags:
-        req.add_header("Tags", "".join(c for c in tags if c.isalnum() or c in ",_"))
+    pr = {"min": 1, "low": 2, "default": 3, "high": 4, "urgent": 5}.get(str(priority), 3)
+    payload = {"topic": topic, "title": title or "", "message": message or title or "", "priority": pr}
+    tl = [t for t in (tags.split(",") if isinstance(tags, str) else (tags or [])) if t]
+    if tl:
+        payload["tags"] = tl
+    if click:
+        payload["click"] = click
+    if actions:
+        payload["actions"] = actions[:3]
+    req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(payload).encode("utf-8"), method="POST",
+                                 headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=12) as r:
             return 200 <= r.status < 300, f"HTTP {r.status}"
     except Exception as e:  # noqa: BLE001
         return False, str(e)
+
+
+# ---------------------------------------------------------------------------
+# Family messages: kids write on the wall, parents get a push with one-tap
+# replies. Stored in data/extras.json under "messages" (last 300).
+# ---------------------------------------------------------------------------
+MSG_PUSH_LIMIT = 3          # pushes per sender ...
+MSG_PUSH_WINDOW = 60        # ... per this many seconds (extra messages still land on the wall)
+_msg_push_times = {}
+QUICK_REPLIES = [("yes", "👍 Yes"), ("no", "👎 Not now"), ("omw", "🏃 On my way")]
+
+
+def _msg_sig(mid, code):
+    return hmac.new(_access["secret"].encode(), f"{mid}|{code}".encode(), "sha256").hexdigest()[:24]
+
+
+def msg_post(body):
+    text = str(body.get("text", "")).strip()[:500]
+    frm = str(body.get("from", "")).strip()[:40]
+    if not text or not frm:
+        raise ValueError("empty message")
+    msg = {"id": secrets.token_hex(6), "from": frm, "to": str(body.get("to", "") or "all")[:40],
+           "text": text, "kind": "kid" if body.get("kind") == "kid" else "parent",
+           "at": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + "Z"}
+    if body.get("reply_to"):
+        msg["reply_to"] = str(body.get("reply_to"))[:20]
+    extras_op({"op": "push", "key": "messages", "value": msg})
+    pushed, limited, detail = False, False, ""
+    topic = str(body.get("topic", "")).strip()
+    if msg["kind"] == "kid" and topic:
+        now = time.time()
+        recent = [t for t in _msg_push_times.get(frm, []) if now - t < MSG_PUSH_WINDOW]
+        if len(recent) >= MSG_PUSH_LIMIT:
+            limited = True
+        else:
+            recent.append(now); _msg_push_times[frm] = recent
+            host = os.environ.get("FQB_PUBLIC_HOST", "").strip()
+            base = f"https://{host}" if host else ""
+            full = str(body.get("fulltext", "TRUE")).upper() != "FALSE"
+            to = msg["to"] if msg["to"] not in ("all", "parents", "") else ""
+            title = f"💬 {frm}" + (f" → {to}" if to else "")
+            actions = [{"action": "http", "label": label, "method": "POST", "clear": True,
+                        "url": f"{base}/api/msg-quick?m={msg['id']}&r={code}&s={_msg_sig(msg['id'], code)}"}
+                       for code, label in QUICK_REPLIES] if base else None
+            pushed, detail = ntfy_send(topic, title, text if full else "New message — open the board to read it",
+                                       "high", "speech_balloon", (base + "/#messages") if base else "", actions)
+    return {"ok": True, "id": msg["id"], "pushed": pushed, "limited": limited, "detail": detail}
+
+
+def msg_quick(mid, code, sig):
+    label = dict(QUICK_REPLIES).get(code)
+    if not label or not hmac.compare_digest(sig or "", _msg_sig(mid, code)):
+        return False, "bad link"
+    with _extras_lock:
+        d = _extras_load()
+    msgs = d.get("messages") if isinstance(d.get("messages"), list) else []
+    orig = next((m for m in msgs if isinstance(m, dict) and m.get("id") == mid), None)
+    if not orig:
+        return False, "message not found"
+    if any(isinstance(m, dict) and m.get("reply_to") == mid and m.get("quick") == code for m in msgs):
+        return True, "already sent"
+    reply = {"id": secrets.token_hex(6), "from": "Parent", "to": orig.get("from", ""), "text": label,
+             "kind": "parent", "reply_to": mid, "quick": code,
+             "at": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + "Z"}
+    extras_op({"op": "push", "key": "messages", "value": reply})
+    return True, "sent"
 
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".heic", ".heif"}
@@ -546,6 +615,11 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/login":
             self._do_login()
             return
+        if path == "/api/msg-quick":
+            q = parse_qs(urlparse(self.path).query)
+            ok, why = msg_quick((q.get("m") or [""])[0], (q.get("r") or [""])[0], (q.get("s") or [""])[0])
+            self._send_json({"ok": ok, "detail": why}, 200 if ok else 403)
+            return
         if path == "/api/access":
             # LAN only: set / clear the internet password
             if self._remote():
@@ -597,6 +671,12 @@ class Handler(SimpleHTTPRequestHandler):
                     _heartbeat["idle"] = 0
                 _heartbeat["busy"] = bool(body.get("busy"))
             self._send_json({"ok": True})
+            return
+        if path == "/api/msg":
+            try:
+                self._send_json(msg_post(self._read_json()))
+            except Exception as e:  # noqa: BLE001
+                self._send_json({"ok": False, "error": str(e)}, 400)
             return
         if path == "/api/notify":
             body = self._read_json()

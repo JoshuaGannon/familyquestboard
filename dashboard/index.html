@@ -344,6 +344,23 @@
   .srow { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--card); margin: 6px 0; font-size: 17px; }
   .srow .grow { flex: 1; }
   .sdraft { border: 2px dashed var(--line); border-radius: 14px; padding: 10px 12px; margin-top: 8px; }
+  .msg-wrap { display: grid; grid-template-columns: 1fr 460px; gap: 20px; height: calc(100% - 70px); min-height: 0; }
+  .msg-thread { background: var(--panel); border-radius: var(--radius); padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .msg-day { align-self: center; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 6px 0; }
+  .bub { max-width: 78%; display: flex; gap: 10px; align-items: flex-end; }
+  .bub .av { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; flex: none; background: var(--card-hi); }
+  .bub .bx { background: var(--card-hi); border-radius: 18px 18px 18px 6px; padding: 10px 14px; }
+  .bub .who { font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 2px; }
+  .bub .tx { font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .bub .tm { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .bub.parent { align-self: flex-end; flex-direction: row-reverse; }
+  .bub.parent .bx { background: rgba(96,165,250,.22); border-radius: 18px 18px 6px 18px; }
+  .bub.new .bx { box-shadow: 0 0 0 3px var(--accent); }
+  .msg-compose { background: var(--panel); border-radius: var(--radius); padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .msg-compose label { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+  .msg-compose .draft { min-height: 70px; font-size: 20px; }
+  .msg-banner { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 70; background: var(--panel-solid); border: 3px solid var(--accent); border-radius: 22px; padding: 14px 24px; font-size: 26px; font-weight: 700; box-shadow: var(--shadow); display: none; max-width: 80vw; }
+  .msg-banner.on { display: block; }
   .prizebox { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.35); border-radius: 16px; padding: 10px 14px; margin-bottom: 14px; }
   .quest .auto { font-size: 12px; color: var(--good); font-weight: 700; }
   .goal { margin-top: 10px; }
@@ -568,6 +585,9 @@
   /* ---------- Phone / remote mode (narrow screens) ---------- */
   @media (max-width: 900px) {
     .phone-only { display: inline-flex; }
+    .msg-wrap { grid-template-columns: 1fr; height: auto; }
+    .msg-thread { max-height: 55vh; }
+    .bub { max-width: 92%; }
     :root { font-size: 16px; --radius: 16px; }
     body { overflow: auto; }
     #app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100dvh; }
@@ -687,6 +707,7 @@
     <button class="navbtn" data-screen="groceries"><span class="ico">🛒</span><span class="lbl">Groceries</span><span class="badge" id="badge-groc"></span></button>
     <button class="navbtn" data-screen="quests"><span class="ico">⚔️</span><span class="lbl">Quests</span></button>
     <button class="navbtn" data-screen="todo"><span class="ico">📝</span><span class="lbl">To-do</span><span class="badge" id="badge-todo"></span></button>
+    <button class="navbtn" data-screen="messages"><span class="ico">💬</span><span class="lbl">Messages</span><span class="badge" id="badge-msg"></span></button>
     <div class="spacer"></div>
     <button class="navbtn" data-screen="parent"><span class="ico">🔒</span><span class="lbl">Parents</span><span class="badge" id="badge-queue"></span></button>
     <div class="pill" id="mode-pill">DEMO</div>
@@ -761,6 +782,15 @@
       <div class="quest-wrap">
         <div class="quest-grid" id="quest-grid"></div>
         <div class="rewards" id="rewards"></div>
+      </div>
+    </section>
+
+    <!-- MESSAGES -->
+    <section class="screen" id="screen-messages">
+      <h1>💬 Messages <small id="msg-sub">the family chat · parents get it on their phones</small></h1>
+      <div class="msg-wrap">
+        <div class="msg-thread" id="msg-thread"></div>
+        <div class="msg-compose" id="msg-compose"></div>
       </div>
     </section>
 
@@ -899,6 +929,7 @@
   <div class="actions"><button class="btn bad" id="de-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="de-cancel">Cancel</button><button class="btn primary" id="de-save">Save</button></div>
 </div></div>
 <div id="toast"></div>
+<div class="msg-banner" id="msg-banner"></div>
 
 <script src="config.js"></script>
 <script>
@@ -1275,6 +1306,90 @@ const Outbox = {
   },
 };
 
+/* ---------- Messages ---------- */
+const KID_QUICK = ['I’m hungry 🍎', 'Can I have screen time? 📺', 'Come here please 🙏', 'I’m done with homework ✅', 'I need help 🆘', 'I love you ❤️'];
+const PARENT_QUICK = ['👍 Yes', '👎 Not now', '🏃 On my way', 'Dinner’s ready! 🍽️', 'Come here please', 'Love you ❤️'];
+const Msg = {
+  draft: { from: '', to: 'parents', text: '' },
+  lastSeenKey: 'fqb_msg_seen', meKey: 'fqb_me', knownIds: null,
+  all() { return X.get('messages', []).filter(m => m && m.text && m.at).slice().sort((a, b) => a.at < b.at ? -1 : 1); },
+  recent() { const cut = Date.now() - 7 * 86400000; return this.all().filter(m => new Date(m.at).getTime() > cut); },
+  seen() { try { return localStorage.getItem(this.lastSeenKey) || ''; } catch (_) { return ''; } },
+  markSeen() { const a = this.all(); if (a.length) try { localStorage.setItem(this.lastSeenKey, a[a.length - 1].at); } catch (_) {} this.badge(); },
+  me() { try { return localStorage.getItem(this.meKey) || ''; } catch (_) { return ''; } },
+  unread() { const s = this.seen(); return this.all().filter(m => m.at > s && m.from !== this.me()).length; },
+  badge() { const n = X.ok ? this.unread() : 0; const b = $('#badge-msg'); if (b) { b.textContent = n; b.classList.toggle('on', n > 0); } },
+  isKid(name) { return members('kid').some(k => k.name === name); },
+  // Called whenever extras reload: spot messages that arrived since last look
+  check() {
+    const ids = new Set(this.all().map(m => m.id));
+    if (this.knownIds) {
+      const fresh = this.all().filter(m => !this.knownIds.has(m.id) && m.from !== this.me());
+      if (fresh.length) this.announce(fresh[fresh.length - 1]);
+    }
+    this.knownIds = ids; this.badge();
+    if (App.screen === 'messages') { renderMessages(); this.markSeen(); }
+  },
+  announce(m) {
+    // On the wall: wake the screen, chime, and show who said what
+    if (!isPhone()) { try { Display.wake(); } catch (_) {} }
+    const who = members().find(x => x.name === m.from);
+    const el = $('#msg-banner'); el.textContent = `💬 ${who && who.emoji ? who.emoji + ' ' : ''}${m.from}: ${m.text}`;
+    el.classList.add('on'); clearTimeout(this.bt); this.bt = setTimeout(() => el.classList.remove('on'), 9000);
+    chime();
+  },
+  async send(text) {
+    const d = this.draft; text = String(text || d.text || '').trim();
+    if (!text) { toast('Type or pick a message first', true); return; }
+    if (!d.from) { toast('Tap who’s sending first', true); return; }
+    const kid = this.isKid(d.from);
+    try {
+      const r = await fetch('/api/msg', { method: 'POST', body: JSON.stringify({ from: d.from, to: d.to, text, kind: kid ? 'kid' : 'parent', topic: cfg('notify_msg_topic', ''), fulltext: cfg('msg_fulltext', 'TRUE') }) });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'not sent');
+      d.text = ''; await X.load(); this.knownIds = new Set(this.all().map(m => m.id)); renderMessages(); this.markSeen();
+      toast(kid ? (j.limited ? 'Sent to the wall 💬 (phone alerts paused for a minute — lots of messages!)' : j.pushed ? 'Sent 💬 — parents got it on their phones' : 'Sent 💬') : 'Sent 💬');
+    } catch (e) { toast('Couldn’t send: ' + (e.message || e), true); }
+  },
+};
+let audioCtx;
+function chime() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    [[880, 0], [1320, 0.16]].forEach(([f, t]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = f; o.type = 'sine'; o.connect(g); g.connect(audioCtx.destination);
+      const at = audioCtx.currentTime + t; g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.25, at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.35);
+      o.start(at); o.stop(at + 0.4);
+    });
+  } catch (_) {}
+}
+function renderMessages() {
+  if (!App.state) return;
+  const th = $('#msg-thread'), co = $('#msg-compose');
+  if (!X.ok) { th.innerHTML = '<div class="empty">Messages are stored on the Pi and need its server running.</div>'; co.innerHTML = ''; return; }
+  const seen = Msg.seen(); let lastDay = '';
+  const list = Msg.recent();
+  th.innerHTML = list.length ? list.map(m => {
+    const mem = members().find(x => x.name === m.from) || {}; const t = new Date(m.at); const dk = dayKey(t);
+    const day = dk !== lastDay ? `<div class="msg-day">${dk === dayKey(new Date()) ? 'Today' : t.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</div>` : ''; lastDay = dk;
+    const toTxt = m.to && m.to !== 'all' && m.to !== 'parents' ? ` → ${esc(m.to)}` : m.to === 'parents' ? ' → Mom & Dad' : '';
+    return day + `<div class="bub ${m.kind === 'parent' ? 'parent' : 'kid'} ${m.at > seen && m.from !== Msg.me() ? 'new' : ''}"><span class="av" style="${mem.color ? `background:${esc(mem.color)}` : ''}">${esc(mem.emoji || (m.kind === 'parent' ? '🧑' : '⭐'))}</span><div class="bx"><div class="who">${esc(m.from)}${toTxt}</div><div class="tx">${esc(m.text)}</div><div class="tm">${esc(fmtTime(t))}</div></div></div>`;
+  }).join('') : '<div class="empty">No messages yet.<br><span style="font-size:16px">Kids: pick your name, tap a message, send — Mom and Dad get it on their phones.</span></div>';
+  th.scrollTop = th.scrollHeight;
+  const d = Msg.draft;
+  if (!d.from) d.from = isPhone() ? (Msg.me() || (members('parent')[0] || {}).name || '') : (App.kid || (members('kid')[0] || {}).name || '');
+  const kid = Msg.isKid(d.from);
+  const toOpts = kid ? [['parents', '👨‍👩 Mom & Dad']].concat(members('parent').map(p => [p.name, `${p.emoji || ''} ${p.name}`])) : [['all', '👨‍👩‍👧 Everyone']].concat(members('kid').map(k => [k.name, `${k.emoji || ''} ${k.name}`]));
+  if (!toOpts.some(o => o[0] === d.to)) d.to = toOpts[0][0];
+  co.innerHTML = `<label>Who’s writing</label><div class="seg">${members().map(m => `<button data-mfrom="${esc(m.name)}" class="${d.from === m.name ? 'modeon' : ''}">${esc(m.emoji || '')} ${esc(m.name)}</button>`).join('')}</div>
+    <label>To</label><div class="seg">${toOpts.map(o => `<button data-mto="${esc(o[0])}" class="${d.to === o[0] ? 'modeon' : ''}">${esc(o[1])}</button>`).join('')}</div>
+    <label>Quick message — tap to send</label><div class="seg">${(kid ? KID_QUICK : PARENT_QUICK).map(q => `<button data-mquick="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+    <label>Or write your own</label><button class="field draft ${d.text ? '' : 'ph'}" id="msg-type">${esc(d.text) || 'Tap to type… (😀 for emoji)'}</button>
+    <div class="row" style="margin-top:8px"><button class="btn primary" id="msg-send" style="flex:1">Send 💬</button></div>
+    ${kid && !cfg('notify_msg_topic', '') ? '<div class="note" style="font-size:13px">Phone alerts aren’t set up yet — Parents → Settings → Messages.</div>' : ''}`;
+}
+
 async function act(action, body, opts) {
   opts = opts || {};
   try {
@@ -1295,7 +1410,8 @@ function render() {
   updatePill();
   if (!App.state) return;
   $('#family-name').textContent = cfg('family_name', '');
-  renderHome(); renderCalendar(); renderGroceries(); renderQuests(); renderTodos(); renderParent();
+  renderHome(); renderCalendar(); renderGroceries(); renderQuests(); renderTodos(); renderParent(); Msg.badge();
+  if (App.screen === 'messages') renderMessages();
   const dueNow = (App.state.todos || []).filter(t => !isTrue(t.done) && t.due && t.due <= dayKey(new Date())).length;
   const bt = $('#badge-todo'); bt.textContent = dueNow; bt.classList.toggle('on', dueNow > 0);
   const pending = (App.state.queue || []).filter(k => k.status === 'pending').length;
@@ -1317,6 +1433,8 @@ function showScreen(name) {
   $$('#nav .navbtn').forEach(b => b.classList.toggle('active', b.dataset.screen === name));
   if (name === 'parent' && !App.unlocked) renderParent();
   if (name === 'todo' && App.state) renderTodos();
+  if (name === 'messages') { renderMessages(); Msg.markSeen(); }
+  if (isPhone() && name === 'messages') try { history.replaceState(null, '', '#messages'); } catch (_) {}
   if (name === 'home') tickClock();
 }
 
@@ -2513,6 +2631,11 @@ function renderParent() {
       <button class="btn sm" data-ncfg="notify_sms">💬 Text numbers: <b style="margin-left:8px">${esc(cfg('notify_sms', '')) || 'not set'}</b></button></div>
       <div class="seg" style="margin-top:8px">${[['quest', '✅ Quest finished'], ['help', '🙋 Needs help'], ['reward', '🎁 Reward requested'], ['streak', '🔥 Streak prize earned']].map(([k, l]) => `<button data-nev="${k}" class="${notifyOn(k) ? 'modeon' : ''}">${l}</button>`).join('')}<button class="btn sm ghost" id="notify-test" style="margin-left:auto">Send a test</button></div>
       <div class="note" style="font-size:14px">Texts: your number as an email — Verizon <code>5551234567@vtext.com</code>, AT&amp;T <code>@txt.att.net</code>, T-Mobile <code>@tmomail.net</code>. Several, comma-separated.</div>
+      <label>Messages</label>
+      <div class="note">Kids’ messages from the 💬 screen go to this ntfy topic, with one-tap replies (👍 Yes · 👎 Not now · 🏃 On my way). Subscribe to it in the ntfy app on each parent’s phone. Max 3 alerts per kid per minute — extras still show on the wall.</div>
+      <div class="row"><button class="btn sm" data-ncfg="notify_msg_topic">💬 Messages topic: <b style="margin-left:8px">${esc(cfg('notify_msg_topic', '')) || 'not set'}</b></button>
+      <button class="btn sm ${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? 'good' : ''}" id="msg-full">${String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE' ? 'Lock screen shows the message ✓' : 'Lock screen says “new message” only'}</button>
+      <button class="btn sm ghost" id="msg-clear">🧹 Clear message history</button></div>
       <label>Internet access</label>
       <div class="note">${!App.server ? 'Needs the Pi / local server.' : App.server.remote ? 'You’re connected from outside the house right now. The password can only be changed from home Wi-Fi.' : App.server.public_host ? `Reachable at <b style="font-size:20px">https://${esc(App.server.public_host)}</b> from anywhere.` : 'Run <code>bash pi/setup-internet.sh</code> on the Pi and forward port 443 on the router — see README.'} Family password: <b>${App.server && App.server.access ? 'set ✓' : 'not set (blocked from outside)'}</b></div>
       ${App.server && !App.server.remote ? `<div class="row"><button class="btn primary" id="set-access">${App.server.access ? 'Change password' : 'Set password'}</button>${App.server.access ? '<button class="btn ghost" id="set-access-off">Turn off internet access</button>' : ''}</div>` : ''}
@@ -3047,6 +3170,14 @@ function bind() {
     const ev = e.target.closest('[data-ev]'); if (ev) { const x = App.calIndex[+ev.dataset.ev]; if (x && x.local) { const src = (App.state.local_events || []).find(y => y.id === x.id); if (src) EE.open(src); } else if (x) showEvent(x); return; }
     const day = e.target.closest('[data-day]'); if (day) showDay(day.dataset.day);
   });
+  $('#msg-compose').addEventListener('click', async e => {
+    const d = Msg.draft;
+    const f = e.target.closest('[data-mfrom]'); if (f) { d.from = f.dataset.mfrom; if (isPhone() && !Msg.isKid(d.from)) try { localStorage.setItem(Msg.meKey, d.from); } catch (_) {} renderMessages(); return; }
+    const t = e.target.closest('[data-mto]'); if (t) { d.to = t.dataset.mto; renderMessages(); return; }
+    const q = e.target.closest('[data-mquick]'); if (q) { await Msg.send(q.dataset.mquick); return; }
+    if (e.target.closest('#msg-type')) { const v = await KB.open({ title: `${d.from || 'Message'} says…`, initial: d.text, placeholder: 'Type a message', multiline: true }); if (v !== null) { d.text = v; renderMessages(); } return; }
+    if (e.target.closest('#msg-send')) { await Msg.send(); return; }
+  });
   $('#cal-add').addEventListener('click', () => EE.open(null, Cal.view === 'week' ? dayKey(addDays(startOfDay(new Date()), Cal.offset * 7)) : ''));
   $('#homeside').addEventListener('click', e => {
     if (e.target.closest('#note-add')) { addNote(); return; }
@@ -3352,7 +3483,7 @@ function bind() {
     const ncfg = e.target.closest('[data-ncfg]');
     if (ncfg) {
       const key = ncfg.dataset.ncfg;
-      const v = await KB.open({ title: key === 'notify_sms' ? 'Text numbers (as email, comma-separated)' : 'ntfy topic name', initial: cfg(key, ''), placeholder: key === 'notify_sms' ? '5551234567@vtext.com' : 'e.g. ourfamily-board-x7k2q' });
+      const v = await KB.open({ title: key === 'notify_sms' ? 'Text numbers (as email, comma-separated)' : key === 'notify_msg_topic' ? 'ntfy topic for kids’ messages' : 'ntfy topic name', initial: cfg(key, ''), placeholder: key === 'notify_sms' ? '5551234567@vtext.com' : 'e.g. ourfamily-board-x7k2q' });
       if (v === null) return;
       App.state.config[key] = v.trim(); renderParent();
       act('setConfig', { key, value: v.trim(), pin: App.pinValue }, { toast: 'Saved' });
@@ -3375,6 +3506,14 @@ function bind() {
       if (hasSms) { try { await App.backend.post('testNotify', { pin: App.pinValue }); out.push('text ✓'); } catch (e2) { out.push('text ✗ (' + (e2.message || e2) + ')'); } }
       toast('Test: ' + out.join(' · '), out.some(x => x.includes('✗')));
       return;
+    }
+    if (e.target.closest('#msg-full')) {
+      const on = String(cfg('msg_fulltext', 'TRUE')).toUpperCase() !== 'FALSE'; const v = on ? 'FALSE' : 'TRUE';
+      App.state.config.msg_fulltext = v; renderParent(); act('setConfig', { key: 'msg_fulltext', value: v, pin: App.pinValue }, { toast: 'Saved' }); return;
+    }
+    if (e.target.closest('#msg-clear')) {
+      if (!await Modal.confirm({ icon: '🧹', title: 'Clear all messages?', body: 'The family chat history is removed from the wall and every phone.', ok: 'Clear', okClass: 'bad' })) return;
+      await X.op({ op: 'set', key: 'messages', value: [] }); Msg.knownIds = new Set(); Msg.badge(); toast('Messages cleared'); return;
     }
     if (e.target.closest('#set-access')) {
       const v = await KB.open({ title: 'Family password for internet access', placeholder: 'at least 6 characters', initial: '' });
@@ -3466,6 +3605,9 @@ async function boot() {
   fetch('/api/health', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { App.server = j; }).catch(() => {});
   loadWeather(); setInterval(loadWeather, 15 * 60000);
   // Extras (Pi-side data): re-read every 20 s so phone changes show on the wall
+  Msg.check();
+  if (location.hash === '#messages') showScreen('messages');
+  setInterval(async () => { if (!X.ok && !App.state) return; const before = JSON.stringify(X.get('messages', [])); await X.load(); if (JSON.stringify(X.get('messages', [])) !== before) Msg.check(); }, 8000);
   setInterval(async () => { const before = JSON.stringify(X.d); await X.load(); if (JSON.stringify(X.d) !== before && App.state) { renderHomeSide(); renderQuests(); renderCalendar(); renderHome(); if (App.screen === 'parent') renderParent(); } }, 20000);
   checkStreaks(); setInterval(checkStreaks, 5 * 60000);
   setInterval(() => { if (App.state) { renderHome(); Display.tick(); } }, 30000);

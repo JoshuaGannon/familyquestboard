@@ -398,6 +398,20 @@ address) in the phone browser → Android/Chrome: menu ⋮ → *Add to Home scre
 / *Install app*; iPhone/Safari: Share → *Add to Home Screen*. It opens full
 screen with no browser bars.
 
+## 💬 Messages (kids → parents, with one-tap replies)
+
+The 💬 screen is a family chat. Kids pick their name, who it's to, and tap a
+quick message (or type one, emoji welcome). Parents get a push on the
+**messages topic** (Parents → Settings → Messages; subscribe to the same name
+in the ntfy app) with three buttons right on the notification:
+👍 Yes · 👎 Not now · 🏃 On my way. Tapping one posts the reply on the wall,
+which chimes, shows a banner and wakes the screen. Tapping the notification
+itself opens the chat on your phone (signed in via the installed app) for a
+typed reply. Limit: 3 phone alerts per kid per minute — anything beyond that
+still shows on the wall. The chat keeps a week of history on the Pi;
+Settings → Messages → Clear wipes it. Needs internet access set up (the reply
+buttons call `https://<you>.duckdns.org`).
+
 ## Streak prizes (per quest)
 
 Parents → Quests & rewards → tap a repeating quest → **Streak prizes**:
