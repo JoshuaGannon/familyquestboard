@@ -529,6 +529,8 @@
   .pinpad .dots span.on { background: var(--accent); }
   .pinpad .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .pinpad .keys button { height: 84px; border-radius: 20px; background: var(--card); font-size: 30px; font-weight: 700; }
+  .pin-remember { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600; color: var(--muted); margin-top: 6px; }
+  .pin-remember input { width: 22px; height: 22px; accent-color: var(--good); }
   .pinpad .msg { min-height: 28px; color: var(--bad); font-weight: 700; margin-top: 14px; }
   .ptabs { display: flex; gap: 10px; margin-bottom: 18px; }
   .ptab { padding: 12px 20px; border-radius: 14px; background: var(--card); font-weight: 700; font-size: 17px; }
@@ -1583,6 +1585,7 @@ async function act(action, body, opts) {
 function render() {
   updatePill();
   if (!App.state) return;
+  ParentMemo.restore();
   $('#family-name').textContent = cfg('family_name', '');
   renderHome(); renderCalendar(); renderGroceries(); renderQuests(); renderTodos(); renderParent(); Msg.badge();
   $('#nav-msg').style.display = Msg.enabled() ? '' : 'none';
@@ -2695,9 +2698,25 @@ async function pushNotify(kind, title, message, force, go) {
 }
 const notifyList = () => String(cfg('notify_events', 'quest,help,reward,streak')).split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
 const notifyOn = (k) => notifyList().includes(k);
+/* ---------- Remember the parent PIN on a parent's own phone (30 days; the wall never remembers) ---------- */
+const ParentMemo = {
+  key: 'fqb_parent_ok', days: 30,
+  offer() { return isPhone() && !Msg.isKid(Msg.me()); },
+  save(pin) { try { localStorage.setItem(this.key, JSON.stringify({ pin, until: Date.now() + this.days * 86400000 })); } catch (_) {} },
+  forget() { try { localStorage.removeItem(this.key); } catch (_) {} },
+  // Called on every render: unlock quietly if this phone remembered a still-valid PIN
+  restore() {
+    if (App.unlocked || !isPhone() || !App.state) return;
+    let m = null; try { m = JSON.parse(localStorage.getItem(this.key) || 'null'); } catch (_) {}
+    if (!m) return;
+    if (!m.until || Date.now() > m.until || String(m.pin) !== String(cfg('pin', '1234')) || Msg.isKid(Msg.me())) { this.forget(); return; }   // expired, PIN changed, or a kid's phone
+    App.unlocked = true; App.pinValue = String(m.pin);
+  },
+};
 function pinPadHtml(title) {
   return `<div class="pinpad"><h1 style="justify-content:center">🔒 ${esc(title || 'Parent PIN')}</h1><div class="dots pin-dots"><span></span><span></span><span></span><span></span></div>
     <div class="keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}">${k}</button>`).join('')}</div><div class="msg pin-msg"></div>
+    ${ParentMemo.offer() ? `<label class="pin-remember"><input type="checkbox" checked> Remember on this phone for ${ParentMemo.days} days</label>` : ''}
     ${App.backend.mode === 'demo' ? '<div class="note">Demo PIN is <b>1234</b>. Change it on the Config tab once you connect your Sheet.</div>' : ''}</div>`;
 }
 
@@ -3521,7 +3540,7 @@ function bind() {
     App.pin = k === '⌫' ? (App.pin || '').slice(0, -1) : ((App.pin || '') + k).slice(0, 4);
     $$('.pin-dots span', pad).forEach((d, i) => d.classList.toggle('on', i < App.pin.length));
     if (App.pin.length === 4) {
-      if (App.pin === String(cfg('pin', '1234'))) { App.unlocked = true; App.pinValue = App.pin; renderParent(); renderTodos(); }
+      if (App.pin === String(cfg('pin', '1234'))) { App.unlocked = true; App.pinValue = App.pin; const rb = $('.pin-remember input', pad); if (rb && rb.checked && ParentMemo.offer()) { ParentMemo.save(App.pin); toast(`This phone stays unlocked for ${ParentMemo.days} days`); } renderParent(); renderTodos(); }
       else { $('.pin-msg', pad).textContent = 'Wrong PIN'; App.pin = ''; setTimeout(() => { $$('.pin-dots span', pad).forEach(d => d.classList.remove('on')); $('.pin-msg', pad).textContent = ''; }, 700); }
     }
   });
@@ -3628,7 +3647,7 @@ function bind() {
   // Parent
   $('#screen-parent').addEventListener('click', async e => {
     if (e.target.closest('.pinpad')) return;
-    if (e.target.closest('#parent-lockbtn')) { App.unlocked = false; renderParent(); renderTodos(); return; }
+    if (e.target.closest('#parent-lockbtn')) { App.unlocked = false; ParentMemo.forget(); renderParent(); renderTodos(); return; }
     const pt = e.target.closest('.ptab'); if (pt) { App.ptab = pt.dataset.ptab; renderParent(); return; }
     const pg = e.target.closest('[data-prizegiven]');
     if (pg) {
