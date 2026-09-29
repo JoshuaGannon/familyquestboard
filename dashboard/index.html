@@ -2684,11 +2684,11 @@ const DE = {
 };
 
 // Push alerts are sent by the Pi (server.py -> ntfy.sh); texts are sent by the Google script.
-async function pushNotify(kind, title, message, force) {
+async function pushNotify(kind, title, message, force, go) {
   const topic = String(cfg('notify_ntfy_topic', '')).trim();
   if (!topic || (!force && !notifyOn(kind))) return { ok: false, skipped: true };
   try {
-    const r = await fetch('/api/notify', { method: 'POST', body: JSON.stringify({ topic, title, message, priority: kind === 'help' ? 'high' : 'default', tags: { help: 'raising_hand', reward: 'gift', streak: 'fire', quest: 'white_check_mark', test: 'tada' }[kind] || '' }) });
+    const r = await fetch('/api/notify', { method: 'POST', body: JSON.stringify({ topic, title, message, priority: kind === 'help' ? 'high' : 'default', tags: { help: 'raising_hand', reward: 'gift', streak: 'fire', quest: 'white_check_mark', test: 'tada' }[kind] || '', go: go || (kind === 'test' ? 'go/home' : 'go/parent/queue') }) });
     const j = await r.json().catch(() => ({}));
     return { ok: r.ok && j.ok, detail: j.detail || r.status };
   } catch (e) { return { ok: false, detail: 'Pi server not reachable' }; }
@@ -3469,7 +3469,7 @@ function bind() {
       const kid = App.kid;
       try {
         const res = await App.backend.post('submitQuest', { questId: q.id, member: kid });
-        pushNotify('quest', `${kid} finished: ${q.title}`, auto ? `+${q.points} pts (auto-approved)` : `+${q.points} pts waiting for approval`);
+        pushNotify('quest', `${kid} finished: ${q.title}`, auto ? `+${q.points} pts (auto-approved)` : `+${q.points} pts waiting for approval`, false, auto ? 'go/quests' : 'go/parent/queue');
         if (auto && res && res.id) {
           try { await App.backend.post('reviewQueue', { id: res.id, status: 'approved', pin: cfg('pin', '') }); X.merge('auto', { [res.id]: 1 }); toast(`Nice work, ${kid}! +${q.points} points 🎉`); }
           catch (e2) { toast(`Saved — waiting for a parent (auto-approve failed: ${e2.message})`, true); }
@@ -3823,7 +3823,16 @@ async function boot() {
   // Extras (Pi-side data): re-read every 20 s so phone changes show on the wall
   Msg.check();
   const openChat = () => { const h = decodeURIComponent(location.hash || ''); if (!h.startsWith('#chat') && h !== '#messages') return false; const cid = h.split('/')[1]; if (cid) Msg.cur = cid; showScreen('messages'); return true; };
-  openChat(); window.addEventListener('hashchange', openChat);
+  // Alert links: #go/<screen>[/<parent tab>] (parents' screens still ask for the PIN)
+  const openGo = () => {
+    const h = decodeURIComponent(location.hash || ''); if (!h.startsWith('#go/')) return false;
+    const [scr, tab] = h.slice(4).split('/'); const ok = ['home', 'calendar', 'groceries', 'quests', 'todo', 'parent', 'messages'];
+    if (tab && scr === 'parent') App.ptab = tab;
+    showScreen(ok.includes(scr) ? scr : 'home');
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}   // so the same link works again next time
+    return true;
+  };
+  openChat(); openGo(); window.addEventListener('hashchange', () => { openChat() || openGo(); });
   $('#msg-banner').addEventListener('click', () => { const cid = $('#msg-banner').dataset.cid; $('#msg-banner').classList.remove('on'); if (cid) { showScreen('messages'); Msg.open(cid); } });
   $('#nav').style.setProperty('--msg-nav', Msg.enabled() ? '' : 'none');
   setInterval(async () => { if (!X.ok && !App.state) return; const before = JSON.stringify(X.get('messages', [])); await X.load(); if (JSON.stringify(X.get('messages', [])) !== before) Msg.check(); }, 8000);
@@ -3854,7 +3863,7 @@ function keepAlive() {
 
 window.addEventListener('DOMContentLoaded', boot);
 window.FQB = App;
-App.Display = Display; App.periodAt = periodAt; App.displayPeriods = displayPeriods; App.Photos = Photos; App.X = X; App.refreshNow = async () => { await refresh(true); await checkStreaks(); };
+App.Display = Display; App.periodAt = periodAt; App.displayPeriods = displayPeriods; App.Photos = Photos; App.X = X; App.pushNotify = pushNotify; App.refreshNow = async () => { await refresh(true); await checkStreaks(); };
 })();
 </script>
 </body>

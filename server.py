@@ -23,6 +23,7 @@ import hashlib
 import hmac
 import ipaddress
 import json
+import re
 import secrets
 import mimetypes
 import os
@@ -704,7 +705,11 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path == "/api/notify":
             body = self._read_json()
-            ok, msg = ntfy_send(body.get("topic"), body.get("title", ""), body.get("message", ""), body.get("priority", "default"), body.get("tags", ""))
+            # Tapping the alert opens the board on the right screen (e.g. "go/parent/queue")
+            host = os.environ.get("FQB_PUBLIC_HOST", "").strip()
+            go = re.sub(r"[^a-z0-9/_-]", "", str(body.get("go", "") or "").lower())[:60]
+            click = f"https://{host}/#{go or 'go/home'}" if host else ""
+            ok, msg = ntfy_send(body.get("topic"), body.get("title", ""), body.get("message", ""), body.get("priority", "default"), body.get("tags", ""), click)
             self._send_json({"ok": ok, "detail": msg}, 200 if ok else 502)
             return
         if path == "/api/config":
