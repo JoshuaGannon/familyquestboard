@@ -12,13 +12,14 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import db
+from . import access, db
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 V2_DIR = os.path.dirname(HERE)
 PROJECT = os.path.dirname(V2_DIR)
 V1_DASHBOARD = os.path.join(PROJECT, "dashboard")
 V1_EXTRAS = os.path.join(PROJECT, "data", "extras.json")
+V1_ACCESS = os.path.join(PROJECT, "data", "access.json")
 V1_PHOTOS = os.path.join(PROJECT, "photos")
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".heic", ".heif"}
 
@@ -124,6 +125,8 @@ def _run(script_url, photos_dir, want_photos):
         data["config"] = cfg
         db.replace_all(data, script_url or "pi-extras")
         _log("Database loaded")
+        if access.adopt_from_v1(V1_ACCESS):
+            _log("Family password copied from v1")
         if want_photos:
             _import_photos(script_url, photos_dir)
         if data.get("events"):

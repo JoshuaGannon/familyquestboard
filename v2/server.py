@@ -481,6 +481,8 @@ def main():
     os.makedirs(data_dir, exist_ok=True)
     db.open_db(os.path.join(data_dir, "fqb.db"))
     access.load(os.path.join(data_dir, "access.json"))
+    if not access.enabled() and access.adopt_from_v1(importer.V1_ACCESS):
+        print("  (family password copied from v1)")
     Handler.photos_dir = os.path.abspath(args.photos) if args.photos else os.path.join(data_dir, "photos")
     os.makedirs(Handler.photos_dir, exist_ok=True)
     if args.demo or not db.rows("members"):

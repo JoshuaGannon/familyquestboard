@@ -60,6 +60,23 @@ def set_password(pw):
     save()
 
 
+def adopt_from_v1(path):
+    """Copy the family password (hash + salt) from v1's access.json, so the same password
+    opens v2 from outside. Returns True if something was copied."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+    except Exception:  # noqa: BLE001
+        return False
+    if not d.get("hash") or not d.get("salt"):
+        return False
+    if _access.get("hash") == d["hash"]:
+        return False
+    _access.update({"hash": d["hash"], "salt": d["salt"]})
+    save()
+    return True
+
+
 def enabled():
     return bool(_access.get("hash"))
 
