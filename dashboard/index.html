@@ -928,12 +928,12 @@
 <!-- Grocery item editor -->
 <div id="groc-ed" class="sheet"><div class="sheet-panel">
   <h2 id="ge-title">New item</h2>
-  <label>Item</label><button class="field" id="ge-name"></button>
+  <label>Item</label><button class="field" id="ge-name"></button><div class="note" id="ge-dup" style="font-size:14px;color:var(--accent)"></div>
   <label>Note <span style="opacity:.6;text-transform:none;letter-spacing:0">(brand, size, "the big bag"…)</span></label><button class="field" id="ge-note"></button>
   <label>Store</label><div class="seg" id="ge-store"></div>
   <label>Priority</label><div class="seg" id="ge-prio"></div>
   <label>Comes back automatically</label><div class="seg" id="ge-repeat"></div><div class="note" id="ge-repeat-note" style="font-size:14px"></div>
-  <div class="actions"><button class="btn bad" id="ge-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="ge-cancel">Cancel</button><button class="btn primary" id="ge-save">Save</button></div>
+  <div class="actions"><button class="btn bad" id="ge-del" style="margin-right:auto">Delete</button><button class="btn ghost" id="ge-cancel">Cancel</button><button class="btn" id="ge-addlib">📚 Library only</button><button class="btn primary" id="ge-addlist">🛒 Library + list</button><button class="btn primary" id="ge-save">Save</button></div>
 </div></div>
 
 <!-- Task detail -->
@@ -1194,7 +1194,7 @@ class DemoBackend {
     const d = this.data;
     const find = (arr, id) => arr.find(r => r.id === id);
     switch (action) {
-      case 'addGrocery': { const ex = d.groceries.find(g => g.item.trim().toLowerCase() === b.item.trim().toLowerCase()); if (ex) { ex.status = 'needed'; if (b.store !== undefined) ex.store = b.store; if (b.priority !== undefined) ex.priority = b.priority; if (b.repeat !== undefined) ex.repeat = b.repeat; if (b.note) ex.note = b.note; } else d.groceries.push({ id: uid(), item: b.item.trim(), note: b.note || '', status: 'needed', store: b.store || '', priority: b.priority || '', repeat: b.repeat || '', next_add: '', added_by: b.by || 'Wall', updated_at: new Date().toISOString() }); break; }
+      case 'addGrocery': { const ex = d.groceries.find(g => g.item.trim().toLowerCase() === b.item.trim().toLowerCase()); if (ex) { if (b.list !== false) ex.status = 'needed'; if (b.store !== undefined) ex.store = b.store; if (b.priority !== undefined) ex.priority = b.priority; if (b.repeat !== undefined) ex.repeat = b.repeat; if (b.note) ex.note = b.note; } else d.groceries.push({ id: uid(), item: b.item.trim(), note: b.note || '', status: b.list === false ? '' : 'needed', store: b.store || '', priority: b.priority || '', repeat: b.repeat || '', next_add: '', added_by: b.by || 'Wall', updated_at: new Date().toISOString() }); break; }
       case 'updateGrocery': { const g = find(d.groceries, b.id); if (g) { ['item', 'note', 'store', 'priority', 'repeat'].forEach(k => { if (b[k] !== undefined) g[k] = b[k]; }); if (!g.repeat) g.next_add = ''; } break; }
       case 'setGroceryStatus': { const g = find(d.groceries, b.id); if (g) g.status = b.status; break; }
       case 'deleteGrocery': d.groceries = d.groceries.filter(g => g.id !== b.id); break;
@@ -1218,12 +1218,13 @@ class DemoBackend {
       case 'submitQuest': { const q = find(d.quests, b.questId); d.queue.push({ id: uid(), type: 'quest', ref_id: q.id, title: q.title, member: b.member, points: q.points, submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
       case 'redeemReward': { const r = find(d.rewards, b.rewardId); d.queue.push({ id: uid(), type: 'reward', ref_id: r.id, title: r.title, member: b.member, points: String(-Math.abs(+r.cost)), submitted_at: new Date().toISOString(), status: 'pending', reviewed_at: '' }); break; }
       case 'reviewQueue': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const k = find(d.queue, b.id); if (k) { k.status = b.status; k.reviewed_at = new Date().toISOString(); } break; }
+      case 'undoQueue': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const k = find(d.queue, b.id); if (!k) throw new Error('Not found'); if (k.type === 'adjust') { k.status = 'undone'; k.reviewed_at = new Date().toISOString(); } else { k.status = 'pending'; k.reviewed_at = ''; } break; }
       case 'adjustPoints': d.queue.push({ id: uid(), type: 'adjust', ref_id: '', title: b.reason || 'Bonus', member: b.member, points: String(+b.points), submitted_at: new Date().toISOString(), status: 'approved', reviewed_at: new Date().toISOString() }); break;
       case 'saveQuest': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const row = { title: b.title, points: String(parseInt(b.points, 10) || 0), assigned_to: b.assigned_to || 'Anyone', repeat: b.repeat || 'daily', icon: b.icon || '⭐', active: b.active === false || b.active === 'FALSE' ? 'FALSE' : 'TRUE', notes: b.notes || '' }; const q = b.id && find(d.quests, b.id); if (q) Object.assign(q, row); else d.quests.push(Object.assign({ id: uid() }, row)); break; }
       case 'deleteQuest': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); d.quests = d.quests.filter(x => x.id !== b.id); break; }
       case 'saveReward': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); const row = { title: b.title, cost: String(parseInt(b.cost, 10) || 0), icon: b.icon || '🎁', active: b.active === false || b.active === 'FALSE' ? 'FALSE' : 'TRUE' }; const r = b.id && find(d.rewards, b.id); if (r) Object.assign(r, row); else d.rewards.push(Object.assign({ id: uid() }, row)); break; }
       case 'deleteReward': { if (String(b.pin) !== d.config.pin) throw new Error('Wrong PIN'); d.rewards = d.rewards.filter(x => x.id !== b.id); break; }
-      case 'setDinner': { const row = d.dinner.find(x => x.date === b.date); if (row) row.meal = b.meal; else d.dinner.push({ date: b.date, meal: b.meal, note: '' }); break; }
+      case 'setDinner': { d.dinner = d.dinner.filter((x, i, a) => x.date !== b.date || a.findIndex(y => y.date === b.date) === i); const row = d.dinner.find(x => x.date === b.date); if (row) row.meal = b.meal; else d.dinner.push({ date: b.date, meal: b.meal, note: '' }); break; }
       default: throw new Error('Unknown action ' + action);
     }
     this.save();
@@ -1281,6 +1282,11 @@ function members(role) {
   return role ? list.filter(m => (m.role || '').toLowerCase() === role) : list;
 }
 
+// Approved/rejected quests & rewards and point adjustments, newest first (undone ones are hidden)
+function recentDecisions() {
+  return (App.state.queue || []).filter(k => k.status === 'approved' || k.status === 'rejected')
+    .sort((a, b) => (b.reviewed_at || b.submitted_at || '') < (a.reviewed_at || a.submitted_at || '') ? -1 : 1);
+}
 function balance(name) {
   let approved = 0, pending = 0;
   for (const k of (App.state.queue || [])) {
@@ -1409,8 +1415,26 @@ const Msg = {
   cid(m) { return convoId(m.from, (m.to === 'parents' || m.to === 'all' || !m.to) ? FAMILY : m.to); },
   me() { try { return localStorage.getItem(this.senderKey) || ''; } catch (_) { return ''; } },
   setMe(n) { try { localStorage.setItem(this.senderKey, n); } catch (_) {} },
-  seen() { try { return JSON.parse(localStorage.getItem(this.seenKey) || '{}'); } catch (_) { return {}; } },
-  markSeen(cid) { const s = this.seen(); const last = this.thread(cid).slice(-1)[0]; if (last) { s[cid] = last.at; try { localStorage.setItem(this.seenKey, JSON.stringify(s)); } catch (_) {} } this.badge(); },
+  // Read status is kept on the Pi per person (phones) and for the wall, so it follows you between devices.
+  who() { return (isPhone() && this.me()) || 'wall'; },
+  localSeen() { try { return JSON.parse(localStorage.getItem(this.seenKey) || '{}'); } catch (_) { return {}; } },
+  seen() {
+    const all = X.get('msg_seen', {}) || {}, out = Object.assign({}, this.localSeen());
+    // a person sees what they read anywhere; the wall counts a message read once anyone in the family has read it
+    const maps = this.who() === 'wall' ? Object.values(all) : [all[this.who()] || {}];
+    for (const m of maps) for (const [c, at] of Object.entries(m || {})) if (!out[c] || at > out[c]) out[c] = at;
+    return out;
+  },
+  markSeen(cid) {
+    const last = this.thread(cid).slice(-1)[0]; if (!last) { this.badge(); return; }
+    const loc = this.localSeen(); if (!loc[cid] || last.at > loc[cid]) { loc[cid] = last.at; try { localStorage.setItem(this.seenKey, JSON.stringify(loc)); } catch (_) {} }
+    const who = this.who(), mine = Object.assign({}, (X.get('msg_seen', {}) || {})[who] || {});
+    if (X.ok && (!mine[cid] || last.at > mine[cid])) {
+      mine[cid] = last.at; const all = Object.assign({}, X.get('msg_seen', {}) || {}); all[who] = mine; X.d.msg_seen = all;
+      X.op({ op: 'merge', key: 'msg_seen', value: { [who]: mine } }).catch(() => {});
+    }
+    this.badge();
+  },
   isKid(n) { return members('kid').some(k => k.name === n); },
   isParent(n) { return members('parent').some(k => k.name === n); },
   // On a phone you are one person; on the wall everyone shares it
@@ -1653,7 +1677,7 @@ function eventsOn(date) {
 
 function dinnerFor(date) {
   const k = dayKey(date);
-  const row = (App.state.dinner || []).find(d => String(d.date).slice(0, 10) === k);
+  const row = (App.state.dinner || []).filter(d => String(d.date).slice(0, 10) === k).pop();   // newest wins
   return row && row.meal ? row : null;
 }
 
@@ -2208,8 +2232,10 @@ const GE = {
     this.state = g ? { id: g.id, name: g.item, note: g.note || '', stores: storesOf(g), nice: isNice(g), repeat: gRepeat(g) }
       : { name: presetName || '', note: '', stores: App.gStore ? [App.gStore] : [], nice: false, repeat: '' };
     if (!g && App.gStore) { const disp = (App.state.groceries || []).flatMap(storesOf).find(x => x.toLowerCase() === App.gStore); this.state.stores = [disp || App.gStore]; }
-    $('#ge-title').textContent = g ? 'Edit item' : 'New item';
+    $('#ge-title').textContent = g ? 'Edit item' : 'Add an item';
     $('#ge-del').style.display = g ? '' : 'none';
+    $('#ge-save').style.display = g ? '' : 'none';
+    $('#ge-addlist').style.display = $('#ge-addlib').style.display = g ? 'none' : '';
     this.draw(); $('#groc-ed').classList.add('open');
   },
   close() { $('#groc-ed').classList.remove('open'); this.state = null; },
@@ -2228,12 +2254,35 @@ const GE = {
   draw() {
     const s = this.state; if (!s) return;
     const nf = $('#ge-name'); nf.textContent = s.name || 'Tap to type the item…'; nf.classList.toggle('ph', !s.name);
+    const dup = !s.id && s.name.trim() && (App.state.groceries || []).find(g => g.item.trim().toLowerCase() === s.name.trim().toLowerCase());
+    $('#ge-dup').textContent = dup ? `“${dup.item}” is already in your library — adding will update it${gStatus(dup) ? ' (it’s already on the list)' : ''}.` : '';
     const tf = $('#ge-note'); tf.textContent = s.note || 'Optional'; tf.classList.toggle('ph', !s.note);
     $('#ge-store').innerHTML = `<button data-store="" class="${s.stores.length ? '' : 'storeon'}">Any store</button>` + this.allStores().map(x => `<button data-store="${esc(x)}" class="${s.stores.some(y => y.toLowerCase() === x.toLowerCase()) ? 'storeon' : ''}">${esc(x)}</button>`).join('') + `<button class="newtag" data-newstore>＋ store</button>`;
     $('#ge-prio').innerHTML = `<button class="prio-ess ${s.nice ? '' : 'on'}" data-prio="">⭐ Essential</button><button class="prio-nice ${s.nice ? 'on' : ''}" data-prio="nice">☆ Nice to have</button>`;
     const GR = [['', 'Only when I add it'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']];
     $('#ge-repeat').innerHTML = GR.map(x => `<button data-grepeat="${x[0]}" class="${s.repeat === x[0] ? 'rpton' : ''}">${x[0] ? '↻ ' : ''}${x[1]}</button>`).join('');
     $('#ge-repeat-note').textContent = s.repeat ? `Goes back on the list ${repeatLabel(s.repeat).toLowerCase()} after you clear it — no need to add it by hand.` : '';
+  },
+  // New item: toList = put it on the shopping list too, or just save it to the library (All items)
+  async add(toList) {
+    const s = this.state; if (!s.name.trim()) { toast('Type the item name first', true); return; }
+    const body = { item: s.name.trim(), note: s.note, store: s.stores.join(', '), priority: s.nice ? 'nice' : '', repeat: s.repeat, list: toList, by: 'Wall' };
+    const ex = (App.state.groceries || []).find(g => g.item.trim().toLowerCase() === body.item.toLowerCase());
+    this.close();
+    if (ex) Object.assign(ex, { item: ex.item, note: body.note || ex.note, store: body.store, priority: body.priority, repeat: body.repeat }, toList ? { status: 'needed' } : {});
+    else (App.state.groceries = App.state.groceries || []).push({ id: 'tmp' + Date.now(), item: body.item, note: body.note, store: body.store, priority: body.priority, repeat: body.repeat, status: toList ? 'needed' : '' });
+    if (toList) App.gtab = 'need'; renderGroceries();
+    try {
+      if (ex) {
+        await App.backend.post('updateGrocery', { id: ex.id, item: ex.item, note: body.note, store: body.store, priority: body.priority, repeat: body.repeat });
+        if (toList && gStatus(ex) !== 'cart') await App.backend.post('setGroceryStatus', { id: ex.id, status: 'needed' });
+      } else {
+        const r = await App.backend.post('addGrocery', body);
+        if (!toList && r && r.id) await App.backend.post('setGroceryStatus', { id: r.id, status: '' });   // older scripts always list new items
+      }
+      toast(toList ? `${body.item} added to the list 🛒` : `${body.item} saved to your library`);
+    } catch (e) { toast('That didn’t save: ' + (e.message || e), true); }
+    await refresh(true);
   },
   async save() {
     const s = this.state; if (!s.name.trim()) { toast('Give the item a name first', true); return; }
@@ -2734,9 +2783,9 @@ function renderParent() {
   const body = $('#pbody');
   if (App.ptab === 'queue') {
     const q = (App.state.queue || []).filter(k => k.status === 'pending').sort((a, b) => a.submitted_at < b.submitted_at ? 1 : -1);
-    const recent = (App.state.queue || []).filter(k => k.status !== 'pending').sort((a, b) => (b.reviewed_at || b.submitted_at) < (a.reviewed_at || a.submitted_at) ? -1 : 1).slice(0, 8);
+    const recent = recentDecisions().slice(0, 12);
     const mem = (n) => members().find(m => m.name === n) || {};
-    const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'help' ? '🙋 Needs help' : k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'}${k.type === 'help' ? '' : ` · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts`} · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status) + (X.get('auto', {})[k.id] ? ' (auto)' : '')}</div></span>${acts ? (k.type === 'help' ? `<span class="acts"><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">👍 Got it</button></span>` : `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>`) : ''}</div>`;
+    const row = (k, acts) => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${esc(k.title)}</div><div class="qs">${k.type === 'help' ? '🙋 Needs help' : k.type === 'reward' ? 'Reward' : k.type === 'adjust' ? 'Adjustment' : 'Quest'}${k.type === 'help' ? '' : ` · ${k.points > 0 ? '+' : ''}${esc(k.points)} pts`} · ${esc(when(k.submitted_at))}${acts ? '' : ' · ' + esc(k.status) + (X.get('auto', {})[k.id] ? ' (auto)' : '')}</div></span>${acts ? (k.type === 'help' ? `<span class="acts"><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">👍 Got it</button></span>` : `<span class="acts"><button class="btn sm bad" data-review="rejected" data-id="${esc(k.id)}">✕ Reject</button><button class="btn sm good" data-review="approved" data-id="${esc(k.id)}">✓ Approve</button></span>`) : k.type !== 'help' ? `<span class="acts"><button class="btn sm ghost" data-undo="${esc(k.id)}">↶ Undo</button></span>` : ''}</div>`;
     const pz = X.ok ? prizesFor() : [];
     const pzHtml = pz.length ? `<div class="prizebox"><div class="sect" style="margin-top:0">🏆 Streak prizes to hand out</div>${pz.map(p => `<div class="qrow"><span class="qi">${esc(mem(p.member).emoji || '⭐')}</span><span><div class="qt">${esc(p.member)} · ${esc(p.text)}</div><div class="qs">${esc(p.label || '')} · ${esc(when(p.at))}</div></span><span class="acts"><button class="btn sm good" data-prizegiven="${esc(p.id)}">Given ✓</button></span></div>`).join('')}</div>` : '';
     body.innerHTML = pzHtml + (q.length ? q.map(k => row(k, true)).join('') : `<div class="empty">Nothing waiting for approval 🎉</div>`) + (recent.length ? `<div class="sect">Recent</div>` + recent.map(k => row(k, false)).join('') : '');
@@ -2765,6 +2814,8 @@ function renderParent() {
       <label>How many</label><div class="seg">${bvals.map(p => `<button data-bp="${p}" class="${mag === p ? 'active' : ''}">${p}</button>`).join('')}<button data-bp="custom" class="${bvals.includes(mag) ? '' : 'active'}">${bvals.includes(mag) ? 'Other…' : mag + ' ✎'}</button></div>
       <label>Reason</label><button class="field ${App.bonus.reason ? '' : 'ph'}" id="bonus-reason">${esc(App.bonus.reason) || 'e.g. Helped grandma, great report card…'}</button>
       <div class="row"><button class="btn primary" id="bonus-go">${App.bonus.points < 0 ? `Take ${Math.abs(App.bonus.points)} from` : `Give +${App.bonus.points} to`} ${esc(App.bonus.member || '…')}</button></div></div>`;
+    const rb = recentDecisions().filter(k => k.type === 'adjust').slice(0, 6), mem = (n) => members().find(m => m.name === n) || {};
+    if (rb.length) body.innerHTML += `<div class="sect">Recent points</div>` + rb.map(k => `<div class="qrow"><span class="qi">${esc(mem(k.member).emoji || '⭐')}</span><span><div class="qt">${esc(k.member)} · ${+k.points > 0 ? '+' : ''}${esc(k.points)} pts</div><div class="qs">${esc(k.title)} · ${esc(when(k.reviewed_at || k.submitted_at))}</div></span><span class="acts"><button class="btn sm ghost" data-undo="${esc(k.id)}">↶ Undo</button></span></div>`).join('');
   } else if (App.ptab === 'display') {
     const now = new Date();
     const cur = periodAt(now), eff = Display.effective(), nx = nextChange(now);
@@ -3296,13 +3347,7 @@ function bind() {
     g.status = next; renderGroceries();
     act('setGroceryStatus', { id: g.id, status: next });
   });
-  $('#groc-add').addEventListener('click', async () => {
-    const v = await KB.open({ title: 'Add an item (it joins the master list)', placeholder: 'e.g. Apples' });
-    if (!v) return;
-    const ex = (App.state.groceries || []).find(g => g.item.trim().toLowerCase() === v.toLowerCase());
-    if (ex) { ex.status = 'needed'; App.gtab = 'need'; renderGroceries(); act('setGroceryStatus', { id: ex.id, status: 'needed' }, { toast: `${ex.item} is already on your list — marked as needed` }); return; }
-    GE.open(null, v);
-  });
+  $('#groc-add').addEventListener('click', () => GE.open(null, ''));
   $('#gfilters').addEventListener('click', e => {
     if (e.target.closest('#groc-essonly')) { App.gEssOnly = !App.gEssOnly; renderGroceries(); return; }
     const b = e.target.closest('[data-store]'); if (b) { App.gStore = b.dataset.store || null; renderGroceries(); }
@@ -3310,6 +3355,8 @@ function bind() {
   $('#groc-ed').addEventListener('click', async e => {
     if (e.target.id === 'groc-ed' || e.target.closest('#ge-cancel')) { GE.close(); return; }
     if (e.target.closest('#ge-save')) { GE.save(); return; }
+    if (e.target.closest('#ge-addlist')) { GE.add(true); return; }
+    if (e.target.closest('#ge-addlib')) { GE.add(false); return; }
     if (e.target.closest('#ge-del')) { GE.del(); return; }
     if (e.target.closest('#ge-name')) { const v = await KB.open({ title: 'Item name', initial: GE.state.name, placeholder: 'e.g. Apples' }); if (v !== null && GE.state) { GE.state.name = v; GE.draw(); } return; }
     if (e.target.closest('#ge-note')) { const v = await KB.open({ title: 'Note', initial: GE.state.note, placeholder: 'brand, size, flavor…' }); if (v !== null && GE.state) { GE.state.note = v; GE.draw(); } return; }
@@ -3654,6 +3701,18 @@ function bind() {
       const list = X.get('prizes', []).map(p => p && p.id === pg.dataset.prizegiven ? Object.assign({}, p, { given: new Date().toISOString() }) : p);
       await X.op({ op: 'set', key: 'prizes', value: list }); renderParent(); renderQuests(); toast('Marked as given 🏆'); return;
     }
+    const un = e.target.closest('[data-undo]'); if (un) {
+      const k = (App.state.queue || []).find(x => x.id === un.dataset.undo); if (!k) return;
+      const pts = (+k.points > 0 ? '+' : '') + k.points + ' pts';
+      const what = k.type === 'adjust'
+        ? { title: `Undo ${pts} for ${k.member}?`, body: `“${esc(k.title)}” is removed and the points stop counting.` }
+        : { title: `Undo this ${k.status === 'approved' ? 'approval' : 'rejection'}?`, body: `${esc(k.member)} · ${esc(k.title)} (${esc(pts)}) goes back to <b>waiting for approval</b>${k.status === 'approved' ? ' — the points come off until you approve it again' : ''}.` };
+      if (!await Modal.confirm({ icon: '↶', title: what.title, body: what.body, ok: 'Undo' })) return;
+      un.closest('.qrow').style.opacity = .4;
+      try { await App.backend.post('undoQueue', { id: k.id, pin: App.pinValue }); toast('Undone'); await refresh(true); }
+      catch (e2) { un.closest('.qrow').style.opacity = ''; toast(/unknown action/i.test(e2.message || '') ? 'Undo needs the updated Google script — paste the new Code.gs and deploy a new version' : 'Couldn’t undo: ' + (e2.message || e2), true); }
+      return;
+    }
     const rv = e.target.closest('[data-review]'); if (rv) {
       rv.closest('.qrow').style.opacity = .4;
       const id = rv.dataset.id, rejecting = rv.dataset.review === 'rejected';
@@ -3668,8 +3727,13 @@ function bind() {
     }
     const dr = e.target.closest('.drow'); if (dr) {
       const cur = dinnerFor(new Date(dr.dataset.date + 'T12:00:00'));
-      const v = await KB.open({ title: 'Dinner on ' + dr.dataset.date, initial: cur ? cur.meal : '', placeholder: 'What’s for dinner?' });
-      if (v !== null) act('setDinner', { date: dr.dataset.date, meal: v, pin: App.pinValue }, { toast: 'Dinner plan saved' });
+      const dd = new Date(dr.dataset.date + 'T12:00:00');
+      const v = await KB.open({ title: `Dinner · ${dd.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}${cur ? ' (clear it to remove)' : ''}`, initial: cur ? cur.meal : '', placeholder: 'What’s for dinner?' });
+      if (v !== null) {
+        const meal = v.trim(), rows = (App.state.dinner = App.state.dinner || []);
+        rows.push({ date: dr.dataset.date, meal, note: '' }); renderParent(); renderHome();   // show it right away
+        act('setDinner', { date: dr.dataset.date, meal, pin: App.pinValue }, { toast: meal ? 'Dinner plan saved' : 'Dinner plan cleared' });
+      }
       return;
     }
     const bm = e.target.closest('[data-bm]'); if (bm) { App.bonus.member = bm.dataset.bm; renderParent(); return; }

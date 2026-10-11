@@ -272,6 +272,7 @@ function doPost(e) {
       case 'notifyStreak':   out = notify('streak', '🔥 ' + (body.member || 'Someone') + ' hit a streak!', String(body.label || '') + ' → ' + String(body.prize || '')) || { ok: true }; break;
       case 'redeemReward':   out = redeemReward(body); break;
       case 'reviewQueue':    out = reviewQueue(body); break;
+      case 'undoQueue':      out = undoQueue(body); break;
       case 'setDinner':      out = setDinner(body); break;
       case 'adjustPoints':   out = adjustPoints(body); break;
       case 'saveEvent':      out = saveEvent(body); break;
@@ -403,7 +404,8 @@ function addGrocery(b) {
   if (!item) throw new Error('Empty item');
   var existing = readTab('Groceries').filter(function (g) { return g.item.trim().toLowerCase() === item.toLowerCase(); })[0];
   if (existing) {
-    var ch = { status: 'needed', updated_at: nowIso() };
+    var ch = { updated_at: nowIso() };
+    if (b.list !== false) ch.status = 'needed';
     if (b.store !== undefined) ch.store = cleanTags(b.store);
     if (b.priority !== undefined) ch.priority = b.priority === 'nice' ? 'nice' : '';
     if (b.repeat !== undefined) ch.repeat = String(b.repeat || '');
@@ -413,7 +415,7 @@ function addGrocery(b) {
   }
   var id = uid();
   appendRow('Groceries', {
-    id: id, item: item, note: String(b.note || ''), status: 'needed',
+    id: id, item: item, note: String(b.note || ''), status: b.list === false ? '' : 'needed',
     store: cleanTags(b.store), priority: b.priority === 'nice' ? 'nice' : '', repeat: String(b.repeat || ''), next_add: '',
     added_by: String(b.by || 'Wall'), updated_at: nowIso(),
   });
@@ -647,6 +649,17 @@ function reviewQueue(b) {
   return { ok: true };
 }
 
+// Undo a decision: an approved/rejected quest or reward goes back to "waiting for approval";
+// a bonus / take-away is marked "undone" and stops counting.
+function undoQueue(b) {
+  requirePin(b.pin);
+  var row = findRow('Queue', b.id);
+  if (!row) throw new Error('Not found');
+  if (row.type === 'adjust') updateRow('Queue', b.id, { status: 'undone', reviewed_at: nowIso() });
+  else updateRow('Queue', b.id, { status: 'pending', reviewed_at: '' });
+  return { ok: true };
+}
+
 function adjustPoints(b) {
   requirePin(b.pin);
   appendRow('Queue', {
@@ -660,13 +673,21 @@ function setDinner(b) {
   requirePin(b.pin);
   var sheet = sheetByName('Dinner');
   var data = sheet.getDataRange().getValues();
+  var want = String(b.date).slice(0, 10), hit = 0, dupes = [];
   for (var r = 1; r < data.length; r++) {
-    if (String(data[r][0]) === String(b.date)) {
-      sheet.getRange(r + 1, 2, 1, 2).setValues([[String(b.meal || ''), String(b.note || '')]]);
-      return { ok: true };
-    }
+    // Sheets turns "2026-10-10" into a real date, so compare as yyyy-MM-dd
+    var v = data[r][0], key = v instanceof Date ? fmtDate(v) : String(v).slice(0, 10);
+    if (key !== want) continue;
+    if (!hit) hit = r + 1; else dupes.push(r + 1);
   }
-  sheet.appendRow([String(b.date), String(b.meal || ''), String(b.note || '')]);
+  // keep the note unless a new one was sent
+  if (hit) sheet.getRange(hit, 2, 1, 2).setValues([[String(b.meal || ''), b.note !== undefined ? String(b.note || '') : String(data[hit - 1][2] || '')]]);
+  else {
+    sheet.appendRow([want, String(b.meal || ''), String(b.note || '')]);
+    hit = sheet.getLastRow();
+  }
+  sheet.getRange(hit, 1).setNumberFormat('@').setValue(want);
+  for (var i = dupes.length - 1; i >= 0; i--) sheet.deleteRow(dupes[i]);   // tidy up duplicates left by the old version
   return { ok: true };
 }
 
