@@ -10,6 +10,7 @@ sed -i "s/\r$//" "$PROJECT/pi/"*.sh "$PROJECT/server.py" 2>/dev/null || true
 bash "$PROJECT/pi/install-extras.sh" || true
 
 sudo systemctl restart fqb-server.service
+systemctl is-enabled fqb2-server.service >/dev/null 2>&1 && sudo systemctl restart fqb2-server.service
 echo "Server restarted."
 
 bash "$PROJECT/pi/relaunch-kiosk.sh"

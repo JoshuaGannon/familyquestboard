@@ -19,6 +19,15 @@ if not exist ".git" (
   git config user.email "you@users.noreply.github.com" >nul
 )
 git remote set-url origin %REPO% >nul 2>&1
+rem v2 safety check: if Python is here, the server tests must pass before anything is pushed
+if exist "v2\tests\test_server.py" (
+  where python >nul 2>&1 && (
+    python "v2\tests\test_server.py" >nul 2>&1 || (
+      echo  v2 tests FAILED - nothing was published. Run:  python v2\tests\test_server.py  to see why.
+      pause ^& exit /b 1
+    )
+  )
+)
 git add -A
 git commit -q -m "Update %date% %time%" 2>nul
 git pull -q --rebase origin main 2>nul

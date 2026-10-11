@@ -11,3 +11,5 @@ pi/watchdog.log
 data/
 pi/internet.env
 pi/duckdns.sh
+pi/wall.env
+v2/data/

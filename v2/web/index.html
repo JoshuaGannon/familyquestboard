@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Family Quest Board</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="loading">
+<div id="loading"><div class="spin"></div><div>Loading…</div></div>
+<div id="app">
+  <nav id="nav">
+    <button class="navbtn" data-screen="home"><span class="ico">🏠</span><span class="lbl">Home</span></button>
+    <button class="navbtn" data-screen="calendar"><span class="ico">📅</span><span class="lbl">Calendar</span></button>
+    <button class="navbtn" data-screen="groceries"><span class="ico">🛒</span><span class="lbl" data-short="Shop">Groceries</span><span class="badge" id="badge-groc"></span></button>
+    <button class="navbtn" data-screen="quests"><span class="ico">⚔️</span><span class="lbl">Quests</span></button>
+    <button class="navbtn" data-screen="todo"><span class="ico">📝</span><span class="lbl">To-do</span><span class="badge" id="badge-todo"></span></button>
+    <button class="navbtn" id="nav-msg" data-screen="messages"><span class="ico">💬</span><span class="lbl" data-short="Chat">Messages</span><span class="badge" id="badge-msg"></span></button>
+    <span class="spacer"></span>
+    <button class="navbtn" data-screen="parent"><span class="ico">🔒</span><span class="lbl">Parents</span><span class="badge" id="badge-queue"></span></button>
+    <span class="pill" id="mode-pill"></span>
+  </nav>
+  <main>
+    <!-- HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="gradient-bg" id="gradient-bg"></div>
+      <div class="photo-layer" id="photo-a"></div>
+      <div class="photo-layer" id="photo-b"></div>
+      <div class="home-shade"></div>
+      <div class="home-grid">
+        <div class="clock"><div class="time" id="clock-time">--:--</div><div class="date" id="clock-date"></div><div class="family" id="family-name"></div></div>
+        <div class="weather" id="weather"></div>
+        <div id="homeside"></div>
+        <div class="smart" id="smart"></div>
+        <div class="leader" id="leader"></div>
+      </div>
+    </section>
+    <!-- CALENDAR -->
+    <section class="screen" id="screen-calendar">
+      <h1><span id="cal-title">📅 This Week</span><small id="cal-sub"></small>
+        <span class="bar" id="cal-bar"><button data-cal="prev">‹</button><button data-cal="today">Today</button><button data-cal="next">›</button><span class="sep"></span><button data-calview="week">Week</button><button data-calview="month">Month</button><span class="sep"></span><button class="add" id="cal-add">＋ Add</button></span></h1>
+      <div class="chips" id="cal-cals"></div>
+      <div id="cal-wrap"></div>
+    </section>
+    <!-- GROCERIES -->
+    <section class="screen" id="screen-groceries">
+      <h1>🛒 Groceries<small id="groc-hint"></small></h1>
+      <div class="gtabs"><button class="gtab" data-gtab="need">🛒 To get <span class="cnt" id="groc-need-cnt">0</span></button><button class="gtab" data-gtab="all">📚 Library <span class="cnt" id="groc-all-cnt">0</span></button><button class="gtab phone-only" data-gtab="store">🏪 In store <span class="cnt" id="groc-store-cnt">0</span></button></div>
+      <div class="offline-bar" id="offline-bar"></div>
+      <div class="chips" id="gfilters"></div>
+      <div class="groc">
+        <div class="groc-main"><div class="groc-list" id="groc-list"></div><div class="letter-rail" id="letter-rail"></div></div>
+        <aside class="groc-side"><div class="card"><div class="count" id="groc-count">0<small>to buy</small></div></div><button class="btn primary" id="groc-add">＋ Add item</button><button class="btn good" id="groc-clear">🧹 Clear list</button><button class="btn" id="groc-send">📤 Share list</button>
+          <div class="note"><b>To get</b> is the list. <b>Library</b> is everything you buy: tap something to put it on the list. In the store, tap what goes in the cart. Back home, <b>Clear list</b>; tap an item first to keep it. Weekly staples come back on their own (hold an item to set that).</div></aside>
+      </div>
+      <div class="letter-bubble" id="letter-bubble"></div>
+    </section>
+    <!-- QUESTS -->
+    <section class="screen" id="screen-quests">
+      <h1>⚔️ Quest Board<small>tap a quest when it's done</small></h1>
+      <div class="kid-tabs" id="kid-tabs"></div>
+      <div class="quest-wrap"><div class="quest-grid" id="quest-grid"></div><aside class="rewards" id="rewards"></aside></div>
+    </section>
+    <!-- TO-DO -->
+    <section class="screen" id="screen-todo">
+      <h1>📝 To-do<small>the parents' list</small><span class="bar"><button class="add" id="todo-add">＋ Add</button></span></h1>
+      <div class="chips" id="tfilters"></div>
+      <div class="todo-wrap"><div class="todo-list" id="todo-list"></div><aside class="todo-side"><div class="card"><div class="count" id="todo-count">0<small>open</small></div></div><div class="note">Tap a task to open it: notes, a checklist, due date, who's on it. Repeating tasks move to their next date when checked off. Type <b>#tags</b> in a task name to file it.</div></aside></div>
+    </section>
+    <!-- MESSAGES -->
+    <section class="screen" id="screen-messages">
+      <h1>💬 Messages<small id="msg-sub"></small></h1>
+      <div class="chat" id="chat"><div class="chat-list" id="chat-list"></div><div class="chat-pane" id="chat-pane"></div></div>
+    </section>
+    <!-- PARENTS -->
+    <section class="screen" id="screen-parent">
+      <h1>🔒 Parent Zone<small id="parent-sub"></small><span class="bar"><button id="parent-lockbtn">Lock</button></span></h1>
+      <div class="ptabs" id="ptabs">
+        <button class="ptab" data-ptab="queue">Approvals <span class="cnt" id="ptab-queue-n"></span></button><button class="ptab" data-ptab="dinner">Dinner</button><button class="ptab" data-ptab="quests">Quests &amp; rewards</button><button class="ptab" data-ptab="bonus">Bonus points</button><button class="ptab" data-ptab="family">Family</button><button class="ptab" data-ptab="display">Display</button><button class="ptab" data-ptab="settings">Settings</button>
+      </div>
+      <div id="pbody"></div>
+    </section>
+  </main>
+</div>
+
+<div id="sleep"><div class="sleep-inner"><div class="time" id="sleep-time">--:--</div><div class="date" id="sleep-date"></div></div></div>
+<div class="msg-banner" id="msg-banner"></div>
+
+<!-- keyboard -->
+<div id="kb"><div class="kb-box"><div class="kb-title" id="kb-title"></div><input id="kb-input" autocomplete="off" autocorrect="on" autocapitalize="sentences"><textarea id="kb-area" rows="4"></textarea><div class="kb-rows" id="kb-rows"></div></div></div>
+<!-- PIN -->
+<div id="pinpad" class="sheet"><div class="sheet-panel pinbox"><h2 id="pin-title">Parent PIN</h2><div class="pin-dots" id="pin-dots"><span></span><span></span><span></span><span></span></div>
+  <div class="pin-keys"><button data-pin="1">1</button><button data-pin="2">2</button><button data-pin="3">3</button><button data-pin="4">4</button><button data-pin="5">5</button><button data-pin="6">6</button><button data-pin="7">7</button><button data-pin="8">8</button><button data-pin="9">9</button><button data-pin="cancel" class="soft">Cancel</button><button data-pin="0">0</button><button data-pin="⌫" class="soft">⌫</button></div>
+  <div class="pin-msg" id="pin-msg"></div><label class="pin-remember" id="pin-remember"><input type="checkbox" checked> Remember on this phone for 30 days</label></div></div>
+<!-- modal -->
+<div id="modal"><div class="modal-box"><div class="m-icon" id="m-icon"></div><h2 id="m-title"></h2><div class="m-body" id="m-body"></div><div class="m-acts"><button class="btn ghost" id="m-alt"></button><span class="spacer"></span><button class="btn ghost" id="m-cancel">Cancel</button><button class="btn primary" id="m-ok">OK</button></div></div></div>
+<!-- editors -->
+<div id="groc-ed" class="sheet"><div class="sheet-panel"><h2 id="ge-title">Add an item</h2>
+  <label>Item</label><button class="field" id="ge-name"></button><div class="note hint" id="ge-dup"></div>
+  <label>Note <span class="soft">(brand, size, "the big bag"…)</span></label><button class="field" id="ge-note"></button>
+  <label>Store</label><div class="seg" id="ge-store"></div>
+  <label>Priority</label><div class="seg" id="ge-prio"></div>
+  <label>Comes back automatically</label><div class="seg" id="ge-repeat"></div><div class="note hint" id="ge-repeat-note"></div>
+  <div class="actions"><button class="btn bad" id="ge-del">Delete</button><span class="spacer"></span><button class="btn ghost" data-close="groc-ed">Cancel</button><button class="btn" id="ge-addlib">📚 Library only</button><button class="btn primary" id="ge-addlist">🛒 Library + list</button><button class="btn primary" id="ge-save">Save</button></div></div></div>
+<div id="todo-dt" class="sheet"><div class="sheet-panel wide"><div class="td-head"><button class="box" id="td-box"></button><button class="td-title" id="td-title"></button></div><div class="chips" id="td-chips"></div>
+  <label>Notes</label><button class="td-notes" id="td-notes"></button><label>Checklist <span class="soft" id="td-steps-n"></span></label><div class="steps" id="td-steps"></div><div class="row"><button class="btn sm ghost" id="td-addstep">＋ Add a step</button></div>
+  <div class="actions"><span class="td-meta" id="td-meta"></span><span class="spacer"></span><button class="btn sm bad" id="td-del">Delete</button><button class="btn sm" id="td-edit">✎ Edit</button><button class="btn sm primary" data-close="todo-dt">Close</button></div></div></div>
+<div id="todo-ed" class="sheet" style="z-index:46"><div class="sheet-panel"><h2 id="te-title">New task</h2>
+  <label>Task</label><button class="field" id="te-task"></button><label>Tags</label><div class="seg" id="te-tags"></div><label>Due</label><div class="seg" id="te-due"></div><label>Who</label><div class="seg" id="te-who"></div><label>Repeat</label><div class="seg" id="te-repeat"></div><div class="note hint" id="te-repeat-note"></div>
+  <div class="actions"><span class="spacer"></span><button class="btn ghost" data-close="todo-ed">Cancel</button><button class="btn primary" id="te-save">Save</button></div></div></div>
+<div id="ev-ed" class="sheet"><div class="sheet-panel"><h2 id="ee-title">New event</h2>
+  <label>What</label><button class="field" id="ee-name"></button><div class="seg" id="ee-kind"></div><label>Day</label><div class="seg" id="ee-date"></div><label>Time</label><div class="seg" id="ee-time"></div><label>Who</label><div class="seg" id="ee-who"></div><label>Repeat</label><div class="seg" id="ee-repeat"></div><label>Note</label><button class="field" id="ee-note"></button>
+  <div class="actions"><button class="btn bad" id="ee-del">Delete</button><span class="spacer"></span><button class="btn ghost" data-close="ev-ed">Cancel</button><button class="btn primary" id="ee-save">Save</button></div></div></div>
+<div id="quest-ed" class="sheet"><div class="sheet-panel wide"><h2 id="qe-title">New quest</h2>
+  <div class="row"><button class="icon-pick" id="qe-icon">⭐</button><button class="field grow" id="qe-name"></button></div>
+  <label id="qe-ptslabel">Points</label><div class="seg" id="qe-points"></div>
+  <div id="qe-questonly"><label>Who can do it</label><div class="seg" id="qe-who"></div><label>How often</label><div class="seg" id="qe-repeat"></div><div class="note hint" id="qe-hint"></div><label>Approval</label><div class="seg" id="qe-approve"></div><div id="qe-streakwrap"><label>🔥 Streak prizes</label><div id="qe-streak"></div></div></div>
+  <div id="qe-rewardonly"><label>Unlock</label><div class="seg" id="qe-lock"></div><div id="qe-lockopts"></div></div>
+  <label>Status</label><div class="seg" id="qe-active"></div>
+  <div class="actions"><button class="btn bad" id="qe-del">Delete</button><span class="spacer"></span><button class="btn ghost" data-close="quest-ed">Cancel</button><button class="btn primary" id="qe-save">Save</button></div></div></div>
+<div id="disp-ed" class="sheet"><div class="sheet-panel"><h2 id="de-title">New period</h2><label>Starts at</label><button class="field" id="de-time"></button><label>Mode</label><div class="seg" id="de-mode"></div><label>Days</label><div class="seg" id="de-days"></div>
+  <div class="actions"><button class="btn bad" id="de-del">Delete</button><span class="spacer"></span><button class="btn ghost" data-close="disp-ed">Cancel</button><button class="btn primary" id="de-save">Save</button></div></div></div>
+<div id="member-ed" class="sheet"><div class="sheet-panel"><h2 id="me-title">New member</h2><div class="row"><button class="icon-pick" id="me-emoji">👤</button><button class="field grow" id="me-name"></button></div><label>Role</label><div class="seg" id="me-role"></div><label>Colour</label><div class="seg" id="me-color"></div><label>Status</label><div class="seg" id="me-active"></div>
+  <div class="actions"><button class="btn bad" id="me-del">Remove</button><span class="spacer"></span><button class="btn ghost" data-close="member-ed">Cancel</button><button class="btn primary" id="me-save">Save</button></div></div></div>
+
+<div id="toast"></div>
+<input type="date" class="hidden-date" id="date-pick">
+<script src="core.js"></script>
+<script src="logic.js"></script>
+<script src="screens.js"></script>
+<script src="parent.js"></script>
+<script src="messages.js"></script>
+<script src="photos.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

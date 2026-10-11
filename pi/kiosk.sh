@@ -3,6 +3,8 @@
 # setup-pi.sh fills in URL and CHROMIUM and registers this to run at login.
 URL="http://localhost:8080"
 CHROMIUM="chromium"
+# v2/pi/switch-wall.sh writes pi/wall.env to point the wall at v2 (not tracked by git)
+[ -f "$(dirname "$0")/wall.env" ] && . "$(dirname "$0")/wall.env"
 
 # Wait for the local server to answer (up to 60 s)
 for _ in $(seq 1 60); do
