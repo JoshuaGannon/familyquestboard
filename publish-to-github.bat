@@ -19,11 +19,13 @@ if not exist ".git" (
   git config user.email "you@users.noreply.github.com" >nul
 )
 git remote set-url origin %REPO% >nul 2>&1
-rem v2 safety check: if Python is here, the server tests must pass before anything is pushed
+rem v2 safety check: if a working Python is here, the server tests must pass before anything is pushed.
+rem (Windows ships a fake "python" that opens the Store - it is ignored.)
 if exist "v2\tests\test_server.py" (
-  where python >nul 2>&1 && (
-    python "v2\tests\test_server.py" >nul 2>&1 || (
-      echo  v2 tests FAILED - nothing was published. Run:  python v2\tests\test_server.py  to see why.
+  python -c "print(1)" >nul 2>&1 && (
+    python "v2\tests\test_server.py" || (
+      echo.
+      echo  v2 tests FAILED - nothing was published. The error is above.
       pause ^& exit /b 1
     )
   )

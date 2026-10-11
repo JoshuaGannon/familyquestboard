@@ -425,7 +425,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"ok": ok, "message": msg})
             return
         if path == "/api/import":
-            if not self._is_parent(body):
+            local = self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1") and not self.headers.get("X-Forwarded-For")
+            if not local and not self._is_parent(body):
                 self._json({"ok": False, "error": "Parent PIN needed"}, 403)
                 return
             started = importer.run(str(body.get("script_url", "")).strip(), want_photos=body.get("photos", True) is not False)

@@ -1,5 +1,9 @@
 """Server-side checks: ICS expansion, actions, role cookie, import. Run: python3 tests/test_server.py"""
-import json, os, sys, tempfile, threading, urllib.request
+import json, os, sys, tempfile
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 from datetime import date, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from fqb import db, ics, importer
@@ -30,7 +34,7 @@ r = db.do("submitQuest", {"questId": "q1", "member": "Ava"}, False); qid = r["id
 ok(db.do("submitQuest", {"questId": "q1", "member": "Ava"}, False).get("dup"), "duplicate submit ignored")
 db.do("reviewQueue", {"id": qid, "status": "approved"}, True)
 ok(sum(int(k['points']) for k in db.rows('queue') if k['member'] == 'Ava' and k['status'] == 'approved') == 10, "points add up")
-db.do("undoQueue", {"id": qid}, True); ok(db._find("queue", qid)["status"] == "pending", "undo → pending")
+db.do("undoQueue", {"id": qid}, True); ok(db._find("queue", qid)["status"] == "pending", "undo -> pending")
 db.do("addGrocery", {"item": "Oat milk", "list": False}, False); ok(db._find("groceries", [g['id'] for g in db.rows('groceries') if g['item'] == 'Oat milk'][0])["status"] == "", "library-only add")
 db.do("addGrocery", {"item": "oat MILK"}, False); ok(len([g for g in db.rows('groceries') if g['item'].lower() == 'oat milk']) == 1, "no duplicate items")
 db.do("setDinner", {"date": "2026-10-12T00:00:00", "meal": "Pizza"}, True); db.do("setDinner", {"date": "2026-10-12", "meal": "Soup"}, True)

@@ -30,7 +30,16 @@ Two things the import cannot copy, both one-minute jobs under Settings:
 - the **calendar** (v1 read it with your Google login; v2 needs the iCal link),
 - the **PIN memory on phones** (enter the PIN once more).
 
-### Put it on the wall / take it off
+### Go live (v2 becomes *the* board)
+
+```bash
+bash v2/pi/go-live.sh           # imports v1 → v2, then the main address and the wall switch to v2
+bash v2/pi/go-live.sh revert    # everything back to v1
+```
+
+While live: `https://<name>.duckdns.org` → v2 and `https://v1.<name>.duckdns.org` → v1. Both servers keep running, nothing is deleted, so a revert is instant. Note that after going live, changes are made in v2 only; a revert shows v1 as it was on switch day.
+
+### Put it on the wall / take it off (without touching the addresses)
 
 ```bash
 bash v2/pi/switch-wall.sh v2      # wall shows v2
