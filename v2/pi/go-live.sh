@@ -12,7 +12,10 @@ V2="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; PROJECT="$(dirname "$V2")
 MODE="${1:-live}"; V1PORT=8080; V2PORT="${FQB2_PORT:-8090}"
 DOMAIN=""; [ -f "$PROJECT/pi/internet.env" ] && . "$PROJECT/pi/internet.env"
 
-systemctl is-active --quiet fqb2-server.service || { echo "v2 is not installed yet — run: bash v2/pi/setup-v2.sh"; exit 1; }
+systemctl is-enabled --quiet fqb2-server.service 2>/dev/null || { echo "v2 is not installed yet — run: bash v2/pi/setup-v2.sh"; exit 1; }
+# make sure the server is running the code that was just pulled
+sudo systemctl restart fqb2-server.service
+for _ in $(seq 1 20); do curl -fs "http://localhost:$V2PORT/api/health" >/dev/null 2>&1 && break; sleep 1; done
 
 if [ "$MODE" = live ]; then
   echo "== 1/3  Importing v1 → v2 (Sheet, Pi data, photos, password)"

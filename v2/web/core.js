@@ -31,7 +31,7 @@ const isPhone = () => S.forcePhone || new URLSearchParams(location.search).has('
 const S = {
   state: null, version: 0, cal: 0, parent: false, server: null, weather: null, error: '', lastOk: null,
   screen: 'home', ptab: 'queue', kid: '', gtab: '', gStore: null, gEssOnly: false, gKeep: [], todoTag: null, todoSort: 'due', todoShowDone: false,
-  bonus: { member: '', points: 5, reason: '' }, calIndex: [], forcePhone: false, online: true,
+  bonus: { member: '', points: 5, reason: '' }, calIndex: [], forcePhone: false, online: true, clearedAt: ls.get('fqb2_cleared', {}), clearedOpen: false,
 };
 function cfg(key, fb) { const v = S.state && S.state.config ? S.state.config[key] : undefined; return v === undefined || v === null || v === '' ? fb : v; }
 const X = {

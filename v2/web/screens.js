@@ -252,13 +252,18 @@ function renderGroceries() {
   }
   if (S.gtab === 'store') {
     rail.classList.add('hidden');
-    const bought = needed.filter(g => gStatus(g) === 'cart').length;
-    $('#groc-count').innerHTML = `${needed.length - bought}<small>left${bought ? ` · ${bought} in cart` : ''}</small>`;
+    const bought = needed.filter(g => gStatus(g) === 'cart').length, left = needed.filter(g => gStatus(g) !== 'cart');
+    $('#groc-count').innerHTML = `${left.length}<small>left${bought ? ` · ${bought} in cart` : ''}</small>`;
     $('#groc-clear').style.display = bought ? '' : 'none'; $('#groc-clear').textContent = `Clear ${bought} bought`; $('#groc-send').style.display = 'none';
-    const row = (g) => { const c = gStatus(g) === 'cart', sub = [g.note, isNice(g) ? 'if they have it' : ''].filter(Boolean).join(' · '); return `<button class="sitem ${c ? 'cart' : ''}" data-id="${esc(g.id)}"><span class="ck">${c ? '✓' : ''}</span><span class="nm">${esc(g.item)}${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</span></button>`; };
-    const groups = groupByStore(needed); groups.forEach(grp => grp.items.sort((a, b) => (gStatus(a) === 'cart') - (gStatus(b) === 'cart')));
-    const multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
-    list.innerHTML = needed.length ? groups.map(grp => (multi ? `<div class="slhead">${esc(grp.store)} · ${grp.items.filter(g => gStatus(g) !== 'cart').length} left</div>` : '') + `<div class="slist">${grp.items.map(row).join('')}</div>`).join('') : `<div class="empty">Nothing on the list 🎉</div>`;
+    const row = (g) => { const sub = [g.note, isNice(g) ? 'if they have it' : ''].filter(Boolean).join(' · '); return `<button class="sitem" data-id="${esc(g.id)}"><span class="ck"></span><span class="nm">${esc(g.item)}${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</span></button>`; };
+    const groups = groupByStore(left), multi = groups.length > 1 || (groups.length === 1 && groups[0].store !== 'Any store');
+    // tapped in the last 3 hours: a collapsible strip at the bottom, tap to put one back
+    const cutoff = Date.now() - 3 * 3600000;
+    const recent = needed.filter(g => gStatus(g) === 'cart').map(g => ({ g, t: S.clearedAt[g.id] || (g.updated_at ? toDate(g.updated_at).getTime() : 0) })).filter(x => x.t >= cutoff).sort((a, b) => b.t - a.t);
+    const recentHtml = recent.length ? `<div class="cleared ${S.clearedOpen ? 'open' : ''}"><button class="clhd" data-toggle-cleared><span>Recently cleared · ${recent.length}</span><span class="chev">${S.clearedOpen ? '▾' : '▸'}</span></button>
+      ${S.clearedOpen ? `<div class="slist">${recent.map(({ g, t }) => `<button class="sitem cart" data-restore="${esc(g.id)}"><span class="ck">✓</span><span class="nm"><s>${esc(g.item)}</s><span class="sub">${esc(relTime(new Date(t).toISOString()))} · tap to put back</span></span></button>`).join('')}</div>` : ''}</div>` : '';
+    list.innerHTML = (left.length ? groups.map(grp => (multi ? `<div class="slhead">${esc(grp.store)} · ${grp.items.length}</div>` : '') + `<div class="slist">${grp.items.map(row).join('')}</div>`).join('')
+      : `<div class="empty">${needed.length ? 'All in the cart 🎉' : 'Nothing on the list 🎉'}</div>`) + recentHtml;
     return;
   }
   rail.classList.remove('hidden');

@@ -120,12 +120,14 @@ function bind() {
     if (!await Modal.confirm({ icon: '🧹', title: keep.length ? `Clear all but ${keep.length}?` : 'Clear the list?', body: keep.length ? 'Kept items stay on the list; everything else is marked stocked.' : 'Everything is marked stocked. Weekly staples come back on their own.', ok: 'Clear' })) return;
     S.gKeep = []; await act('clearList', { keep }, { toast: 'List cleared' });
   });
-  const gPressed = longPress($('#groc-list'), '.gchip, .gitem, .sitem', (b) => { const g = (S.state.groceries || []).find(x => x.id === b.dataset.id); if (g) GE.open(g); });
+  const gPressed = longPress($('#groc-list'), '.gchip, .gitem, .sitem:not([data-restore])', (b) => { const g = (S.state.groceries || []).find(x => x.id === b.dataset.id); if (g) GE.open(g); });
   on($('#groc-list'), 'click', e => {
     if (gPressed()) return;
+    if (e.target.closest('[data-toggle-cleared]')) { S.clearedOpen = !S.clearedOpen; renderGroceries(); return; }
+    const rs = e.target.closest('[data-restore]'); if (rs) { const g = (S.state.groceries || []).find(x => x.id === rs.dataset.restore); if (g) { g.status = 'needed'; delete S.clearedAt[g.id]; ls.set('fqb2_cleared', S.clearedAt); renderGroceries(); Outbox.send('setGroceryStatus', { id: g.id, status: 'needed' }); toast(`${g.item} is back on the list`); } return; }
     const b = e.target.closest('.gchip, .gitem, .sitem'); if (!b) return;
     const g = (S.state.groceries || []).find(x => x.id === b.dataset.id); if (!g) return;
-    if (S.gtab === 'store') { const next = gStatus(g) === 'cart' ? 'needed' : 'cart'; g.status = next; renderGroceries(); Outbox.send('setGroceryStatus', { id: g.id, status: next }); return; }
+    if (S.gtab === 'store') { g.status = 'cart'; S.clearedAt[g.id] = Date.now(); ls.set('fqb2_cleared', S.clearedAt); renderGroceries(); Outbox.send('setGroceryStatus', { id: g.id, status: 'cart' }); return; }
     if (S.gtab === 'need') { const i = S.gKeep.indexOf(g.id); if (i >= 0) S.gKeep.splice(i, 1); else S.gKeep.push(g.id); renderGroceries(); return; }
     const next = gStatus(g) === '' ? 'needed' : ''; g.status = next; renderGroceries(); act('setGroceryStatus', { id: g.id, status: next });
   });

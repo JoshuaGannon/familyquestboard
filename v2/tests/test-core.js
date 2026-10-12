@@ -63,11 +63,12 @@ const assert = (c, m) => { if (!c) { console.log('  FAIL:', m); process.exitCode
   await ph.goto(URL); await ph.waitForTimeout(2000); await ph.click('[data-pick="Dad"]'); await ph.waitForTimeout(300);
   await ph.click('[data-screen="groceries"]'); await ph.click('[data-gtab="store"]'); await ph.waitForTimeout(300);
   assert(await ph.locator('.sitem').count() > 3, 'phone in-store checklist');
-  await ph.locator('.sitem').first().click(); await ph.waitForTimeout(1500); assert(await ph.locator('.sitem.cart').count() === 1, 'checked in store');
+  const nStore = await ph.locator('.sitem').count(); await ph.locator('.sitem').first().click(); await ph.waitForTimeout(1500); assert(await ph.locator('.sitem:not([data-restore])').count() === nStore - 1 && /Recently cleared · 1/.test(await ph.textContent('.clhd')), 'tapped item leaves the list, lands in Recently cleared');
+  await ph.click('[data-toggle-cleared]'); await ph.locator('[data-restore]').first().click(); await ph.waitForTimeout(1500); assert(await ph.locator('.sitem:not([data-restore])').count() === nStore, 'restored from Recently cleared');
   await ph.click('[data-screen="parent"]'); await ph.waitForTimeout(400); assert(await ph.locator('#pinpad.open').count() === 1 && await ph.locator('#pin-remember').isVisible(), 'phone PIN with remember');
   await pin(ph); assert(await ph.locator('.ptab').count() >= 6, 'phone parent unlocked');
   await ph.reload(); await ph.waitForTimeout(2000); await ph.click('[data-screen="parent"]'); await ph.waitForTimeout(400); assert(await ph.locator('#pinpad.open').count() === 0, 'phone stays unlocked after reload');
-  await ph.click('[data-screen="messages"]'); await ph.waitForTimeout(300); await ph.click('[data-newchat]'); await ph.waitForTimeout(200); await ph.click('[data-pick="Ava"]'); await ph.waitForTimeout(300); await ph.click('[data-mquick="👍 Yes"]'); await ph.waitForTimeout(1200);
+  await ph.click('[data-screen="messages"]'); await ph.waitForTimeout(300); await ph.click('[data-newchat]'); await ph.waitForTimeout(300); await ph.click('[data-pick="Ava"]'); await ph.waitForTimeout(300); await ph.click('[data-mquick="👍 Yes"]'); await ph.waitForTimeout(1200);
   assert(await ph.locator('#thread .bub.me').count() === 1, 'phone sent a message');
   await wall.click('[data-screen="messages"]'); await wall.waitForTimeout(300); assert(/Ava & Dad/.test(await txt('#chat-list')), 'wall sees the conversation');
   console.log('ERRORS:', errors.length ? errors : 'none'); if (errors.length) process.exitCode = 1; await b.close(); })();
