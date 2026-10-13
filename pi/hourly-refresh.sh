@@ -5,6 +5,8 @@
 # using the board, so it never yanks the screen out from under anyone.
 PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="$(grep -o 'FQB_PORT=[0-9]*' /etc/systemd/system/fqb-server.service 2>/dev/null | cut -d= -f2)"; PORT="${PORT:-8080}"
+# the wall may be pointed at v2 (v2/pi/switch-wall.sh writes pi/wall.env) - ask that server, not v1
+if [ -f "$PROJECT/pi/wall.env" ]; then . "$PROJECT/pi/wall.env"; WP="${URL##*:}"; case "$WP" in [0-9]*) PORT="$WP";; esac; fi
 STATE="$PROJECT/pi/.watchdog"; mkdir -p "$STATE"
 now=$(date +%s)
 paused=$(cat "$STATE/paused_until" 2>/dev/null || echo 0)

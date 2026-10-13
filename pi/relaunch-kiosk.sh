@@ -18,6 +18,8 @@ done
 # never renders. Power the screen on first (through the server, so it knows);
 # once the board loads it turns the screen back off if the schedule says so.
 PORT="$(grep -o 'FQB_PORT=[0-9]*' /etc/systemd/system/fqb-server.service 2>/dev/null | cut -d= -f2)"; PORT="${PORT:-8080}"
+# the wall may be pointed at v2 (v2/pi/switch-wall.sh writes pi/wall.env) - ask that server, not v1
+if [ -f "$PROJECT/pi/wall.env" ]; then . "$PROJECT/pi/wall.env"; WP="${URL##*:}"; case "$WP" in [0-9]*) PORT="$WP";; esac; fi
 if curl -fs -m 5 "http://localhost:$PORT/api/display" 2>/dev/null | grep -q '"state": "off"'; then
   curl -fs -m 10 -X POST -d '{"state":"on"}' "http://localhost:$PORT/api/display" >/dev/null 2>&1 || bash "$PROJECT/pi/screen.sh" on >/dev/null 2>&1
   sleep 3
