@@ -36,6 +36,29 @@ const assert = (c, m) => { if (!c) { console.log('  FAIL:', m); process.exitCode
   // new quest via editor
   await wall.click('[data-ptab="quests"]'); await wall.click('[data-act="quest-add"]'); await wall.waitForTimeout(300); await type(wall, 'Water the garden'); await wall.click('[data-qpts="15"]'); await wall.click('[data-qrep="weekly"]'); await wall.click('[data-qauto="1"]'); await wall.click('#qe-save'); await wall.waitForTimeout(900);
   assert(/Water the garden/.test(await txt('#pbody')) && /auto-approve/.test(await txt('#pbody')), 'quest created with auto-approve');
+  // custom intervals: pick days (today + one other), every 3 days, twice a week
+  const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], todayDow = new Date().getDay(), otherDow = (todayDow + 3) % 7;
+  await wall.click('[data-act="quest-add"]'); await wall.waitForTimeout(300); await type(wall, 'Take out bins'); await wall.click('[data-qrep-days]'); await wall.waitForTimeout(150);
+  assert(await wall.locator('#qe-days [data-qday]').count() === 7, 'day picker shows 7 days');
+  for (const d of [1, 4]) if (await wall.locator(`#qe-days [data-qday="${d}"].on`).count()) await wall.click(`#qe-days [data-qday="${d}"]`); // clear the mon/thu default
+  await wall.click(`#qe-days [data-qday="${todayDow}"]`); await wall.click(`#qe-days [data-qday="${otherDow}"]`); await wall.waitForTimeout(150);
+  assert((await txt('#qe-hint')).includes(dowNames[todayDow]) && (await txt('#qe-hint')).includes(dowNames[otherDow]), 'hint names the picked days');
+  await wall.click('#qe-save'); await wall.waitForTimeout(900);
+  assert(new RegExp(dowNames[todayDow] + '.*' + dowNames[otherDow] + '|' + dowNames[otherDow] + '.*' + dowNames[todayDow]).test(await txt('#pbody')), 'quest list shows the picked days');
+  await wall.click('[data-act="quest-add"]'); await wall.waitForTimeout(300); await type(wall, 'Vacuum room'); await wall.click('[data-qrep-every]'); await wall.waitForTimeout(200); await type(wall, '3'); await wall.waitForTimeout(150);
+  assert(/Every 3 days/.test(await txt('#qe-repeat')), 'every-3-days chip set'); await wall.click('#qe-save'); await wall.waitForTimeout(900);
+  await wall.click('[data-act="quest-add"]'); await wall.waitForTimeout(300); await type(wall, 'Practice piano'); await wall.click('[data-qrep-week]'); await wall.waitForTimeout(200); await type(wall, '2'); await wall.waitForTimeout(150);
+  assert(/Twice a week/.test(await txt('#qe-repeat')), 'twice-a-week chip set'); await wall.click('#qe-save'); await wall.waitForTimeout(900);
+  assert(/Every 3 days/.test(await txt('#pbody')) && /Twice a week/.test(await txt('#pbody')), 'custom intervals saved and listed');
+  // kid side: the day-picked quest shows today, twice-a-week shows a 0 of 2 counter, and it stays available after one completion
+  await wall.click('[data-screen="quests"]'); await wall.waitForTimeout(300); await wall.click('[data-kid="Ava"]'); await wall.waitForTimeout(200);
+  assert(await wall.locator('.quest', { hasText: 'Take out bins' }).count() === 1, 'day-picked quest visible on a picked day');
+  const piano = wall.locator('.quest', { hasText: 'Practice piano' }); assert(/0 of 2 this week/.test(await piano.textContent()), 'twice-a-week shows 0 of 2');
+  await piano.click(); await wall.waitForTimeout(200); await wall.click('#m-ok'); await wall.waitForTimeout(800);
+  await wall.click('[data-screen="parent"]'); await wall.waitForTimeout(300); await wall.click('[data-ptab="queue"]'); await wall.waitForTimeout(200); await wall.locator('.qrow', { hasText: 'Practice piano' }).locator('[data-review="approved"]').click(); await wall.waitForTimeout(800);
+  await wall.click('[data-screen="quests"]'); await wall.waitForTimeout(300); await wall.click('[data-kid="Ava"]'); await wall.waitForTimeout(200);
+  assert(/1 of 2 this week/.test(await piano.textContent()) && !(await piano.getAttribute('class')).includes('done'), 'twice-a-week still available after one approval (1 of 2)');
+  await wall.click('[data-screen="parent"]'); await wall.waitForTimeout(300); await wall.click('[data-ptab="quests"]'); await wall.waitForTimeout(200);
   // family: add member
   await wall.click('[data-ptab="family"]'); await wall.click('[data-act="member-add"]'); await wall.waitForTimeout(300); await type(wall, 'Zoe'); await wall.click('#me-save'); await wall.waitForTimeout(900);
   assert(/Zoe/.test(await txt('#pbody')), 'member added');

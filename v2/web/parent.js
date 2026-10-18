@@ -140,7 +140,14 @@ const QE = {
     $('#qe-points').innerHTML = pts.map(p => `<button data-qpts="${p}" class="${s.points === p ? 'on' : ''}">${p}</button>`).join('') + `<button data-qpts="custom" class="${pts.includes(s.points) ? '' : 'on'}">${pts.includes(s.points) ? 'Other…' : s.points + ' ✎'}</button>`;
     if (this.kind === 'quest') {
       $('#qe-who').innerHTML = [['Anyone', '👧👦 Anyone']].concat(members('kid').map(k => [k.name, `${k.emoji || '⭐'} ${k.name}`])).map(w => `<button data-qwho="${esc(w[0])}" class="${s.who.toLowerCase() === w[0].toLowerCase() ? 'on' : ''}">${esc(w[1])}</button>`).join('');
-      $('#qe-repeat').innerHTML = QREPEATS.map(r => `<button data-qrep="${r[0]}" class="${s.repeat === r[0] ? 'on' : ''}">${r[1]}</button>`).join(''); $('#qe-hint').textContent = QHINTS[s.repeat] || '';
+      const evN = everyDays(s.repeat) > 1 ? everyDays(s.repeat) : 0, dys = questDays(s.repeat), pw = perWeek(s.repeat);
+      $('#qe-repeat').innerHTML = QREPEATS.map(r => `<button data-qrep="${r[0]}" class="${s.repeat === r[0] ? 'on' : ''}">${r[1]}</button>`).join('')
+        + `<button data-qrep-every class="${evN ? 'on' : ''}">${evN ? `↻ Every ${evN} days ✎` : '↻ Every N days…'}</button>`
+        + `<button data-qrep-week class="${pw ? 'on' : ''}">${pw ? esc(questRepeatLabel(s.repeat)) + ' ✎' : 'N times a week…'}</button>`
+        + `<button data-qrep-days class="${dys ? 'on' : ''}">${dys ? '📅 ' + esc(questRepeatLabel(s.repeat)) : '📅 Pick the days…'}</button>`;
+      $('#qe-days').innerHTML = dys ? DOW_LABEL.map((l, i) => `<button data-qday="${i}" class="${dys.includes(i) ? 'on good' : ''}">${l}</button>`).join('') : '';
+      $('#qe-days').style.display = dys ? '' : 'none';
+      $('#qe-hint').textContent = questHint(s.repeat);
       this.drawStreak();
       $('#qe-approve').innerHTML = `<button data-qauto="0" class="${s.auto ? '' : 'on'}">👀 Parent approves</button><button data-qauto="1" class="${s.auto ? 'on good' : ''}">✓ Auto-approve</button>`;
     } else {
@@ -156,6 +163,7 @@ const QE = {
   async save() {
     const s = this.state; if (!s.title.trim()) { toast('Give it a name first', true); return; }
     if (s.sdraft && s.streak && s.streak.mode === 'custom') { toast('Finish or cancel the streak prize first', true); return; }
+    if (this.kind === 'quest' && questDays(s.repeat) && !questDays(s.repeat).length) { toast('Pick at least one day', true); return; }
     const kind = this.kind; this.close();
     if (kind === 'quest') {
       const res = await act('saveQuest', { id: s.id, title: s.title.trim(), icon: s.icon, points: s.points, assigned_to: s.who, repeat: s.repeat, active: s.active, notes: s.notes }, { toast: 'Quest saved' });

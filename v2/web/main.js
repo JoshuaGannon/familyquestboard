@@ -256,6 +256,10 @@ function bind() {
     const qp = e.target.closest('[data-qpts]'); if (qp) { if (qp.dataset.qpts === 'custom') { const n = await num('How many points?', s.points, 0, 10000); if (n !== null) s.points = Math.round(n); } else s.points = +qp.dataset.qpts; QE.draw(); return; }
     const qw = e.target.closest('[data-qwho]'); if (qw) { s.who = qw.dataset.qwho; QE.draw(); return; }
     const qr = e.target.closest('[data-qrep]'); if (qr) { s.repeat = qr.dataset.qrep; QE.draw(); return; }
+    if (e.target.closest('[data-qrep-every]')) { const n = await num('Every how many days?', everyDays(s.repeat) || 3, 2, 365); if (n !== null && QE.state) { QE.state.repeat = 'every:' + Math.round(n); QE.draw(); } return; }
+    if (e.target.closest('[data-qrep-week]')) { const n = await num('How many times a week?', perWeek(s.repeat) || 2, 1, 7); if (n !== null && QE.state) { QE.state.repeat = 'week:' + Math.round(n); QE.draw(); } return; }
+    if (e.target.closest('[data-qrep-days]')) { if (!questDays(s.repeat)) s.repeat = 'days:mon,thu'; QE.draw(); return; }
+    const qd = e.target.closest('[data-qday]'); if (qd) { const ds = questDays(s.repeat) || [], i = +qd.dataset.qday; const nx = ds.includes(i) ? ds.filter(x => x !== i) : ds.concat(i).sort(); s.repeat = 'days:' + nx.map(x => DOW[x]).join(','); QE.draw(); return; }
     const qa = e.target.closest('[data-qauto]'); if (qa) { s.auto = qa.dataset.qauto === '1'; QE.draw(); return; }
     const qc = e.target.closest('[data-qact]'); if (qc) { s.active = qc.dataset.qact === '1'; QE.draw(); return; }
     const sm = e.target.closest('[data-smode]'); if (sm) { s.streak.mode = sm.dataset.smode; s.sdraft = null; QE.draw(); return; }

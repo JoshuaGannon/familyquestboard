@@ -328,11 +328,16 @@ function renderQuests() {
   if (!kids.length) { $('#kid-tabs').innerHTML = ''; $('#quest-grid').innerHTML = `<div class="empty">Add family members with role <b>kid</b> under Parents → Family.</div>`; $('#rewards').innerHTML = ''; return; }
   if (!S.kid || !kids.find(k => k.name === S.kid)) S.kid = (isPhone() && kids.find(k => k.name === Me.name()) || kids[0]).name;
   $('#kid-tabs').innerHTML = kids.map(k => { const b = balance(k.name); return `<button class="kid-tab ${k.name === S.kid ? 'active' : ''}" style="--kid:${esc(k.color || '#f59e0b')}" data-kid="${esc(k.name)}"><span class="av" style="background:${esc(k.color || '#334')}">${esc(k.emoji || '⭐')}</span><span>${esc(k.name)}<div class="pts">${b.approved} pts</div></span></button>`; }).join('');
-  const kid = kids.find(k => k.name === S.kid), wknd = [0, 6].includes(new Date().getDay()), order = { available: 0, pending: 1, done: 2 };
-  const items = kidQuests(kid.name).filter(q => !(wknd && String(q.repeat).toLowerCase() === 'weekdays')).map(q => ({ q, s: questStatus(q, kid.name) })).sort((a, b) => order[a.s] - order[b.s]);
+  const kid = kids.find(k => k.name === S.kid), today = new Date(), order = { available: 0, pending: 1, done: 2 };
+  const items = kidQuests(kid.name).filter(q => !questHiddenOn(q, today)).map(q => ({ q, s: questStatus(q, kid.name) })).sort((a, b) => order[a.s] - order[b.s]);
   const label = { pending: 'WAITING ⏳', done: 'DONE ✓' }, rep = { daily: 'today', weekdays: 'today', weekly: 'this week', biweekly: 'every 2 weeks', monthly: 'this month', once: 'one time' };
-  const repTxt = (r) => { const n = everyDays(r); return n ? (n === 1 ? 'today' : `every ${n} days`) : (rep[(r || 'daily').toLowerCase()] || esc(r)); };
-  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur, nx = nextPrize(q, st); return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s === 'done' ? 'disabled' : ''}>${helpAsked(q, kid.name) ? '<span class="helpflag">🙋</span>' : ''}${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${questOpts(q).auto ? '<div class="auto">✓ no approval needed</div>' : ''}${nx ? `<div class="snext">🔥 ${nx.target - st} more → ${esc(prizeShort(nx.m))}</div>` : ''}<div class="qm"><span>${repTxt(q.repeat)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
+  const repTxt = (r, q) => {
+    const n = everyDays(r); if (n) return n === 1 ? 'today' : `every ${n} days`;
+    if (questDays(r)) return 'today';
+    const pw = perWeek(r); if (pw) return `${Math.min(pw, questWeekCount(q, kid.name))} of ${pw} this week`;
+    return rep[(r || 'daily').toLowerCase()] || esc(r);
+  };
+  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur, nx = nextPrize(q, st); return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s === 'done' ? 'disabled' : ''}>${helpAsked(q, kid.name) ? '<span class="helpflag">🙋</span>' : ''}${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${questOpts(q).auto ? '<div class="auto">✓ no approval needed</div>' : ''}${nx ? `<div class="snext">🔥 ${nx.target - st} more → ${esc(prizeShort(nx.m))}</div>` : ''}<div class="qm"><span>${repTxt(q.repeat, q)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
     : `<div class="empty">No quests for ${esc(kid.name)} yet.</div>`;
   const b = balance(kid.name), rewards = (S.state.rewards || []).filter(r => r.title && (r.active === '' || r.active === undefined || isTrue(r.active)));
   const cps = couponsFor(kid.name), bestOff = cps.length ? Math.max(...cps.map(c => +c.off || 0)) : 0;

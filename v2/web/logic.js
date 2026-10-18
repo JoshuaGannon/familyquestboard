@@ -22,20 +22,32 @@ function everyDays(r) { const m = /^(?:every[:\s]*)?(\d+)(?:\s*days?)?$/i.exec(S
 const pendingEntry = (q, m) => (S.state.queue || []).find(k => k.type === 'quest' && k.ref_id === q.id && k.member === m && k.status === 'pending');
 const helpAsked = (q, m) => (S.state.queue || []).some(k => k.type === 'help' && k.ref_id === q.id && k.member === m && k.status === 'pending');
 const questOn = (q) => q.title && (q.active === '' || q.active === undefined || isTrue(q.active));
+const DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+/* repeat formats: once | daily | weekdays | weekly | biweekly | monthly | every:N (every N days) | days:mon,thu (chosen weekdays) | week:N (N times a week) */
+function questDays(r) { const m = /^days:(.*)$/i.exec(String(r || '').trim()); if (!m) return null; const out = m[1].split(',').map(x => DOW.indexOf(x.trim().slice(0, 3).toLowerCase())).filter(x => x >= 0); return [...new Set(out)].sort(); }
+function perWeek(r) { const m = /^week:(\d+)$/i.exec(String(r || '').trim()); return m ? Math.max(1, +m[1]) : 0; }
+const questHiddenOn = (q, d) => { const r = String(q.repeat || 'daily').toLowerCase(), dow = d.getDay(); if (r === 'weekdays') return dow === 0 || dow === 6; const ds = questDays(r); return !!(ds && ds.length && !ds.includes(dow)); };
 function questStatus(quest, memberName) {
   const monday = isTrue(cfg('week_starts_monday', 'TRUE')), now = new Date();
-  const period = (quest.repeat || 'daily').toLowerCase();
+  const period = (quest.repeat || 'daily').toLowerCase(), pw = perWeek(period);
+  let inWeek = 0, pend = false;
   for (const k of (S.state.queue || [])) {
     if (k.type !== 'quest' || k.ref_id !== quest.id || k.member !== memberName || k.status === 'rejected' || k.status === 'undone') continue;
     const t = toDate(k.submitted_at); let same = true;
-    if (period === 'daily' || period === 'weekdays') same = dayKey(t) === dayKey(now);
+    if (period === 'daily' || period === 'weekdays' || questDays(period)) same = dayKey(t) === dayKey(now);
     else if (period === 'weekly') same = weekKey(t, monday) === weekKey(now, monday);
     else if (period === 'biweekly') same = (now - t) < 14 * 86400000;
     else if (period === 'monthly') same = t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth();
     else if (everyDays(period)) { const d0 = startOfDay(t), d1 = startOfDay(now); same = Math.round((d1 - d0) / 86400000) < everyDays(period); }
+    else if (pw) { if (weekKey(t, monday) === weekKey(now, monday)) { inWeek++; if (k.status === 'pending') pend = true; } continue; }
     if (same) return k.status === 'pending' ? 'pending' : 'done';
   }
+  if (pw) return pend ? 'pending' : inWeek >= pw ? 'done' : 'available';
   return 'available';
+}
+function questWeekCount(quest, memberName) {
+  const monday = isTrue(cfg('week_starts_monday', 'TRUE')), now = new Date();
+  return (S.state.queue || []).filter(k => k.type === 'quest' && k.ref_id === quest.id && k.member === memberName && k.status !== 'rejected' && k.status !== 'undone' && weekKey(toDate(k.submitted_at), monday) === weekKey(now, monday)).length;
 }
 function kidQuests(member) {
   return (S.state.quests || []).filter(questOn)
@@ -43,7 +55,20 @@ function kidQuests(member) {
 }
 const QREPEATS = [['once', 'One time'], ['daily', 'Every day'], ['weekdays', 'School days (Mon–Fri)'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']];
 const QHINTS = { once: 'Disappears for that kid after it’s approved once.', daily: 'Comes back every morning.', weekdays: 'Comes back every morning, hidden on Saturday and Sunday.', weekly: 'Can be done once per week.', biweekly: 'Can be done again 14 days after the last time.', monthly: 'Can be done once per calendar month.' };
-const questRepeatLabel = (r) => { const n = everyDays(r); if (n) return n === 1 ? 'Every day' : `Every ${n} days`; const f = QREPEATS.find(x => x[0] === String(r || 'daily').toLowerCase()); return f ? f[1] : String(r); };
+const DOW_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const daysText = (ds) => { if (!ds || !ds.length) return 'no days picked'; if (ds.length === 7) return 'every day'; const l = ds.map(d => DOW_LABEL[d]); return l.length === 1 ? 'every ' + l[0] : l.slice(0, -1).join(', ') + ' & ' + l[l.length - 1]; };
+const questRepeatLabel = (r) => {
+  const n = everyDays(r); if (n) return n === 1 ? 'Every day' : `Every ${n} days`;
+  const ds = questDays(r); if (ds) { const t = daysText(ds); return t.charAt(0).toUpperCase() + t.slice(1); }
+  const pw = perWeek(r); if (pw) return pw === 1 ? 'Once a week' : pw === 2 ? 'Twice a week' : `${pw}× a week`;
+  const f = QREPEATS.find(x => x[0] === String(r || 'daily').toLowerCase()); return f ? f[1] : String(r);
+};
+function questHint(r) {
+  const n = everyDays(r); if (n) return n === 1 ? QHINTS.daily : `Can be done again ${n} days after the last time.`;
+  const ds = questDays(r); if (ds) return ds.length ? `Only shows up on ${daysText(ds).replace(/^every /, '')}; once per day.` : 'Pick at least one day below.';
+  const pw = perWeek(r); if (pw) return `Can be done ${pw === 1 ? 'once' : pw === 2 ? 'twice' : pw + ' times'} a week, on any days. Streaks count whole weeks.`;
+  return QHINTS[String(r || 'daily').toLowerCase()] || '';
+}
 const questOpts = (q) => (X.get('questOpts', {})[q.id] || {});
 
 /* ---------- streaks ---------- */
@@ -52,16 +77,16 @@ const epochDay = (d) => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.get
 function periodKey(rep, d) {
   const n = everyDays(rep);
   if (n) return 'e' + Math.floor(epochDay(d) / n);
-  if (rep === 'weekly') return 'w' + weekKey(d, isTrue(cfg('week_starts_monday', 'TRUE')));
+  if (rep === 'weekly' || perWeek(rep)) return 'w' + weekKey(d, isTrue(cfg('week_starts_monday', 'TRUE')));
   if (rep === 'biweekly') return 'b' + Math.floor(epochDay(d) / 14);
   if (rep === 'monthly') return 'm' + d.getFullYear() + '-' + d.getMonth();
   return dayKey(d);
 }
-function periodLen(rep) { const n = everyDays(rep); return n || ({ weekly: 7, biweekly: 14, monthly: 30 }[rep] || 1); }
+function periodLen(rep) { const n = everyDays(rep); return n || (perWeek(rep) ? 7 : ({ weekly: 7, biweekly: 14, monthly: 30 }[rep] || 1)); }
 function stepBack(rep, d) {
   const n = everyDays(rep);
   if (n) return addDays(d, -n);
-  if (rep === 'weekly') return addDays(d, -7);
+  if (rep === 'weekly' || perWeek(rep)) return addDays(d, -7);
   if (rep === 'biweekly') return addDays(d, -14);
   if (rep === 'monthly') return new Date(d.getFullYear(), d.getMonth() - 1, Math.min(d.getDate(), 28));
   return addDays(d, -1);
@@ -70,16 +95,18 @@ function isPausedDay(d) { const k = dayKey(d), today = dayKey(new Date()); retur
 function questStreak(q, member) {
   const rep = String(q.repeat || 'daily').toLowerCase();
   if (rep === 'once') return { cur: 0, start: null };
-  const done = new Set(); let earliest = null;
+  const done = new Set(), counts = {}, pw = perWeek(rep), ds = questDays(rep); let earliest = null;
   for (const k of (S.state.queue || [])) {
     if (k.type !== 'quest' || k.ref_id !== q.id || k.member !== member || k.status === 'rejected' || k.status === 'undone') continue;
-    const t = toDate(k.submitted_at); done.add(periodKey(rep, t)); if (!earliest || t < earliest) earliest = t;
+    const t = toDate(k.submitted_at), key = periodKey(rep, t); counts[key] = (counts[key] || 0) + 1;
+    if (!pw || counts[key] >= pw) done.add(key); if (!earliest || t < earliest) earliest = t;
   }
   if (!earliest) return { cur: 0, start: null };
   const c = streakCfg(), shieldOK = c.shield && periodLen(rep) <= 3, stop = startOfDay(earliest);
   let d = startOfDay(new Date()), count = 0, start = null, first = true, lastShield = null, guard = 0;
   while (guard++ < 500 && d >= stop) {
     if (rep === 'weekdays' && (d.getDay() === 0 || d.getDay() === 6)) { d = addDays(d, -1); continue; }
+    if (ds && ds.length && !ds.includes(d.getDay())) { d = addDays(d, -1); continue; }
     if (isPausedDay(d)) { d = stepBack(rep, d); first = false; continue; }
     const key = periodKey(rep, d);
     if (done.has(key)) { count++; start = key; }
