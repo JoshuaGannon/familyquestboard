@@ -91,6 +91,7 @@
 </div>
 
 <div id="sleep"><div class="sleep-inner"><div class="time" id="sleep-time">--:--</div><div class="date" id="sleep-date"></div></div></div>
+<div id="alerts"></div>
 <div class="msg-banner" id="msg-banner"></div>
 
 <!-- keyboard -->
@@ -121,10 +122,12 @@
 <div id="quest-ed" class="sheet"><div class="sheet-panel wide"><h2 id="qe-title">New quest</h2>
   <div class="row"><button class="icon-pick" id="qe-icon">⭐</button><button class="field grow" id="qe-name"></button></div>
   <label id="qe-ptslabel">Points</label><div class="seg" id="qe-points"></div>
-  <div id="qe-questonly"><label>Who can do it</label><div class="seg" id="qe-who"></div><label>How often</label><div class="seg" id="qe-repeat"></div><div class="seg" id="qe-days" style="display:none;margin-top:6px"></div><div class="note hint" id="qe-hint"></div><label>Approval</label><div class="seg" id="qe-approve"></div><div id="qe-streakwrap"><label>🔥 Streak prizes</label><div id="qe-streak"></div></div></div>
+  <div id="qe-questonly"><label>Who can do it</label><div class="seg" id="qe-who"></div><label>How often</label><div class="seg" id="qe-repeat"></div><div class="seg" id="qe-days" style="display:none;margin-top:6px"></div><div class="note hint" id="qe-hint"></div><label>Approval</label><div class="seg" id="qe-approve"></div><label>⚠️ If it’s missed</label><div class="seg" id="qe-pen"></div><div class="note hint" id="qe-penhint"></div><div id="qe-streakwrap"><label>🔥 Streak prizes</label><div id="qe-streak"></div></div></div>
   <div id="qe-rewardonly"><label>Unlock</label><div class="seg" id="qe-lock"></div><div id="qe-lockopts"></div></div>
   <label>Status</label><div class="seg" id="qe-active"></div>
   <div class="actions"><button class="btn bad" id="qe-del">Delete</button><span class="spacer"></span><button class="btn ghost" data-close="quest-ed">Cancel</button><button class="btn primary" id="qe-save">Save</button></div></div></div>
+<div id="pen-ed" class="sheet" style="z-index:47"><div class="sheet-panel wide"><h2 id="pe-title">If a quest is missed</h2><div class="note" id="pe-sub"></div><div id="pe-body"></div>
+  <div class="actions"><span class="spacer"></span><button class="btn ghost" data-close="pen-ed">Cancel</button><button class="btn primary" id="pe-save">Save</button></div></div></div>
 <div id="disp-ed" class="sheet"><div class="sheet-panel"><h2 id="de-title">New period</h2><label>Starts at</label><button class="field" id="de-time"></button><label>Mode</label><div class="seg" id="de-mode"></div><label>Days</label><div class="seg" id="de-days"></div>
   <div class="actions"><button class="btn bad" id="de-del">Delete</button><span class="spacer"></span><button class="btn ghost" data-close="disp-ed">Cancel</button><button class="btn primary" id="de-save">Save</button></div></div></div>
 <div id="member-ed" class="sheet"><div class="sheet-panel"><h2 id="me-title">New member</h2><div class="row"><button class="icon-pick" id="me-emoji">👤</button><button class="field grow" id="me-name"></button></div><label>Role</label><div class="seg" id="me-role"></div><label>Colour</label><div class="seg" id="me-color"></div><label>Status</label><div class="seg" id="me-active"></div>
@@ -138,6 +141,7 @@
 <script src="parent.js"></script>
 <script src="messages.js"></script>
 <script src="photos.js"></script>
+<script src="alerts.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

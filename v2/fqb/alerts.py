@@ -53,8 +53,9 @@ def notify(kind, title, message, go="go/parent/queue", force=False):
     if not force and kind not in kinds:
         return False, "off"
     base = public_base()
-    tags = {"help": "raising_hand", "reward": "gift", "streak": "fire", "quest": "white_check_mark", "test": "tada"}.get(kind, "")
-    return ntfy_send(topic, title, message, "high" if kind == "help" else "default", tags, f"{base}/#{go}" if base else "")
+    tags = {"help": "raising_hand", "reward": "gift", "streak": "fire", "quest": "white_check_mark", "test": "tada",
+            "penalty": "warning", "nag": "alarm_clock", "digest": "clipboard"}.get(kind, "")
+    return ntfy_send(topic, title, message, "high" if kind in ("help", "penalty") else "default", tags, f"{base}/#{go}" if base else "")
 
 
 def _msg_sig(mid, code, as_name=""):

@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from fqb import access, alerts, db, ics, importer, pi  # noqa: E402
+from fqb import access, alerts, db, ics, importer, penalties, pi, sound  # noqa: E402
 
 WEB = os.path.join(HERE, "web")
 DATA = os.path.join(HERE, "data")
@@ -301,6 +301,9 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/api/heartbeat":
             self._json(pi.heartbeat_get())
             return
+        if path == "/api/audio":
+            self._json(sound.probe())
+            return
         if path == "/api/import/status":
             self._json(importer.status())
             return
@@ -424,6 +427,27 @@ class Handler(SimpleHTTPRequestHandler):
             ok, msg = pi.system_action(str(body.get("action", "")))
             self._json({"ok": ok, "message": msg})
             return
+        if path == "/api/audio":
+            local = self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1") and not self.headers.get("X-Forwarded-For")
+            if not local and not self._is_parent(body):   # the wall itself may play sounds; phones need the PIN
+                self._json({"ok": False, "error": "Parent PIN needed"}, 403)
+                return
+            what = str(body.get("action", "play"))
+            if what == "volume":
+                ok, msg = sound.set_volume(body.get("level", 50))
+            elif what == "sink":
+                ok, msg = sound.set_sink(body.get("id", ""))
+            else:
+                ok, msg = sound.play(str(body.get("sound", "chime")), body.get("level"))
+            self._json({"ok": ok, "detail": msg}, 200 if ok else 502)
+            return
+        if path == "/api/penalties/run":
+            if not self._is_parent(body):
+                self._json({"ok": False, "error": "Parent PIN needed"}, 403)
+                return
+            rows = penalties.run_day()
+            self._json({"ok": True, "proposed": len(rows), "alerts": penalties.refresh_alerts(), "version": db.version()})
+            return
         if path == "/api/import":
             local = self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1") and not self.headers.get("X-Forwarded-For")
             if not local and not self._is_parent(body):
@@ -437,6 +461,8 @@ class Handler(SimpleHTTPRequestHandler):
     def _after(self, action, body, out):
         """Alerts that follow an action (never allowed to fail the action)."""
         try:
+            if action in ("submitQuest", "withdrawQuest", "reviewQueue", "undoQueue", "saveQuest", "deleteQuest"):
+                penalties.refresh_alerts()
             if action == "submitQuest" and not out.get("dup"):
                 q = db._find("quests", body.get("questId")) or {}
                 auto = bool(body.get("auto"))
@@ -484,12 +510,14 @@ def main():
     access.load(os.path.join(data_dir, "access.json"))
     if not access.enabled() and access.adopt_from_v1(importer.V1_ACCESS):
         print("  (family password copied from v1)")
+    sound.init(data_dir)
     Handler.photos_dir = os.path.abspath(args.photos) if args.photos else os.path.join(data_dir, "photos")
     os.makedirs(Handler.photos_dir, exist_ok=True)
     if args.demo or not db.rows("members"):
         if db.seed_demo():
             print("  (empty database — seeded the starter family; Settings → Import brings your real data over)")
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
+    penalties.start()
     ip = pi.lan_ip()
     print("Family Quest Board v2")
     print(f"  Board   : http://localhost:{args.port}")

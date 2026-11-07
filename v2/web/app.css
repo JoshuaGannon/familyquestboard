@@ -355,3 +355,57 @@ body.phone .qrow { flex-wrap: wrap; } body.phone .qrow .acts { margin-left: 0; w
 body.phone .sheet { padding: 0; align-items: flex-end; } body.phone .sheet-panel { width: 100%; border-radius: 24px 24px 0 0; max-height: 92dvh; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
 body.phone .modal-box { width: 100%; } body.phone .kb-box { border-radius: 0; }
 body.phone .msg-banner { font-size: 18px; max-width: 94vw; top: 10px; }
+
+
+/* ---------- missed-quest alerts (home) ---------- */
+#alerts { position: fixed; top: 215px; left: 50%; transform: translateX(-50%); width: min(1100px, 94vw); z-index: 44; display: none; flex-direction: column; gap: 10px; pointer-events: none; }
+body.on-home #alerts.on { display: flex; }
+#sleep.off ~ #alerts { display: none !important; }
+#alerts > * { pointer-events: auto; }
+.alert-card { position: relative; display: flex; align-items: center; gap: 16px; text-align: left; width: 100%; padding: 16px 22px; border-radius: 22px; background: #2a1215; color: #fff; border: 4px solid var(--bad); box-shadow: 0 18px 50px rgba(0,0,0,.55); }
+.alert-card.missed { background: #2b2410; border-color: var(--accent); }
+.alert-card .al-ico { font-size: 44px; line-height: 1; flex: none; }
+.alert-card .al-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.alert-card .al-who { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+.alert-card .al-who .av { width: 26px; height: 26px; border-radius: 13px; display: inline-grid; place-items: center; font-size: 15px; }
+.alert-card .al-text { font-size: 26px; font-weight: 900; line-height: 1.15; overflow: hidden; }
+.alert-card.missed .al-text { font-size: 23px; }
+.alert-card .al-mq { display: inline-block; }
+.alert-card .al-pts { font-size: 40px; font-weight: 900; color: #fff; background: var(--bad); border-radius: 16px; padding: 6px 16px; flex: none; line-height: 1; }
+.alert-card .al-ack { flex: none; background: rgba(255,255,255,.14); color: #fff; border-radius: 14px; padding: 12px 16px; font-weight: 800; font-size: 16px; }
+.alert-strip { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 16px; border-radius: 20px; background: #2a1215; border: 4px solid var(--bad); box-shadow: 0 18px 50px rgba(0,0,0,.55); }
+.alert-strip.missed { background: #2b2410; border-color: var(--accent); }
+.alert-strip .al-row { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.1); color: #fff; border-radius: 14px; padding: 10px 14px; font-size: 18px; font-weight: 700; }
+.alert-strip .av { width: 28px; height: 28px; border-radius: 14px; display: inline-grid; place-items: center; }
+@keyframes al-in { from { opacity: 0; transform: translateY(-30px) scale(.96); } to { opacity: 1; transform: none; } }
+/* the attention effects — pick per level in Settings. One animation slot per effect so they stack. */
+.alert-card, .alert-strip { --n2: none; --n3: none; --n4: none; --n5: none; --glow: 248,113,113; --flash: var(--bad);
+  animation-name: al-in, var(--n2), var(--n3), var(--n4), var(--n5);
+  animation-duration: .5s, .6s, 1.6s, 2.4s, 1s; animation-delay: 0s, .55s, .5s, .5s, .5s;
+  animation-iteration-count: 1, 1, infinite, infinite, infinite; animation-fill-mode: both, none, none, none, none;
+  animation-timing-function: cubic-bezier(.2,.9,.3,1.2), ease-in-out, ease-in-out, ease-in-out, steps(2, jump-none); }
+.alert-card.missed, .alert-strip.missed { --glow: 251,191,36; --flash: var(--accent); }
+.an-shake { --n2: al-shake; } .an-pulse { --n3: al-breathe; } .an-glow { --n4: al-glow; } .an-flash { --n5: al-flash; }
+@keyframes al-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--glow), 0), 0 18px 50px rgba(0,0,0,.55); } 50% { box-shadow: 0 0 46px 12px rgba(var(--glow), .55), 0 18px 50px rgba(0,0,0,.55); } }
+@keyframes al-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+@keyframes al-shake { 0%, 100% { transform: translateX(0); } 15%, 45%, 75% { transform: translateX(-9px); } 30%, 60%, 90% { transform: translateX(9px); } }
+@keyframes al-flash { from { border-color: var(--flash); } to { border-color: #fff; } }
+.an-pulse .al-pts, .an-pulse .al-ico { animation: al-pulse 1.6s ease-in-out infinite; }
+@keyframes al-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.an-marquee .al-mq { animation: al-drift 3.2s ease-in-out infinite; }
+@keyframes al-drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
+/* kid card badge */
+.quest .late { font-size: 12px; font-weight: 800; color: #1a1200; background: var(--accent); border-radius: 8px; padding: 3px 8px; margin-top: 6px; align-self: flex-start; }
+.quest .late.penalty { background: var(--bad); color: #fff; }
+.quest.alerted { border-color: var(--bad); }
+.quest.alerted.missedk { border-color: var(--accent); }
+/* penalty rows in approvals */
+.qrow.penalty { background: rgba(248,113,113,.12); }
+/* penalty editor */
+.pe-lad { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; } .pe-lad span { background: var(--card-hi); border-radius: 10px; padding: 6px 12px; font-weight: 800; } .pe-lad span.warn { color: var(--accent); } .pe-lad span.pt { color: #fca5a5; }
+.pe-lad .arrow { color: var(--muted); font-weight: 700; }
+/* settings: volume slider */
+.vol { display: flex; align-items: center; gap: 12px; margin: 8px 0; } .vol input[type=range] { flex: 1; accent-color: var(--accent); height: 36px; } .vol b { min-width: 48px; text-align: right; }
+body.phone #alerts { top: 8px; width: 96vw; }
+body.phone .alert-card { padding: 12px 14px; gap: 10px; border-width: 3px; } body.phone .alert-card .al-text, body.phone .alert-card.missed .al-text { font-size: 16px; } body.phone .alert-card .al-ico { font-size: 28px; } body.phone .alert-card .al-pts { font-size: 22px; padding: 4px 10px; } body.phone .alert-card .al-ack { display: none; }
+body.phone .alert-strip .al-row { font-size: 14px; padding: 8px 10px; }

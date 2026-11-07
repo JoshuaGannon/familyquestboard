@@ -2,8 +2,8 @@
 // open in the store with no signal. App shell is cached; data always goes to
 // the network (the page keeps its own last state, and grocery taps queue up
 // in the Outbox until there's signal).
-const CACHE = 'fqb2-shell-v1';
-const SHELL = ['./', './index.html', './app.css', './core.js', './logic.js', './screens.js', './parent.js', './messages.js', './photos.js', './main.js', './manifest.json', './icon-192.png'];
+const CACHE = 'fqb2-shell-v2';
+const SHELL = ['./', './index.html', './app.css', './core.js', './logic.js', './screens.js', './parent.js', './messages.js', './photos.js', './alerts.js', './main.js', './manifest.json', './icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));

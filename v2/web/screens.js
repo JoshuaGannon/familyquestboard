@@ -85,7 +85,7 @@ function renderHome() {
   else lh += `<div class="lkids">` + kids.map(k => ({ k, b: balance(k.name) })).sort((a, b) => b.b.approved - a.b.approved).map(({ k, b }) =>
     `<div class="lkid"><div class="lrow"><span class="av" style="background:${esc(k.color || '#334')}">${esc(k.emoji || '⭐')}</span><span class="ln">${esc(k.name)}</span><span class="pts">${b.approved}${b.pending ? `<span class="pend">+${b.pending} pending</span>` : ''}</span></div>${goalBar(goalFor(k.name))}</div>`).join('') + `</div>`;
   $('#leader').innerHTML = lh;
-  renderHomeSide(); renderWeather();
+  renderHomeSide(); renderWeather(); Alerts.render();
 }
 function renderWeather() {
   const w = S.weather, el = $('#weather');
@@ -337,7 +337,7 @@ function renderQuests() {
     const pw = perWeek(r); if (pw) return `${Math.min(pw, questWeekCount(q, kid.name))} of ${pw} this week`;
     return rep[(r || 'daily').toLowerCase()] || esc(r);
   };
-  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur, nx = nextPrize(q, st); return `<button class="quest ${s}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s === 'done' ? 'disabled' : ''}>${helpAsked(q, kid.name) ? '<span class="helpflag">🙋</span>' : ''}${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${questOpts(q).auto ? '<div class="auto">✓ no approval needed</div>' : ''}${nx ? `<div class="snext">🔥 ${nx.target - st} more → ${esc(prizeShort(nx.m))}</div>` : ''}<div class="qm"><span>${repTxt(q.repeat, q)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
+  $('#quest-grid').innerHTML = items.length ? items.map(({ q, s }) => { const st = questStreak(q, kid.name).cur, nx = nextPrize(q, st); const al = s === 'available' ? alertFor(q.id, kid.name) : null; return `<button class="quest ${s} ${al ? 'alerted ' + (al.kind === 'missed' ? 'missedk' : '') : ''}" data-state="${label[s] || ''}" data-q="${esc(q.id)}" ${s === 'done' ? 'disabled' : ''}>${helpAsked(q, kid.name) ? '<span class="helpflag">🙋</span>' : ''}${st >= 2 ? `<span class="flame">🔥${st}</span>` : ''}<div class="qi">${esc(q.icon || '⭐')}</div><div class="qt">${esc(q.title)}</div>${questOpts(q).auto ? '<div class="auto">✓ no approval needed</div>' : ''}${nx ? `<div class="snext">🔥 ${nx.target - st} more → ${esc(prizeShort(nx.m))}</div>` : ''}${al ? `<div class="late ${al.kind}">${al.kind === 'penalty' ? `🚨 −${esc(al.points)} if not done today` : '⚠️ missed ' + (al.misses > 1 ? al.misses + ' in a row' : 'last time')}</div>` : ''}<div class="qm"><span>${repTxt(q.repeat, q)}</span><span class="qp">+${esc(q.points || 0)}</span></div></button>`; }).join('')
     : `<div class="empty">No quests for ${esc(kid.name)} yet.</div>`;
   const b = balance(kid.name), rewards = (S.state.rewards || []).filter(r => r.title && (r.active === '' || r.active === undefined || isTrue(r.active)));
   const cps = couponsFor(kid.name), bestOff = cps.length ? Math.max(...cps.map(c => +c.off || 0)) : 0;

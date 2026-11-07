@@ -48,6 +48,12 @@ bash v2/pi/switch-wall.sh v1      # back to v1
 
 Both servers keep running either way, so phones can use whichever they like.
 
+### Missed quests: warnings, penalties, the big notice
+
+Parents → **Family → Missed quests** turns it on (off by default; counting starts the day you switch it on, nothing is charged for the past). The family default sets what each miss costs (a ladder like *warning, −5, −10…*), how often a miss counts (every time / every 2nd / only once N pile up), free misses, a cap per run, whether doing the quest resets the ladder, and whether penalties are taken automatically or wait under **Approvals** as *Apply / Forgive*. Any quest can override all of that from its own editor (**If it’s missed → Custom**), or opt out.
+
+Once a day (just after midnight, and whenever the server starts) the Pi looks at the periods that just closed, logs a warning or proposes a penalty, and keeps `kv.alerts` up to date: that is what the home screen shows as the big red/yellow notice (comes back every N minutes, configurable), what the kid’s quest card wears as a badge, and what the “heads-up” push and the parents’ evening digest are built from. **Settings → Board alerts & sounds** picks the effects (glow / pulse / shake / drift / flash), the sound, quiet hours, and lets you test the Pi’s speaker and set its volume (`pi/audio.sh` — PipeWire, PulseAudio or ALSA).
+
 ## Day to day
 
 - Publish from Windows exactly as before (`publish-to-github.bat`). The Pi restarts both servers after a pull.
@@ -67,12 +73,14 @@ v2/
   fqb/access.py      family password gate, parent-role cookie
   fqb/importer.py    import from v1
   fqb/pi.py          screen power, kiosk restart, override, heartbeat
+  fqb/penalties.py   missed quests: warnings, penalty ladder, board alerts, nag + digest (once-a-minute tick)
+  fqb/sound.py       generated wave files + pi/audio.sh (speaker, volume, output)
   web/               the app: core.js (state, keyboard, dialogs), logic.js (points, streaks,
-                     groceries, calendar), screens.js, parent.js, messages.js, photos.js, main.js, app.css
+                     groceries, calendar), screens.js, parent.js, messages.js, photos.js, alerts.js (the notice + sounds), main.js, app.css
   pi/                setup-v2.sh, switch-wall.sh
   tests/             test_server.py (Python), test-core.js (browser), run.sh
 ```
 
 ## API (for the curious)
 
-`GET /api/state?since=N` — everything, or `{unchanged:true}`. `POST /api/do {action,…}` — the actions (`addGrocery`, `submitQuest`, `reviewQueue`, `undoQueue`, `setDinner`, `saveEvent`, `saveQuest`, `saveMember`, `setConfig`, …). `POST /api/x` — the loosely structured bits (notes, countdowns, coupons…) with `set / merge / push / remove / award`. `POST /api/unlock {pin, remember}` sets the parent cookie; `POST /api/lock` clears it. `/api/photos`, `/api/notify`, `/api/msg`, `/api/import`, `/api/export`.
+`GET /api/state?since=N` — everything, or `{unchanged:true}`. `POST /api/do {action,…}` — the actions (`addGrocery`, `submitQuest`, `reviewQueue`, `undoQueue`, `setDinner`, `saveEvent`, `saveQuest`, `saveMember`, `setConfig`, …). `POST /api/x` — the loosely structured bits (notes, countdowns, coupons…) with `set / merge / push / remove / award`. `POST /api/unlock {pin, remember}` sets the parent cookie; `POST /api/lock` clears it. `/api/photos`, `/api/notify`, `/api/msg`, `/api/import`, `/api/export`, `/api/penalties/run` (check misses now), `/api/audio` (probe / play / volume / sink).

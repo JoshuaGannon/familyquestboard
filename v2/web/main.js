@@ -47,6 +47,12 @@ function bind() {
     if (act_ === 'feed-add') { const name = await KB.open({ title: 'Calendar name (e.g. Family)', placeholder: 'Family' }); if (name === null) return; const url = await KB.open({ title: 'iCal link (https://…)', placeholder: 'https://calendar.google.com/calendar/ical/…/basic.ics' }); if (!url || !/^https?:\/\//.test(url.trim())) { if (url !== null) toast('That doesn’t look like a link', true); return; } const cur = String(cfg('ical_urls', '')).trim(); await setConfig('ical_urls', (cur ? cur + '\n' : '') + `${name.trim() || 'Calendar'} | ${url.trim()}`, 'Calendar added — loading events'); await fetch('/api/events?refresh=1').catch(() => {}); await Sync.refresh(); return; }
     if (act_ === 'cal-refresh') { toast('Refreshing calendars…'); await fetch('/api/events?refresh=1').catch(() => {}); S.cal = 0; await Sync.refresh(); renderParent(); return; }
     if (act_ === 'notify-test') { toast('Sending…'); try { const j = await api('/api/notify', { kind: 'test', title: '🏰 Family Quest Board', message: 'Push alerts are working!', force: true, go: 'go/home' }); toast('Push sent ✓ ' + (j.detail || '')); } catch (e2) { toast('Push failed: ' + e2.message, true); } return; }
+    if (act_ === 'alert-preview-missed') return Alerts.preview('missed');
+    if (act_ === 'alert-preview-penalty') return Alerts.preview('penalty');
+    if (act_ === 'snd-test-here') { Sound.local(penCfg().banner.sound || 'chime'); return; }
+    if (act_ === 'snd-test-pi') { toast('Playing on the Pi…'); try { const j = await api('/api/audio', { action: 'play', sound: penCfg().banner.sound || 'chime' }); toast('Played on the Pi ✓ ' + (j.detail || '')); } catch (e2) { toast('Pi audio: ' + e2.message, true); } return; }
+    if (act_ === 'snd-probe') { toast('Checking…'); try { const r = await fetch('/api/audio'); S.audio = await r.json(); if (S.audio.volume !== null && S.audio.volume !== undefined) { const sl = $('#snd-vol'); if (sl) { sl.value = S.audio.volume; $('#snd-vol-n').textContent = S.audio.volume + '%'; } } } catch (e2) { S.audio = { supported: false, error: e2.message }; } renderParent(); return; }
+    if (act_ === 'snd-vol-set') { const v = +$('#snd-vol').value; try { await api('/api/audio', { action: 'volume', level: v }); await X.merge('penaltyCfg', { banner: Object.assign({}, penCfg().banner, { volume: v }) }); toast(`Pi volume ${v}%`); } catch (e2) { toast('Pi audio: ' + e2.message, true); } return; }
     if (act_ === 'msg-toggle') return setConfig('messages_enabled', Msg.enabled() ? 'FALSE' : 'TRUE', Msg.enabled() ? 'Messages off' : 'Messages on');
     if (act_ === 'msg-full') return setConfig('msg_fulltext', isTrue(cfg('msg_fulltext', 'TRUE')) ? 'FALSE' : 'TRUE');
     if (act_ === 'msg-clear') { if (!await Modal.confirm({ icon: '🧹', title: 'Clear all messages?', body: 'The chat history is removed from the wall and every phone.', ok: 'Clear', okClass: 'bad' })) return; await X.op({ op: 'set', key: 'messages', value: [] }); Msg.knownIds = new Set(); Msg.cur = null; render(); toast('Messages cleared'); return; }
@@ -236,8 +242,23 @@ function bind() {
     const bp = e.target.closest('[data-bp]'); if (bp) { const sign = S.bonus.points < 0 ? -1 : 1; if (bp.dataset.bp === 'custom') { const n = await num('How many points?', Math.abs(S.bonus.points), 1, 10000); if (n !== null) S.bonus.points = sign * Math.round(n); } else S.bonus.points = sign * (+bp.dataset.bp); renderParent(); return; }
     const ov = e.target.closest('[data-ovr]'); if (ov) { const mode = ov.dataset.ovr; if (!mode) { await Display.setOverride(null); toast('Following the schedule'); } else { const v = await Modal.pick({ icon: '⏱', title: `${modeLabel(mode)} for how long?`, options: [{ value: '30', label: '30 minutes' }, { value: '60', label: '1 hour' }, { value: '180', label: '3 hours' }, { value: '0', label: 'Until the next scheduled change' }] }); if (!v && v !== '0') return; await Display.setOverride(mode, +v); toast('Override set'); } renderParent(); return; }
     const pr = e.target.closest('[data-period]'); if (pr) { const p = displayPeriods().find(x => x.id === pr.dataset.period); if (p) DE.open(p); return; }
+    const pbtn = e.target.closest('[data-pb],[data-pban],[data-pbsnd],[data-pbon],[data-pbvia],[data-sink]'); if (pbtn) {
+      const b = Object.assign({}, penCfg().banner), saveB = async (patch, msg) => { await X.merge('penaltyCfg', { banner: Object.assign(b, patch) }); Alerts.reset(); render(); if (msg) toast(msg); };
+      if (pbtn.dataset.pb === 'interval') { const v = await num('Show the notice every how many minutes?', b.interval, 1, 240); if (v !== null) await saveB({ interval: Math.round(v) }); }
+      else if (pbtn.dataset.pb === 'duration') { const v = await num('Keep it on screen for how many seconds?', b.duration, 5, 600); if (v !== null) await saveB({ duration: Math.round(v) }); }
+      else if (pbtn.dataset.pb === 'quiet') { const f = await KB.open({ title: 'No sounds from (24h, e.g. 20:30) — leave empty for never', initial: b.quietFrom, inputMode: 'numeric' }); if (f === null) return; const t = f.trim() ? await KB.open({ title: 'Sounds again at (e.g. 07:00)', initial: b.quietTo, inputMode: 'numeric' }) : ''; if (t === null) return; await saveB({ quietFrom: f.trim(), quietTo: (t || '').trim() }); }
+      else if (pbtn.dataset.pban) { const [lvl, k] = pbtn.dataset.pban.split(':'), key = lvl === 'missed' ? 'animMissed' : 'animPenalty', cur = (b[key] || []).slice(), i = cur.indexOf(k); if (i >= 0) cur.splice(i, 1); else cur.push(k); await saveB({ [key]: cur }); }
+      else if (pbtn.dataset.pbsnd !== undefined) { await saveB({ sound: pbtn.dataset.pbsnd }); if (pbtn.dataset.pbsnd) Sound.play(pbtn.dataset.pbsnd, b.via); }
+      else if (pbtn.dataset.pbon) await saveB({ soundOn: pbtn.dataset.pbon });
+      else if (pbtn.dataset.pbvia) await saveB({ via: pbtn.dataset.pbvia }, pbtn.dataset.pbvia === 'pi' ? 'Sounds play on the Pi’s speaker' : 'Sounds play in the page');
+      else if (pbtn.dataset.sink !== undefined) { try { const j = await api('/api/audio', { action: 'sink', id: pbtn.dataset.sink }); toast(j.detail || 'Output changed'); const r = await fetch('/api/audio'); S.audio = await r.json(); renderParent(); } catch (e2) { toast('Pi audio: ' + e2.message, true); } }
+      return;
+    }
     const fx = e.target.closest('[data-fx]'); if (fx) {
-      const k = fx.dataset.fx, c = streakCfg(); const save = async (patch) => { await X.op({ op: 'set', key: 'streak', value: Object.assign({}, X.get('streak', {}), patch) }); render(); };
+      const k = fx.dataset.fx, c = streakCfg();
+      if (k === 'pen-toggle') { const pc = penCfg(); await X.merge('penaltyCfg', { enabled: !pc.enabled }); api('/api/penalties/run').then(() => Sync.refresh()).catch(() => Sync.refresh()); toast(pc.enabled ? 'Penalties off' : 'Penalties on — counting starts today, nothing is charged for the past'); render(); return; }
+      if (k === 'pen-edit') { const pc = penCfg(); PE.open('family', pc, 'If a quest is missed — family default'); return; }
+      if (k === 'pen-run') { toast('Checking…'); try { const j = await api('/api/penalties/run'); await Sync.refresh(); toast(j.proposed ? `${j.proposed} penalt${j.proposed === 1 ? 'y' : 'ies'} proposed — see Approvals` : `Checked ✓ ${(j.alerts || []).length} quest${(j.alerts || []).length === 1 ? '' : 's'} late right now`); } catch (e2) { toast(e2.message, true); } return; } const save = async (patch) => { await X.op({ op: 'set', key: 'streak', value: Object.assign({}, X.get('streak', {}), patch) }); render(); };
       if (k === 'shield') { await save({ shield: !c.shield }); toast(c.shield ? 'Shield off' : 'Shield on'); }
       else if (k === 'pause') { const ps = (c.pauses || []).slice(); const open_ = ps.find(p => p.from && !p.to); if (open_) { open_.to = dayKey(new Date()); await save({ pauses: ps }); toast('Streaks running again'); } else { ps.push({ from: dayKey(new Date()), to: '' }); await save({ pauses: ps }); toast('Streaks paused — tap again to resume'); } }
       else if (k === 'milestones') { const v = await KB.open({ title: 'Milestones as "days:points off", comma separated', initial: (c.milestones || []).map(m => `${m.n}:${m.off}`).join(', '), placeholder: '7:10, 14:25' }); if (v === null) return; const ms = v.split(',').map(x => x.trim().split(':').map(Number)).filter(x => x[0] > 0 && x[1] > 0).map(x => ({ n: x[0], off: x[1] })); await save({ milestones: ms }); toast('Milestones saved'); }
@@ -260,6 +281,8 @@ function bind() {
     if (e.target.closest('[data-qrep-week]')) { const n = await num('How many times a week?', perWeek(s.repeat) || 2, 1, 7); if (n !== null && QE.state) { QE.state.repeat = 'week:' + Math.round(n); QE.draw(); } return; }
     if (e.target.closest('[data-qrep-days]')) { if (!questDays(s.repeat)) s.repeat = 'days:mon,thu'; QE.draw(); return; }
     const qd = e.target.closest('[data-qday]'); if (qd) { const ds = questDays(s.repeat) || [], i = +qd.dataset.qday; const nx = ds.includes(i) ? ds.filter(x => x !== i) : ds.concat(i).sort(); s.repeat = 'days:' + nx.map(x => DOW[x]).join(','); QE.draw(); return; }
+    const qpe = e.target.closest('[data-qpen]'); if (qpe) { const m = qpe.dataset.qpen; s.pen = m === 'custom' ? Object.assign({}, penCfg(), s.pen && s.pen.mode === 'custom' ? s.pen : {}, { mode: 'custom' }) : { mode: m }; if (m === 'custom') { delete s.pen.banner; delete s.pen.digest; delete s.pen.enabled; } QE.draw(); if (m === 'custom') PE.open('quest', s.pen, `If “${s.title || 'this quest'}” is missed`); return; }
+    if (e.target.closest('[data-qpen-edit]')) { PE.open('quest', s.pen, `If “${s.title || 'this quest'}” is missed`); return; }
     const qa = e.target.closest('[data-qauto]'); if (qa) { s.auto = qa.dataset.qauto === '1'; QE.draw(); return; }
     const qc = e.target.closest('[data-qact]'); if (qc) { s.active = qc.dataset.qact === '1'; QE.draw(); return; }
     const sm = e.target.closest('[data-smode]'); if (sm) { s.streak.mode = sm.dataset.smode; s.sdraft = null; QE.draw(); return; }
@@ -279,6 +302,25 @@ function bind() {
     const ln = e.target.closest('[data-lkn]'); if (ln && s.lock) { s.lock.n = +ln.dataset.lkn; QE.draw(); return; }
     const lc = e.target.closest('[data-lkc]'); if (lc && s.lock) { s.lock.count = +lc.dataset.lkc; QE.draw(); return; }
     const lm = e.target.closest('[data-lkm]'); if (lm && s.lock) { s.lock.min = +lm.dataset.lkm; QE.draw(); return; }
+  });
+  on($('#pen-ed'), 'click', async e => {
+    if (e.target.closest('#pe-save')) return PE.save();
+    const st = PE.state; if (!st) return; const c = st.c;
+    const pe = e.target.closest('[data-pe]'); if (pe) { const [k, v] = pe.dataset.pe.split(':'); c[k] = k === 'enabled' || k === 'auto' || k === 'floor' ? v === '1' : k === 'grace' || k === 'cap' ? +v : v; PE.draw(); return; }
+    const pl = e.target.closest('[data-pelad]'); if (pl) {
+      if (pl.dataset.pelad === 'custom') { const v = await KB.open({ title: 'Points for the 1st, 2nd, 3rd… miss (0 = warning)', initial: (c.ladder || []).join(', '), placeholder: '0, 5, 10, 20' }); if (v === null) return; const lad = v.split(/[,\s]+/).map(x => Math.abs(parseInt(x, 10))).filter(x => !isNaN(x)); if (!lad.length) { toast('Type at least one number', true); return; } c.ladder = lad; }
+      else { const P = [[[0, 5], 'repeat'], [[0, 5, 10], 'grow'], [[0, 5, 10], 'repeat'], [[5, 10], 'grow'], [[0], 'repeat']][+pl.dataset.pelad]; c.ladder = P[0].slice(); c.beyond = P[1]; }
+      PE.draw(); return;
+    }
+    const pn = e.target.closest('[data-pen]'); if (pn) {
+      if (pn.dataset.pen === 'n') { const v = await num(c.cadence === 'afterN' ? 'Penalties start after how many misses?' : 'Every how many misses?', c.n || 2, 2, 30); if (v !== null) c.n = Math.round(v); }
+      else if (pn.dataset.pen === 'nag') { const v = await KB.open({ title: 'Heads-up time (24h, e.g. 19:00)', initial: c.nag || '19:00', inputMode: 'numeric' }); if (v === null) return; if (v.trim() && !/^\d{1,2}:\d{2}$/.test(v.trim())) { toast('Use hh:mm, like 19:00', true); return; } c.nag = v.trim(); }
+      PE.draw();
+    }
+  });
+  on($('#alerts'), 'click', e => {
+    const ack = e.target.closest('[data-alert-ack]'); if (ack) { e.stopPropagation(); Alerts.snooze(ack.dataset.alertAck, 30); toast('Okay — I’ll remind again in 30 minutes'); return; }
+    const m = e.target.closest('[data-member]'); if (m) { S.kid = m.dataset.member; showScreen('quests'); bumpIdle(); }
   });
   on($('#disp-ed'), 'click', async e => {
     const s = DE.state; if (!s) return;

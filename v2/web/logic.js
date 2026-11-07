@@ -71,6 +71,43 @@ function questHint(r) {
 }
 const questOpts = (q) => (X.get('questOpts', {})[q.id] || {});
 
+
+/* ---------- missed quests: warnings, penalties, alerts (the server decides; this reads and describes) ---------- */
+const PEN_DEFAULTS = { enabled: false, grace: 0, ladder: [0, 5, 10], beyond: 'repeat', cadence: 'period', n: 2, cap: 30, reset: 'done', floor: true, auto: false, route: 'both', nag: '19:00',
+  banner: { interval: 10, duration: 20, animMissed: ['glow'], animPenalty: ['glow', 'pulse', 'shake'], sound: 'chime', soundOn: 'penalty', quietFrom: '20:30', quietTo: '07:00', via: 'pi', volume: 70 }, digest: '20:30' };
+function penCfg() { const saved = X.get('penaltyCfg', {}) || {}; const c = Object.assign({}, PEN_DEFAULTS, saved); c.banner = Object.assign({}, PEN_DEFAULTS.banner, saved.banner || {}); return c; }
+function questPen(q) {  // effective settings for one quest, or null when off
+  const fam = penCfg(), p = (questOpts(q).penalty) || {}, mode = p.mode || 'default';
+  if (mode === 'off') return null;
+  if (mode === 'custom') { const c = Object.assign({}, fam); for (const [k, v] of Object.entries(p)) if (!['mode', 'banner', 'digest'].includes(k) && v !== null && v !== undefined) c[k] = v; c.enabled = true; return c; }
+  return fam.enabled ? fam : null;
+}
+const alertsNow = () => (X.get('alerts', []) || []).filter(a => a && a.id);
+const alertFor = (qid, member) => alertsNow().find(a => a.quest === qid && a.member === member) || null;
+function ladderAmount(c, i) { const l = (c.ladder || []).map(Number); if (!l.length) return 0; if (i < l.length) return l[i]; if (c.beyond === 'grow' && l.length >= 2) return l[l.length - 1] + (l[l.length - 1] - l[l.length - 2]) * (i - l.length + 1); return l[l.length - 1]; }
+function ladderText(c) {
+  const l = (c.ladder || []).map(Number); if (!l.length) return 'nothing';
+  const parts = l.map(v => v ? `−${v}` : 'warning');
+  const tail = c.beyond === 'grow' && l.length >= 2 ? `, −${ladderAmount(c, l.length)}, −${ladderAmount(c, l.length + 1)}…` : l.length > 1 || l[0] ? ` (then ${parts[parts.length - 1]} each time)` : '';
+  return parts.join(', ') + tail;
+}
+function cadenceText(c) {
+  const n = +c.n || 2, nth = (k) => k === 2 ? '2nd' : k === 3 ? '3rd' : k + 'th';
+  const base = c.cadence === 'everyN' ? `every ${nth(n)} miss` : c.cadence === 'afterN' ? `only once ${n} misses pile up` : 'every time it’s missed';
+  return (+c.grace ? `${c.grace} free miss${+c.grace === 1 ? '' : 'es'}, then ` : '') + base;
+}
+function penSummary(c) {
+  if (!c) return 'No penalties';
+  return `${ladderText(c)} · ${cadenceText(c)}${+c.cap ? ` · max −${c.cap} per run` : ''} · ${c.auto ? 'taken automatically' : 'parent taps Apply'}`;
+}
+const ROUTES = [['board', '🖥️ Board'], ['phones', '📲 Phones'], ['both', '🖥️📲 Both'], ['quiet', '🔕 Quiet']];
+const routeLabel = (r) => (ROUTES.find(x => x[0] === r) || ROUTES[2])[1];
+function inQuietHours(b, d) {
+  const now = d || new Date(), m = now.getHours() * 60 + now.getMinutes(), f = parseHM(b.quietFrom, -1), t = parseHM(b.quietTo, -1);
+  if (f < 0 || t < 0 || f === t) return false;
+  return f < t ? (m >= f && m < t) : (m >= f || m < t);
+}
+
 /* ---------- streaks ---------- */
 const streakCfg = () => Object.assign({ milestones: [{ n: 7, off: 10 }, { n: 14, off: 25 }], shield: true, pauses: [] }, X.get('streak', {}));
 const epochDay = (d) => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);

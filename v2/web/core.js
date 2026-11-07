@@ -308,6 +308,7 @@ function showScreen(name) {
   if (!SCREENS.includes(name)) name = 'home';
   S.screen = name;
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
+  document.body.classList.toggle('on-home', name === 'home');
   $$('#nav .navbtn').forEach(b => b.classList.toggle('active', b.dataset.screen === name));
   const main = $('main'); if (main) main.scrollTop = 0;
   if (name === 'messages') { Msg.onShow(); }
